@@ -1,5 +1,5 @@
 Name:           xibo-kiosk
-Version:        1.0.0
+Version:        0.2.0
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
