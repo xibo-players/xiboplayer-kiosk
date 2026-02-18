@@ -1,0 +1,17 @@
+name: Build DEB
+
+on:
+  push:
+    tags: ['v*']
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deb:
+    uses: xibo-players/.github/.github/workflows/build-deb.yml@main
+    with:
+      package-name: xibo-kiosk
+      deb-script: 'deb/build-deb.sh'
+      default-version: '1.0.0'
+      gpg-sign: true
+    secrets: inherit

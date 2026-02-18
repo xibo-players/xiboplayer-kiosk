@@ -1,0 +1,30 @@
+# Xibo Digital Signage Player - systemd user unit
+
+[Unit]
+Description=Xibo Digital Signage Player
+After=graphical-session.target
+Requisite=graphical-session.target
+StartLimitBurst=20
+StartLimitIntervalSec=300
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/xiboplayer --allow-offline %h/.local/share/xibo
+ExecStartPre=/bin/sh -c '[ -f %h/.local/share/xibo/cms.json ]'
+Restart=on-failure
+RestartSec=5s
+
+# Resource limits
+MemoryMax=1536M
+MemoryHigh=1G
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=xibo
+
+# Environment (imported by kiosk script)
+# WAYLAND_DISPLAY, XDG_RUNTIME_DIR come from import-environment
+
+[Install]
+WantedBy=graphical-session.target
