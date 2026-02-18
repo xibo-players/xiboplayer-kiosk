@@ -14,5 +14,5 @@ jobs:
       rpm-spec: 'rpm/xibo-kiosk.spec'
       source-tarball: 'full'
       default-version: '1.0.0'
-      gpg-sign: false
+      gpg-sign: true
     secrets: inherit

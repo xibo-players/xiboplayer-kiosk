@@ -13,5 +13,5 @@ jobs:
       package-name: xibo-kiosk
       deb-script: 'deb/build-deb.sh'
       default-version: '1.0.0'
-      gpg-sign: false
+      gpg-sign: true
     secrets: inherit
