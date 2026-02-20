@@ -2,17 +2,12 @@ name: Build Kiosk Images
 
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows: ['Build RPM']
-    types: [completed]
-    branches: ['**']
 
 permissions:
   contents: write
 
 jobs:
   build:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'v'))
     uses: xibo-players/.github/.github/workflows/build-iso.yml@main
     with:
       package-name: xibo-kiosk
