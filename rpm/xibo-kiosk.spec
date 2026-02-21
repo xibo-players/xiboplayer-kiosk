@@ -1,5 +1,5 @@
 Name:           xibo-kiosk
-Version:        0.2.0
+Version:        0.3.0
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -70,6 +70,14 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
 
 %changelog
+* Sat Feb 21 2026 Pau Aliagas <linuxnow@gmail.com> - 0.3.0-1
+- Add player selection to setup wizard (Electron, Chromium, Arexibo)
+- Add Google Geolocation API key prompt (optional)
+- Write player environment file for systemd service
+- Add EnvironmentFile directive to xibo-player.service
+- Show active player in status (Ctrl+I) and reconfigure (Ctrl+R) dialogs
+- Allow alternatives command via doas
+
 * Wed Feb 18 2026 Pau Aliagas <linuxnow@gmail.com> - 1.0.0-1
 - Initial standalone xibo-kiosk package
 - Separated from arexibo repository for independent versioning
