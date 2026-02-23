@@ -19,6 +19,7 @@ Requires:       keyd
 Requires:       mesa-va-drivers
 Requires:       libva
 Requires:       alternatives
+Requires:       (xiboplayer-electron or xiboplayer-chromium or arexibo)
 Recommends:     libva-intel-driver
 
 %description

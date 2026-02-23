@@ -47,7 +47,7 @@ Description: Kiosk session scripts for Xibo digital signage players
  displays under GNOME Kiosk. Includes a first-boot registration wizard,
  session holder with health monitoring, dunst notification config, and
  a systemd user unit for the player process.
-Depends: gnome-kiosk, dunst, unclutter, zenity
+Depends: gnome-kiosk, dunst, unclutter, zenity, xiboplayer-electron | xiboplayer-chromium | arexibo
 Recommends: keyd
 Section: misc
 Priority: optional
