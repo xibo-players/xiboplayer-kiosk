@@ -93,7 +93,7 @@ dnf swap -y ffmpeg-free ffmpeg --allowerasing || true
 cat > /etc/yum.repos.d/xiboplayer.repo << 'EOF'
 [xiboplayer]
 name=Xibo Players
-baseurl=https://dnf.xiboplayer.org/rpm/fedora/$releasever/$basearch/
+baseurl=https://dl.xiboplayer.org/rpm/fedora/$releasever/$basearch/
 enabled=1
 gpgcheck=0
 EOF
