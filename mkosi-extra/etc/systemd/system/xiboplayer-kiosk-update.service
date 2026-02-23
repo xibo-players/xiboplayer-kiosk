@@ -1,0 +1,6 @@
+[Unit]
+Description=Update xiboplayer-kiosk and player packages
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/dnf update -y xiboplayer-kiosk arexibo xiboplayer-electron xiboplayer-chromium

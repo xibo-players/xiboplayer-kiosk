@@ -1,5 +1,5 @@
 #!/bin/bash
-XIBO_KIOSK_DIR="${XIBO_KIOSK_DIR:-/usr/share/xibo-kiosk}"
+XIBO_KIOSK_DIR="${XIBO_KIOSK_DIR:-/usr/share/xiboplayer-kiosk}"
 XIBO_DATA_DIR="${XIBO_DATA_DIR:-${HOME}/.local/share/xibo}"
 if [ -f "${XIBO_DATA_DIR}/cms.json" ]; then
     exec "${XIBO_KIOSK_DIR}/gnome-kiosk-script.xibo.sh"

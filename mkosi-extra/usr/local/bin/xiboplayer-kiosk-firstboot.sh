@@ -4,7 +4,7 @@
 
 set -e
 
-MARKER="/var/lib/xibo-kiosk-firstboot-done"
+MARKER="/var/lib/xiboplayer-kiosk-firstboot-done"
 
 # Check if already run
 [ -f "$MARKER" ] && exit 0

@@ -10,7 +10,7 @@ jobs:
   deb:
     uses: xibo-players/.github/.github/workflows/build-deb.yml@main
     with:
-      package-name: xibo-kiosk
+      package-name: xiboplayer-kiosk
       deb-script: 'deb/build-deb.sh'
       default-version: '0.3.0'
       gpg-sign: true

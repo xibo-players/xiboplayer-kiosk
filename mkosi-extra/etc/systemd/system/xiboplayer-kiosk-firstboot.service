@@ -2,11 +2,11 @@
 Description=Xibo Kiosk First Boot Setup
 After=network-online.target
 Wants=network-online.target
-ConditionPathExists=!/var/lib/xibo-kiosk-firstboot-done
+ConditionPathExists=!/var/lib/xiboplayer-kiosk-firstboot-done
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/xibo-kiosk-firstboot.sh
+ExecStart=/usr/local/bin/xiboplayer-kiosk-firstboot.sh
 RemainAfterExit=yes
 
 [Install]

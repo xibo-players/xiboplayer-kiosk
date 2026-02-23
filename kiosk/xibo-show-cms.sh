@@ -1,7 +1,7 @@
 #!/bin/bash
 # Show CMS server and display name, offer reconfiguration.
 # Triggered by Ctrl+R (via keyd).
-XIBO_KIOSK_DIR="${XIBO_KIOSK_DIR:-/usr/share/xibo-kiosk}"
+XIBO_KIOSK_DIR="${XIBO_KIOSK_DIR:-/usr/share/xiboplayer-kiosk}"
 XIBO_DATA_DIR="${XIBO_DATA_DIR:-${HOME}/.local/share/xibo}"
 CMS=$(grep -oP '"address"\s*:\s*"\K[^"]+' "${XIBO_DATA_DIR}/cms.json" 2>/dev/null || echo "not configured")
 DISPLAY_NAME=$(grep -oP '"display_name"\s*:\s*"\K[^"]+' "${XIBO_DATA_DIR}/cms.json" 2>/dev/null || echo "unknown")

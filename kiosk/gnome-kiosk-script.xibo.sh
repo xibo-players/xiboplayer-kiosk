@@ -4,7 +4,7 @@
 # Keeps the gnome-kiosk session alive while delegating player management
 # to systemd (xibo-player.service). Shows persistent status notifications.
 
-XIBO_KIOSK_DIR="${XIBO_KIOSK_DIR:-/usr/share/xibo-kiosk}"
+XIBO_KIOSK_DIR="${XIBO_KIOSK_DIR:-/usr/share/xiboplayer-kiosk}"
 XIBO_DATA_DIR="${XIBO_DATA_DIR:-${HOME}/.local/share/xibo}"
 NOTIFY_ID=1
 

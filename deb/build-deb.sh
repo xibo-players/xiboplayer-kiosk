@@ -1,10 +1,10 @@
 #!/bin/bash
-# Build xibo-kiosk DEB package
+# Build xiboplayer-kiosk DEB package
 # Usage: ./deb/build-deb.sh [VERSION]
 set -euo pipefail
 
 VERSION="${1:-0.2.0}"
-PACKAGE="xibo-kiosk"
+PACKAGE="xiboplayer-kiosk"
 ARCH="all"
 DEB_DIR="dist/${PACKAGE}_${VERSION}_${ARCH}"
 
@@ -13,19 +13,19 @@ echo "Building ${PACKAGE} ${VERSION} (${ARCH})..."
 # Create DEB directory structure
 rm -rf "${DEB_DIR}"
 mkdir -p "${DEB_DIR}/DEBIAN"
-mkdir -p "${DEB_DIR}/usr/share/xibo-kiosk"
+mkdir -p "${DEB_DIR}/usr/share/xiboplayer-kiosk"
 mkdir -p "${DEB_DIR}/usr/lib/systemd/user"
 mkdir -p "${DEB_DIR}/etc/keyd"
 mkdir -p "${DEB_DIR}/etc/skel/.local/bin"
 
 # Install kiosk scripts
-install -m755 kiosk/gnome-kiosk-script.sh "${DEB_DIR}/usr/share/xibo-kiosk/"
-install -m755 kiosk/gnome-kiosk-script.xibo.sh "${DEB_DIR}/usr/share/xibo-kiosk/"
-install -m755 kiosk/gnome-kiosk-script.xibo-init.sh "${DEB_DIR}/usr/share/xibo-kiosk/"
-install -m644 kiosk/dunstrc "${DEB_DIR}/usr/share/xibo-kiosk/"
-install -m755 kiosk/xibo-keyd-run.sh "${DEB_DIR}/usr/share/xibo-kiosk/"
-install -m755 kiosk/xibo-show-ip.sh "${DEB_DIR}/usr/share/xibo-kiosk/"
-install -m755 kiosk/xibo-show-cms.sh "${DEB_DIR}/usr/share/xibo-kiosk/"
+install -m755 kiosk/gnome-kiosk-script.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m755 kiosk/gnome-kiosk-script.xibo.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m755 kiosk/gnome-kiosk-script.xibo-init.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m644 kiosk/dunstrc "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m755 kiosk/xibo-keyd-run.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m755 kiosk/xibo-show-ip.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m755 kiosk/xibo-show-cms.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 
 # Install dispatcher to skel (copied to new users' ~/.local/bin/)
 install -m755 kiosk/gnome-kiosk-script.sh "${DEB_DIR}/etc/skel/.local/bin/gnome-kiosk-script"
@@ -51,7 +51,7 @@ Depends: gnome-kiosk, dunst, unclutter, zenity
 Recommends: keyd
 Section: misc
 Priority: optional
-Homepage: https://github.com/xibo-players/xibo-kiosk
+Homepage: https://github.com/xibo-players/xiboplayer-kiosk
 EOF
 
 # Build DEB

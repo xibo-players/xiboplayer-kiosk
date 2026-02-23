@@ -1,5 +1,5 @@
 [Unit]
-Description=Check for xibo-kiosk and player updates
+Description=Check for xiboplayer-kiosk and player updates
 
 [Timer]
 OnCalendar=daily

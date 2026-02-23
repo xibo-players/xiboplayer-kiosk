@@ -10,8 +10,8 @@ jobs:
   build:
     uses: xibo-players/.github/.github/workflows/build-iso.yml@main
     with:
-      package-name: xibo-kiosk
-      kickstart-file: 'kickstart/xibo-kiosk.ks'
+      package-name: xiboplayer-kiosk
+      kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
       build-installer: true
       build-disk-images: true
       architectures: 'x86_64,aarch64'

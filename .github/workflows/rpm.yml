@@ -10,8 +10,8 @@ jobs:
   rpm:
     uses: xibo-players/.github/.github/workflows/build-rpm.yml@main
     with:
-      package-name: xibo-kiosk
-      rpm-spec: 'rpm/xibo-kiosk.spec'
+      package-name: xiboplayer-kiosk
+      rpm-spec: 'rpm/xiboplayer-kiosk.spec'
       source-tarball: 'full'
       default-version: '0.3.0'
       gpg-sign: true

@@ -5,7 +5,7 @@
 #
 # Usage:
 #   Boot from Fedora netinstall and add to kernel cmdline:
-#   inst.ks=https://raw.githubusercontent.com/xibo-players/xibo-kiosk/main/kickstart/xibo-kiosk.ks
+#   inst.ks=https://raw.githubusercontent.com/xibo-players/xiboplayer-kiosk/main/kickstart/xiboplayer-kiosk.ks
 #
 # Or create a custom ISO with this kickstart embedded.
 
@@ -22,7 +22,7 @@ timezone Europe/Madrid --utc
 
 # Network - DHCP by default
 network --bootproto=dhcp --device=link --activate --onboot=yes
-network --hostname=xibo-kiosk
+network --hostname=xiboplayer-kiosk
 
 # Root password (change this or use --lock)
 rootpw --lock
@@ -58,7 +58,7 @@ gstreamer1-plugins-ugly-free
 gstreamer1-plugin-openh264
 gstreamer1-plugin-libav
 
-# Kiosk utilities (also pulled by xibo-kiosk, listed for clarity)
+# Kiosk utilities (also pulled by xiboplayer-kiosk, listed for clarity)
 zenity
 dunst
 unclutter
@@ -86,9 +86,9 @@ dnf install -y \
 dnf swap -y ffmpeg-free ffmpeg --allowerasing || true
 %end
 
-# Install xibo-kiosk and player packages from central package portal
+# Install xiboplayer-kiosk and player packages from central package portal
 %post --erroronfail
-# Add xiboplayer repository (hosts all packages: xibo-kiosk, xiboplayer-electron,
+# Add xiboplayer repository (hosts all packages: xiboplayer-kiosk, xiboplayer-electron,
 # xiboplayer-chromium, arexibo)
 cat > /etc/yum.repos.d/xiboplayer.repo << 'EOF'
 [xiboplayer]
@@ -99,7 +99,7 @@ gpgcheck=0
 EOF
 
 # Install all available players
-dnf install -y xibo-kiosk xiboplayer-electron xiboplayer-chromium arexibo
+dnf install -y xiboplayer-kiosk xiboplayer-electron xiboplayer-chromium arexibo
 
 # Register players via alternatives (highest priority = default)
 alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 30
