@@ -15,5 +15,5 @@ jobs:
       build-installer: true
       build-disk-images: true
       architectures: 'x86_64,aarch64'
-      default-version: '0.3.0'
+      default-version: '0.4.4'
     secrets: inherit

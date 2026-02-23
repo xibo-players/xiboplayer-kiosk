@@ -12,6 +12,6 @@ jobs:
     with:
       package-name: xiboplayer-kiosk
       deb-script: 'deb/build-deb.sh'
-      default-version: '0.3.0'
+      default-version: '0.4.4'
       gpg-sign: true
     secrets: inherit

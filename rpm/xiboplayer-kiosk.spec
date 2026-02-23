@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.3.0
+Version:        0.4.4
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -70,6 +70,10 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
 
 %changelog
+* Sun Feb 23 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.4-1
+- Rename package from xibo-kiosk to xiboplayer-kiosk
+- Update custom domain to dl.xiboplayer.org
+
 * Sat Feb 21 2026 Pau Aliagas <linuxnow@gmail.com> - 0.3.0-1
 - Add player selection to setup wizard (Electron, Chromium, Arexibo)
 - Add Google Geolocation API key prompt (optional)
