@@ -1,10 +1,10 @@
 Name:           xiboplayer-kiosk
 Version:        0.4.4
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
 License:        AGPLv3+
-URL:            https://github.com/xibo-players/xiboplayer-kiosk
+URL:            https://xiboplayer.org
 Source0:        %{name}-%{version}.tar.gz
 
 BuildArch:      noarch
@@ -71,6 +71,9 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
 
 %changelog
+* Sun Feb 23 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.4-2
+- Update homepage URL to https://xiboplayer.org
+
 * Sun Feb 23 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.4-1
 - Rename package from xibo-kiosk to xiboplayer-kiosk
 - Update custom domain to dl.xiboplayer.org

@@ -51,7 +51,7 @@ Depends: gnome-kiosk, dunst, unclutter, zenity, xiboplayer-electron | xiboplayer
 Recommends: keyd
 Section: misc
 Priority: optional
-Homepage: https://github.com/xibo-players/xiboplayer-kiosk
+Homepage: https://xiboplayer.org
 EOF
 
 # Build DEB
