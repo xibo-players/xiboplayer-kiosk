@@ -32,7 +32,7 @@ RUN rpm-ostree install \
 
 # Multimedia players
 RUN rpm-ostree install \
-    vlc mpv gnome-showtime && \
+    vlc mpv showtime && \
     rpm-ostree cleanup -m
 
 # Full codec + media stack
