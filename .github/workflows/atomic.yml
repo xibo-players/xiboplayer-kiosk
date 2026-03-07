@@ -1,0 +1,222 @@
+name: Build Atomic Kiosk Image
+
+on:
+  push:
+    branches: [main]
+    paths: ['atomic/**', 'mkosi-extra/**']
+  schedule:
+    # Weekly Monday 06:00 UTC — pick up Silverblue + RPM updates
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: xibo-players/xiboplayer-kiosk
+  FEDORA_VERSION: '43'
+
+jobs:
+  build-oci:
+    name: Build OCI Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image
+        run: |
+          podman build \
+            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }} \
+            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            -f atomic/Containerfile .
+
+      - name: Push to ghcr.io
+        run: |
+          podman push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}
+          podman push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+  build-iso-x86_64:
+    name: Build ISO (x86_64)
+    needs: build-oci
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build bootable ISO with bootc-image-builder
+        run: |
+          sudo podman run --rm --privileged \
+            --security-opt label=type:unconfined_t \
+            -v ./output:/output \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+            --type iso \
+            --target-arch x86_64 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}
+
+      - name: Rename ISO
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mv output/bootiso/install.iso \
+            output/xiboplayer-kiosk-atomic_${VERSION}_x86_64.iso
+
+      - name: List output
+        run: ls -lah output/*.iso
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: atomic-iso-x86_64
+          path: output/*.iso
+          retention-days: 30
+
+  build-iso-aarch64:
+    name: Build ISO (aarch64)
+    needs: build-oci
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build bootable ISO with bootc-image-builder
+        run: |
+          sudo podman run --rm --privileged \
+            --security-opt label=type:unconfined_t \
+            -v ./output:/output \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+            --type iso \
+            --target-arch aarch64 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}
+
+      - name: Rename ISO
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mv output/bootiso/install.iso \
+            output/xiboplayer-kiosk-atomic_${VERSION}_aarch64.iso
+
+      - name: List output
+        run: ls -lah output/*.iso
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: atomic-iso-aarch64
+          path: output/*.iso
+          retention-days: 30
+
+  release:
+    name: Create Release
+    needs: [build-iso-x86_64, build-iso-aarch64]
+    if: always() && (needs.build-iso-x86_64.result == 'success' || needs.build-iso-aarch64.result == 'success')
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=atomic-$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Flatten artifacts
+        run: |
+          mkdir -p release
+          find artifacts -name "*.iso" -exec mv {} release/ \;
+          ls -lah release/
+
+      - name: Generate checksums
+        run: |
+          cd release
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          NOTES=$(cat <<'NOTES_EOF'
+          # Xiboplayer Kiosk (Atomic Silverblue)
+
+          Self-contained Fedora Atomic kiosk image with immutable OS, automatic updates, and rollback support.
+
+          ## What's included
+
+          - **Fedora Silverblue 43** (immutable, atomic updates)
+          - **Full codecs**: ffmpeg, gstreamer, VA-API
+          - **Players**: xiboplayer-electron, xiboplayer-chromium, arexibo
+          - **Multimedia**: VLC, mpv, GNOME Showtime
+          - **Kiosk session**: GDM autologin → gnome-kiosk
+
+          ## Install
+
+          Flash the ISO to a USB stick and boot:
+          ```
+          sudo dd if=xiboplayer-kiosk-atomic_*_x86_64.iso of=/dev/sdX bs=8M status=progress
+          ```
+
+          ## Update existing kiosks
+
+          Kiosks update automatically via `rpm-ostreed-automatic.timer`.
+
+          To update manually or rebase from the traditional image:
+          ```
+          rpm-ostree rebase ostree-unverified-registry:ghcr.io/xibo-players/xiboplayer-kiosk:43
+          systemctl reboot
+          ```
+
+          ## Rollback
+
+          ```
+          rpm-ostree rollback
+          systemctl reboot
+          ```
+
+          ## Verify downloads
+
+          ```
+          sha256sum -c SHA256SUMS
+          ```
+          NOTES_EOF
+          )
+
+          gh release view "$TAG" --json tagName >/dev/null 2>&1 || \
+            gh release create "$TAG" --title "Kiosk Atomic $TAG" --notes ""
+          gh release edit "$TAG" --notes "$NOTES"
+          gh release upload "$TAG" release/* --clobber
