@@ -16,8 +16,9 @@ RUN rpm-ostree install \
 
 # Swap ffmpeg-free for full ffmpeg (codecs)
 RUN rpm-ostree override remove \
-    ffmpeg-free libavcodec-free libavfilter-free libavformat-free \
-    libavutil-free libpostproc-free libswresample-free libswscale-free \
+    ffmpeg-free libavcodec-free libavdevice-free libavfilter-free \
+    libavformat-free libavutil-free libpostproc-free libswresample-free \
+    libswscale-free \
     --install ffmpeg --install ffmpeg-libs && \
     rpm-ostree cleanup -m
 
