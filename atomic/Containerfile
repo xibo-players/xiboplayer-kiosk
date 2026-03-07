@@ -1,0 +1,95 @@
+# Xiboplayer Kiosk — Atomic Silverblue Image
+#
+# Self-contained Fedora Silverblue image with all xiboplayer packages,
+# full multimedia codecs, and kiosk configuration baked in.
+#
+# Build:  podman build -t ghcr.io/xibo-players/xiboplayer-kiosk:43 -f atomic/Containerfile .
+# Update: rpm-ostree rebase ostree-unverified-registry:ghcr.io/xibo-players/xiboplayer-kiosk:43
+
+FROM quay.io/fedora/fedora-silverblue:43
+
+# RPM Fusion free + nonfree
+RUN rpm-ostree install \
+    https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-43.noarch.rpm \
+    https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-43.noarch.rpm && \
+    rpm-ostree cleanup -m
+
+# Swap ffmpeg-free for full ffmpeg (codecs)
+RUN rpm-ostree override remove \
+    ffmpeg-free libavcodec-free libavfilter-free libavformat-free \
+    libavutil-free libpostproc-free libswresample-free libswscale-free \
+    --install ffmpeg --install ffmpeg-libs && \
+    rpm-ostree cleanup -m
+
+# Xiboplayer repo
+COPY mkosi-extra/etc/yum.repos.d/xibo-players.repo /etc/yum.repos.d/xibo-players.repo
+
+# Kiosk session + display manager
+RUN rpm-ostree install \
+    gnome-kiosk && \
+    rpm-ostree cleanup -m
+
+# Multimedia players
+RUN rpm-ostree install \
+    vlc mpv gnome-showtime && \
+    rpm-ostree cleanup -m
+
+# Full codec + media stack
+RUN rpm-ostree install \
+    gstreamer1-plugins-base gstreamer1-plugins-good \
+    gstreamer1-plugins-bad-free gstreamer1-plugins-ugly-free \
+    gstreamer1-plugin-openh264 gstreamer1-plugin-libav \
+    mesa-va-drivers libva && \
+    rpm-ostree cleanup -m
+
+# Hardware support
+RUN rpm-ostree install \
+    NetworkManager-wifi linux-firmware wireguard-tools \
+    qt6-qtwebengine zeromq && \
+    rpm-ostree cleanup -m
+
+# Kiosk utilities
+RUN rpm-ostree install \
+    avahi nss-mdns keyd && \
+    rpm-ostree cleanup -m
+
+# CLI tools
+RUN rpm-ostree install \
+    vim-enhanced && \
+    rpm-ostree cleanup -m
+
+# Xiboplayer packages
+RUN rpm-ostree install \
+    xiboplayer-kiosk xiboplayer-electron xiboplayer-chromium arexibo && \
+    rpm-ostree cleanup -m
+
+# Kiosk configuration overlay
+# GDM autologin, kiosk session, doas rules, systemd units, user setup
+COPY mkosi-extra/etc/gdm/custom.conf /etc/gdm/custom.conf
+COPY mkosi-extra/etc/doas.conf /etc/doas.conf
+COPY mkosi-extra/etc/locale.conf /etc/locale.conf
+COPY mkosi-extra/etc/systemd/logind.conf.d/no-idle.conf /etc/systemd/logind.conf.d/no-idle.conf
+COPY mkosi-extra/etc/systemd/system/xiboplayer-kiosk-firstboot.service /etc/systemd/system/xiboplayer-kiosk-firstboot.service
+COPY mkosi-extra/etc/systemd/system/gnome-initial-setup.service /etc/systemd/system/gnome-initial-setup.service
+COPY mkosi-extra/etc/systemd/system/gnome-initial-setup-first-login.service /etc/systemd/system/gnome-initial-setup-first-login.service
+COPY mkosi-extra/etc/systemd/system/systemd-firstboot.service /etc/systemd/system/systemd-firstboot.service
+COPY mkosi-extra/usr/lib/systemd/system-preset/80-xiboplayer-kiosk.preset /usr/lib/systemd/system-preset/80-xiboplayer-kiosk.preset
+COPY mkosi-extra/usr/lib/sysusers.d/xiboplayer-kiosk.conf /usr/lib/sysusers.d/xiboplayer-kiosk.conf
+COPY mkosi-extra/usr/local/bin/xiboplayer-kiosk-firstboot.sh /usr/local/bin/xiboplayer-kiosk-firstboot.sh
+COPY mkosi-extra/var/lib/AccountsService/users/xibo /var/lib/AccountsService/users/xibo
+
+# doas.conf must be 600
+RUN chmod 600 /etc/doas.conf && \
+    chmod 755 /usr/local/bin/xiboplayer-kiosk-firstboot.sh
+
+# Enable services via preset
+RUN systemctl preset-all && \
+    systemctl enable gdm.service avahi-daemon.service keyd.service && \
+    systemctl set-default graphical.target
+
+# On Atomic, updates come via rpm-ostree, not dnf
+# Remove the dnf-based update timer (replaced by rpm-ostreed-automatic)
+RUN systemctl enable rpm-ostreed-automatic.timer
+
+# Finalize the ostree container
+RUN ostree container commit
