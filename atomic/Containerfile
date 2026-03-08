@@ -23,8 +23,7 @@ RUN rpm-ostree override remove \
     rpm-ostree cleanup -m
 
 # Xiboplayer repo + keyd COPR
-COPY mkosi-extra/etc/yum.repos.d/xibo-players.repo /etc/yum.repos.d/xibo-players.repo
-COPY mkosi-extra/etc/yum.repos.d/copr:copr.fedorainfracloud.org:alternateved:keyd.repo /etc/yum.repos.d/keyd.repo
+COPY mkosi-extra/etc/yum.repos.d/ /etc/yum.repos.d/
 
 # Kiosk session + display manager
 RUN rpm-ostree install \
