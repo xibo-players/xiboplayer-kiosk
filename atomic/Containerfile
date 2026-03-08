@@ -22,8 +22,9 @@ RUN rpm-ostree override remove \
     --install ffmpeg --install ffmpeg-libs && \
     rpm-ostree cleanup -m
 
-# Xiboplayer repo
+# Xiboplayer repo + keyd COPR
 COPY mkosi-extra/etc/yum.repos.d/xibo-players.repo /etc/yum.repos.d/xibo-players.repo
+COPY mkosi-extra/etc/yum.repos.d/copr:copr.fedorainfracloud.org:alternateved:keyd.repo /etc/yum.repos.d/keyd.repo
 
 # Kiosk session + display manager
 RUN rpm-ostree install \
