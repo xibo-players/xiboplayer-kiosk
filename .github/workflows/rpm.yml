@@ -12,6 +12,7 @@ jobs:
     with:
       package-name: xiboplayer-kiosk
       rpm-spec: 'rpm/xiboplayer-kiosk.spec'
+      fedora-matrix: '["43", "44"]'
       source-tarball: 'full'
       default-version: '0.4.9'
       gpg-sign: true
