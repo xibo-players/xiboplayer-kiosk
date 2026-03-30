@@ -1,6 +1,6 @@
 Name:           xiboplayer-kiosk
 Version:        0.4.4
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
 License:        AGPLv3+
@@ -52,6 +52,7 @@ install -Dm755 kiosk/xibo-keyd-run.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/x
 install -Dm755 kiosk/xibo-show-ip.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-show-ip.sh
 install -Dm755 kiosk/xibo-show-cms.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-show-cms.sh
 install -Dm644 kiosk/keyd-xibo.conf %{buildroot}%{_sysconfdir}/keyd/xibo.conf
+install -Dm644 kiosk/copr-keyd.repo %{buildroot}%{_sysconfdir}/yum.repos.d/copr-keyd.repo
 
 # Create skel directory for gnome-kiosk-script dispatcher
 install -d %{buildroot}%{_sysconfdir}/skel/.local/bin
@@ -68,9 +69,13 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_datadir}/xiboplayer-kiosk/xibo-show-cms.sh
 %{_userunitdir}/xibo-player.service
 %{_sysconfdir}/keyd/xibo.conf
+%{_sysconfdir}/yum.repos.d/copr-keyd.repo
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
 
 %changelog
+* Mon Mar 30 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.4-3
+- Ship keyd COPR repo file so dnf can resolve keyd dependency (fixes #4)
+
 * Sun Feb 23 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.4-2
 - Update homepage URL to https://xiboplayer.org
 
