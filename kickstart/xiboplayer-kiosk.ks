@@ -10,8 +10,11 @@
 # Or create a custom ISO with this kickstart embedded.
 
 # Installation settings
-text
+# NOTE: do not set display mode (text/cmdline/graphical) — livemedia-creator requires it unset
 skipx
+
+# Install source — required by livemedia-creator for self-contained ISO builds
+url --mirrorlist=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-43&arch=x86_64
 firstboot --disable
 reboot --eject
 
