@@ -52,6 +52,7 @@ gnome-kiosk-script-session
 
 # Media playback
 vlc
+mpv
 firefox
 gstreamer1-plugins-base
 gstreamer1-plugins-good
@@ -84,8 +85,15 @@ dnf install -y \
   https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-43.noarch.rpm \
   https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-43.noarch.rpm
 
-# Swap ffmpeg-free for ffmpeg
+# Swap ffmpeg-free for full ffmpeg (all codecs)
 dnf swap -y ffmpeg-free ffmpeg --allowerasing || true
+
+# Install RPM Fusion codec packages (H.264, H.265, AAC, DTS, etc.)
+dnf install -y \
+  gstreamer1-plugins-ugly \
+  gstreamer1-plugins-bad-freeworld \
+  libva-intel-media-driver \
+  || true
 %end
 
 # Install xiboplayer-release (adds repos + keyd COPR + GPG key) then all players
