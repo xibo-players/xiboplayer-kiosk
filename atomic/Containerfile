@@ -71,9 +71,10 @@ COPY mkosi-extra/etc/doas.conf /etc/doas.conf
 COPY mkosi-extra/etc/locale.conf /etc/locale.conf
 COPY mkosi-extra/etc/systemd/logind.conf.d/no-idle.conf /etc/systemd/logind.conf.d/no-idle.conf
 COPY mkosi-extra/etc/systemd/system/xiboplayer-kiosk-firstboot.service /etc/systemd/system/xiboplayer-kiosk-firstboot.service
-COPY mkosi-extra/etc/systemd/system/gnome-initial-setup.service /etc/systemd/system/gnome-initial-setup.service
-COPY mkosi-extra/etc/systemd/system/gnome-initial-setup-first-login.service /etc/systemd/system/gnome-initial-setup-first-login.service
-COPY mkosi-extra/etc/systemd/system/systemd-firstboot.service /etc/systemd/system/systemd-firstboot.service
+# Mask unwanted services (symlinks to /dev/null can't be COPYed in container builds)
+RUN ln -sf /dev/null /etc/systemd/system/gnome-initial-setup.service && \
+    ln -sf /dev/null /etc/systemd/system/gnome-initial-setup-first-login.service && \
+    ln -sf /dev/null /etc/systemd/system/systemd-firstboot.service
 COPY mkosi-extra/usr/lib/systemd/system-preset/80-xiboplayer-kiosk.preset /usr/lib/systemd/system-preset/80-xiboplayer-kiosk.preset
 COPY mkosi-extra/usr/lib/sysusers.d/xiboplayer-kiosk.conf /usr/lib/sysusers.d/xiboplayer-kiosk.conf
 COPY mkosi-extra/usr/local/bin/xiboplayer-kiosk-firstboot.sh /usr/local/bin/xiboplayer-kiosk-firstboot.sh
