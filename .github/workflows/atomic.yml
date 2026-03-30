@@ -71,6 +71,7 @@ jobs:
             -v ./output:/output \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             quay.io/centos-bootc/bootc-image-builder:latest \
+            --local \
             --type iso \
             --target-arch x86_64 \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}
@@ -117,6 +118,7 @@ jobs:
             -v ./output:/output \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             quay.io/centos-bootc/bootc-image-builder:latest \
+            --local \
             --type iso \
             --target-arch aarch64 \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}
