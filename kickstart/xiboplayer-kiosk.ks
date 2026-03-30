@@ -106,7 +106,7 @@ dnf install -y \
 %post --erroronfail
 # Install the release RPM — configures xiboplayer repo, keyd COPR, and GPG key
 dnf install -y \
-  https://github.com/xibo-players/xibo-players.github.io/releases/download/v44-2/xiboplayer-release-$(rpm -E %fedora)-2.noarch.rpm
+  https://dl.xiboplayer.org/rpm/fedora/43/noarch/xiboplayer-release-43-7.fc43.noarch.rpm
 
 # Install all available players
 dnf install -y xiboplayer-kiosk xiboplayer-electron xiboplayer-chromium arexibo
