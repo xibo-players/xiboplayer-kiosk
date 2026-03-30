@@ -92,7 +92,13 @@ dnf swap -y ffmpeg-free ffmpeg --allowerasing || true
 dnf install -y \
   gstreamer1-plugins-ugly \
   gstreamer1-plugins-bad-freeworld \
+  || true
+
+# GPU drivers — install what's available for the hardware
+dnf install -y \
   libva-intel-media-driver \
+  libva-nvidia-driver \
+  mesa-va-drivers \
   || true
 %end
 
