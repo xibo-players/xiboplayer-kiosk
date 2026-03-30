@@ -65,6 +65,7 @@ jobs:
       - name: Build bootable ISO with bootc-image-builder
         run: |
           mkdir -p output
+          sudo podman pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}
           sudo podman run --rm --privileged \
             --security-opt label=type:unconfined_t \
             -v ./output:/output \
@@ -110,6 +111,7 @@ jobs:
       - name: Build bootable ISO with bootc-image-builder
         run: |
           mkdir -p output
+          sudo podman pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}
           sudo podman run --rm --privileged \
             --security-opt label=type:unconfined_t \
             -v ./output:/output \
