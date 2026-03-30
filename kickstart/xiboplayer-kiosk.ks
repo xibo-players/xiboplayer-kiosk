@@ -34,13 +34,12 @@ rootpw --lock
 user --name=xibo --groups=wheel --password=xibo --plaintext --gecos="Xibo Kiosk User"
 
 # Disk configuration - use entire disk
-clearpart --all --initlabel
-# Explicit partitioning required by livemedia-creator --no-virt
-part /boot --fstype=ext4 --size=1024
-part / --fstype=ext4 --size=8192 --grow
+zerombr
+clearpart --all --initlabel --disklabel=gpt
+autopart --nolvm --nohome --type=plain --fstype=xfs
 
 # Bootloader
-bootloader --append="quiet rhgb"
+bootloader --location=mbr --append="quiet rhgb splash loglevel=3"
 
 # Package selection
 %packages
