@@ -1,0 +1,117 @@
+name = "xiboplayer-kiosk"
+description = "Xibo Kiosk — pre-built digital signage image with all players"
+version = "0.4.9"
+
+# Fedora base packages
+[[packages]]
+name = "gdm"
+
+[[packages]]
+name = "gnome-kiosk"
+
+[[packages]]
+name = "gnome-kiosk-script-session"
+
+# Media playback
+[[packages]]
+name = "vlc"
+
+[[packages]]
+name = "firefox"
+
+[[packages]]
+name = "gstreamer1-plugins-base"
+
+[[packages]]
+name = "gstreamer1-plugins-good"
+
+[[packages]]
+name = "gstreamer1-plugins-bad-free"
+
+[[packages]]
+name = "gstreamer1-plugins-ugly-free"
+
+[[packages]]
+name = "gstreamer1-plugin-openh264"
+
+[[packages]]
+name = "gstreamer1-plugin-libav"
+
+# Kiosk utilities
+[[packages]]
+name = "zenity"
+
+[[packages]]
+name = "dunst"
+
+[[packages]]
+name = "unclutter"
+
+[[packages]]
+name = "opendoas"
+
+# Networking
+[[packages]]
+name = "avahi"
+
+[[packages]]
+name = "nss-mdns"
+
+[[packages]]
+name = "wireguard-tools"
+
+[[packages]]
+name = "NetworkManager-wifi"
+
+# Hardware support
+[[packages]]
+name = "mesa-va-drivers"
+
+[[packages]]
+name = "libva"
+
+# CLI tools
+[[packages]]
+name = "vim-enhanced"
+
+# Kiosk + players (from xiboplayer repo)
+[[packages]]
+name = "xiboplayer-kiosk"
+
+[[packages]]
+name = "xiboplayer-electron"
+
+[[packages]]
+name = "xiboplayer-chromium"
+
+[[packages]]
+name = "arexibo"
+
+# User configuration
+[[customizations.user]]
+name = "xibo"
+password = "xibo"
+groups = ["wheel"]
+description = "Xibo Kiosk User"
+
+# Locale
+[customizations.locale]
+languages = ["en_US.UTF-8"]
+keyboard = "us"
+
+# Timezone
+[customizations.timezone]
+timezone = "Europe/Madrid"
+
+# Hostname
+[customizations.hostname]
+hostname = "xiboplayer-kiosk"
+
+# Enable services
+[customizations.services]
+enabled = ["gdm", "avahi-daemon", "sshd"]
+disabled = ["gnome-initial-setup"]
+
+# Set graphical target
+[customizations.kernel]
+append = "quiet rhgb"
