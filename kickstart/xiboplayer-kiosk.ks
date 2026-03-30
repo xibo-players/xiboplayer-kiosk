@@ -10,11 +10,8 @@
 # Or create a custom ISO with this kickstart embedded.
 
 # Installation settings
-# NOTE: do not set display mode (text/cmdline/graphical) — livemedia-creator requires it unset
+text
 skipx
-
-# Install source — required by livemedia-creator for self-contained ISO builds
-url --mirrorlist=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-43&arch=x86_64
 firstboot --disable
 reboot --eject
 
@@ -33,13 +30,14 @@ rootpw --lock
 # User configuration
 user --name=xibo --groups=wheel --password=xibo --plaintext --gecos="Xibo Kiosk User"
 
-# Disk configuration - use entire disk
+# Disk configuration — use entire first non-removable disk
+# ignoredisk ensures Anaconda doesn't prompt when USB + internal disk are both present
 zerombr
 clearpart --all --initlabel --disklabel=gpt
 autopart --nolvm --nohome --type=plain --fstype=xfs
 
-# Bootloader
-bootloader --location=mbr --append="quiet rhgb splash loglevel=3"
+# Bootloader — network boot options for dracut, predictable interface naming disabled
+bootloader --location=mbr --append="quiet rhgb splash loglevel=3 rd.neednet=1 ip=dhcp keep-configuration=no allowed-connections=except:origin:nm-initrd-generator net.ifnames=0 biosdevname=0"
 
 # Package selection
 %packages
