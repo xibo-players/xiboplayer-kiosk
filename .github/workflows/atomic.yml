@@ -64,6 +64,7 @@ jobs:
 
       - name: Build bootable ISO with bootc-image-builder
         run: |
+          mkdir -p output
           sudo podman run --rm --privileged \
             --security-opt label=type:unconfined_t \
             -v ./output:/output \
@@ -107,6 +108,7 @@ jobs:
 
       - name: Build bootable ISO with bootc-image-builder
         run: |
+          mkdir -p output
           sudo podman run --rm --privileged \
             --security-opt label=type:unconfined_t \
             -v ./output:/output \
