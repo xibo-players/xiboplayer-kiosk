@@ -24,12 +24,12 @@ RUN rpm-ostree override remove \
 
 # Install xiboplayer-release (adds repos + keyd COPR + GPG key)
 RUN rpm-ostree install \
-    https://github.com/xibo-players/xibo-players.github.io/releases/download/v44-2/xiboplayer-release-43-2.noarch.rpm && \
+    https://github.com/xibo-players/xibo-players.github.io/releases/download/v43-7/xiboplayer-release-43-7.fc43.noarch.rpm && \
     rpm-ostree cleanup -m
 
 # Kiosk session + display manager
 RUN rpm-ostree install \
-    gnome-kiosk && \
+    gnome-kiosk gnome-kiosk-script-session && \
     rpm-ostree cleanup -m
 
 # Multimedia players
