@@ -35,7 +35,9 @@ user --name=xibo --groups=wheel --password=xibo --plaintext --gecos="Xibo Kiosk 
 
 # Disk configuration - use entire disk
 clearpart --all --initlabel
-autopart --type=plain --nohome
+# Explicit partitioning required by livemedia-creator --no-virt
+part /boot --fstype=ext4 --size=1024
+part / --fstype=ext4 --size=8192 --grow
 
 # Bootloader
 bootloader --append="quiet rhgb"
