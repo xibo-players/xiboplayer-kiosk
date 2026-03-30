@@ -88,17 +88,11 @@ dnf install -y \
 dnf swap -y ffmpeg-free ffmpeg --allowerasing || true
 %end
 
-# Install xiboplayer-kiosk and player packages from central package portal
+# Install xiboplayer-release (adds repos + keyd COPR + GPG key) then all players
 %post --erroronfail
-# Add xiboplayer repository (hosts all packages: xiboplayer-kiosk, xiboplayer-electron,
-# xiboplayer-chromium, arexibo)
-cat > /etc/yum.repos.d/xiboplayer.repo << 'EOF'
-[xiboplayer]
-name=Xibo Players
-baseurl=https://dl.xiboplayer.org/rpm/fedora/$releasever/$basearch/
-enabled=1
-gpgcheck=0
-EOF
+# Install the release RPM — configures xiboplayer repo, keyd COPR, and GPG key
+dnf install -y \
+  https://github.com/xibo-players/xibo-players.github.io/releases/download/v44-2/xiboplayer-release-$(rpm -E %fedora)-2.noarch.rpm
 
 # Install all available players
 dnf install -y xiboplayer-kiosk xiboplayer-electron xiboplayer-chromium arexibo

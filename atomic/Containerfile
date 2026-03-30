@@ -22,8 +22,10 @@ RUN rpm-ostree override remove \
     --install ffmpeg --install ffmpeg-libs && \
     rpm-ostree cleanup -m
 
-# Xiboplayer repo + keyd COPR
-COPY mkosi-extra/etc/yum.repos.d/ /etc/yum.repos.d/
+# Install xiboplayer-release (adds repos + keyd COPR + GPG key)
+RUN rpm-ostree install \
+    https://github.com/xibo-players/xibo-players.github.io/releases/download/v44-2/xiboplayer-release-43-2.noarch.rpm && \
+    rpm-ostree cleanup -m
 
 # Kiosk session + display manager
 RUN rpm-ostree install \
