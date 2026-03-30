@@ -12,10 +12,9 @@ jobs:
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
-      build-installer: true
+      build-installer: false
       build-disk-images: true
       build-self-contained-iso: true
-      blueprint-file: 'osbuild/xiboplayer-kiosk.toml'
       architectures: 'x86_64,aarch64'
       default-version: '0.4.9'
     secrets: inherit
