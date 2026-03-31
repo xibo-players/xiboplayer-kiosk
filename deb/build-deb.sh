@@ -3,7 +3,7 @@
 # Usage: ./deb/build-deb.sh [VERSION]
 set -euo pipefail
 
-VERSION="${1:-0.4.4}"
+VERSION="${1:-0.4.10}"
 PACKAGE="xiboplayer-kiosk"
 ARCH="all"
 DEB_DIR="dist/${PACKAGE}_${VERSION}_${ARCH}"
