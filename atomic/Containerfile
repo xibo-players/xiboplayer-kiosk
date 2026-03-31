@@ -8,11 +8,16 @@
 
 FROM quay.io/fedora/fedora-silverblue:43
 
-# RPM Fusion free + nonfree
+# RPM Fusion free + nonfree (retry on mirror timeout)
 RUN rpm-ostree install \
     https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-43.noarch.rpm \
     https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-43.noarch.rpm && \
-    rpm-ostree cleanup -m
+    rpm-ostree cleanup -m || \
+    (echo "Retrying with direct download mirror..." && \
+     rpm-ostree install \
+       https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-43.noarch.rpm \
+       https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-43.noarch.rpm && \
+     rpm-ostree cleanup -m)
 
 # Swap ffmpeg-free for full ffmpeg (codecs)
 RUN rpm-ostree override remove \
