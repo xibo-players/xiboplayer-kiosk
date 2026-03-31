@@ -36,6 +36,47 @@ install -m644 kiosk/xibo-player.service "${DEB_DIR}/usr/lib/systemd/user/"
 # Install keyd config
 install -m644 kiosk/keyd-xibo.conf "${DEB_DIR}/etc/keyd/xibo.conf"
 
+# Create postinst script — enable codec repos and install recommends
+cat > "${DEB_DIR}/DEBIAN/postinst" << 'POSTINST'
+#!/bin/bash
+set -e
+
+# Enable multiverse (Ubuntu) or non-free (Debian) for codec packages
+if [ -f /etc/os-release ]; then
+  . /etc/os-release
+  case "$ID" in
+    ubuntu)
+      # Enable multiverse and restricted components
+      if command -v add-apt-repository >/dev/null 2>&1; then
+        add-apt-repository -y multiverse 2>/dev/null || true
+        add-apt-repository -y restricted 2>/dev/null || true
+      fi
+      ;;
+    debian)
+      # Enable non-free and non-free-firmware in sources
+      if [ -f /etc/apt/sources.list.d/debian.sources ]; then
+        sed -i 's/Components: main/Components: main contrib non-free non-free-firmware/' \
+          /etc/apt/sources.list.d/debian.sources 2>/dev/null || true
+      fi
+      ;;
+  esac
+fi
+
+# Install recommended codec packages (best-effort, don't fail)
+apt-get update -qq 2>/dev/null || true
+apt-get install -y --no-install-recommends \
+  ffmpeg vlc mpv \
+  gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+  gstreamer1.0-plugins-ugly gstreamer1.0-plugins-bad \
+  gstreamer1.0-libav \
+  libva2 mesa-va-drivers \
+  avahi-daemon libnss-mdns \
+  2>/dev/null || true
+
+exit 0
+POSTINST
+chmod 755 "${DEB_DIR}/DEBIAN/postinst"
+
 # Create control file
 cat > "${DEB_DIR}/DEBIAN/control" << EOF
 Package: ${PACKAGE}
@@ -48,7 +89,12 @@ Description: Kiosk session scripts for Xibo digital signage players
  session holder with health monitoring, dunst notification config, and
  a systemd user unit for the player process.
 Depends: gnome-kiosk, dunst, unclutter, zenity, xiboplayer-electron | xiboplayer-chromium | arexibo
-Recommends: keyd
+Recommends: keyd, ffmpeg, vlc, mpv,
+ gstreamer1.0-plugins-base, gstreamer1.0-plugins-good,
+ gstreamer1.0-plugins-ugly, gstreamer1.0-plugins-bad,
+ gstreamer1.0-libav,
+ libva2, mesa-va-drivers, intel-media-va-driver-non-free | intel-media-va-driver,
+ avahi-daemon, libnss-mdns, wireguard-tools
 Section: misc
 Priority: optional
 Homepage: https://xiboplayer.org
