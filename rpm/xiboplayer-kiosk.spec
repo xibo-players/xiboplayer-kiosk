@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.10
+Version:        0.4.11
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -73,6 +73,9 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
 
 %changelog
+* Tue Mar 31 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.11-1
+- Everything + netinstall ISOs, aarch64 QCOW2, first-boot guide
+
 * Mon Mar 30 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.4-3
 - Ship keyd COPR repo file so dnf can resolve keyd dependency (fixes #4)
 
