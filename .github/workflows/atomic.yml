@@ -62,15 +62,17 @@ jobs:
             echo "version=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build bootable ISO with bootc-image-builder
+      - name: Pull OCI image and build ISO
         run: |
           mkdir -p output
+          sudo podman login -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} ${{ env.REGISTRY }}
           sudo podman pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}
           sudo podman run --rm --privileged \
             --security-opt label=type:unconfined_t \
             -v ./output:/output \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             quay.io/centos-bootc/bootc-image-builder:latest \
+            --rootfs ext4 \
             --local \
             --type iso \
             --target-arch x86_64 \
@@ -109,15 +111,17 @@ jobs:
             echo "version=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build bootable ISO with bootc-image-builder
+      - name: Pull OCI image and build ISO
         run: |
           mkdir -p output
+          sudo podman login -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} ${{ env.REGISTRY }}
           sudo podman pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}
           sudo podman run --rm --privileged \
             --security-opt label=type:unconfined_t \
             -v ./output:/output \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             quay.io/centos-bootc/bootc-image-builder:latest \
+            --rootfs ext4 \
             --local \
             --type iso \
             --target-arch aarch64 \
