@@ -12,6 +12,8 @@ jobs:
     with:
       package-name: xiboplayer-kiosk
       deb-script: 'deb/build-deb.sh'
-      default-version: '0.4.9'
+      distro-matrix: '["ubuntu:24.04", "debian:trixie"]'
+      default-version: '0.4.11'
       gpg-sign: true
+      publish-to-repo: true
     secrets: inherit
