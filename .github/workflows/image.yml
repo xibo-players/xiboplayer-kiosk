@@ -12,9 +12,9 @@ jobs:
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
-      build-installer: false
       build-disk-images: true
       build-self-contained-iso: true
+      build-netinstall: true
       architectures: 'x86_64,aarch64'
       default-version: '0.4.10'
     secrets: inherit
