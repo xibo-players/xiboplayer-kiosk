@@ -1,6 +1,36 @@
 # xiboplayer-kiosk
 
-Kiosk session scripts for running Xibo digital signage players as full-screen displays under GNOME Kiosk.
+Turn any PC or Raspberry Pi into a digital signage kiosk. Download a ready-made image, flash it to a USB stick or SD card, boot and connect to your Xibo CMS.
+
+**[Download kiosk images](https://github.com/xibo-players/xiboplayer-kiosk/releases/latest)** | **[Installation guide](https://www.xiboplayer.org/downloads/)** | **[First-boot guide](https://www.xiboplayer.org/guide/first-boot)**
+
+### Available images
+
+| Image | Hardware | Description |
+|-------|----------|-------------|
+| **Everything ISO** | PC / laptop | Self-contained offline installer — flash to USB and boot |
+| **Netinstall ISO** | PC / laptop | Lightweight ISO — downloads packages during install |
+| **Raw disk** | Raspberry Pi, NUC | Flash directly to SD card or SSD |
+| **QCOW2** | Virtual machines | Ready-to-boot VM for GNOME Boxes, virt-manager or QEMU |
+| **Atomic ISO** | Any | Immutable Fedora Silverblue with automatic updates and rollback |
+
+### Quick start
+
+```bash
+# Option 1: Flash a ready-made image (recommended)
+# Download from https://github.com/xibo-players/xiboplayer-kiosk/releases/latest
+
+# Option 2: Install on existing Fedora
+sudo dnf install https://dl.xiboplayer.org/rpm/fedora/43/noarch/xiboplayer-release-43-7.fc43.noarch.rpm
+sudo dnf install xiboplayer-kiosk xiboplayer-electron
+
+# Option 3: Install on Ubuntu / Debian
+# See https://www.xiboplayer.org/downloads/
+```
+
+Default login: `xibo` / `xibo` — change your password after first boot.
+
+---
 
 ## Features
 
