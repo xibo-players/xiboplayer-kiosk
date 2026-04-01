@@ -9,7 +9,10 @@ PLAYER=$(basename "$(readlink /etc/alternatives/xiboplayer 2>/dev/null)" 2>/dev/
 if zenity --question --title="Xibo" \
     --text="CMS Server: $CMS\nDisplay: $DISPLAY_NAME\nPlayer: $PLAYER\n\nReconfigure CMS connection?\n\nThis will stop the player and start the setup wizard." \
     --width=300 2>/dev/null; then
-    systemctl --user stop xibo-player.service 2>/dev/null || true
+    # Stop whichever player service is running
+    for svc in xibo-player.service xiboplayer-electron.service xiboplayer-chromium.service; do
+        systemctl --user stop "$svc" 2>/dev/null || true
+    done
     rm -f "${XIBO_DATA_DIR}/cms.json"
     rm -f "${XIBO_DATA_DIR}/env"
     pkill -u "$(whoami)" -f gnome-kiosk-script 2>/dev/null || true

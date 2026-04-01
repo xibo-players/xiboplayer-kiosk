@@ -3,4 +3,5 @@ Description=Update xiboplayer-kiosk and player packages
 
 [Service]
 Type=oneshot
+ExecCondition=/bin/sh -c '! test -f /run/ostree-booted'
 ExecStart=/usr/bin/dnf update -y xiboplayer-kiosk arexibo xiboplayer-electron xiboplayer-chromium

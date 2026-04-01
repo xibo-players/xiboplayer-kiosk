@@ -28,8 +28,9 @@ RUN rpm-ostree override remove \
     rpm-ostree cleanup -m
 
 # Install xiboplayer-release (adds repos + keyd COPR + GPG key)
+ARG RELEASE_VER=43-7
 RUN rpm-ostree install \
-    https://github.com/xibo-players/xibo-players.github.io/releases/download/v43-7/xiboplayer-release-43-7.fc43.noarch.rpm && \
+    https://github.com/xibo-players/xibo-players.github.io/releases/download/v${RELEASE_VER}/xiboplayer-release-${RELEASE_VER}.fc43.noarch.rpm && \
     rpm-ostree cleanup -m
 
 # Kiosk session + display manager
