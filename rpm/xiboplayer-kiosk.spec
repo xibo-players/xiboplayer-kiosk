@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.11
+Version:        0.4.12
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -73,6 +73,9 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
 
 %changelog
+* Wed Apr 01 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.12-1
+- Player selection first, Electron/Chromium use own setup UI
+
 * Tue Mar 31 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.11-1
 - Everything + netinstall ISOs, aarch64 QCOW2, first-boot guide
 
