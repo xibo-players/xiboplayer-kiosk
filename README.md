@@ -137,6 +137,29 @@ update-alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/yourplayer
 update-alternatives --remove xiboplayer /usr/bin/yourplayer
 ```
 
+## FPS monitoring
+
+Both Electron and Chromium support an optional Chrome DevTools Protocol port for monitoring FPS, memory and renderer performance. Not enabled by default.
+
+**Enable:**
+```bash
+# Chromium (port 9222)
+systemctl --user set-environment XIBOPLAYER_DEBUG_PORT=9222
+systemctl --user restart xiboplayer-chromium
+
+# Electron (port 9223)
+systemctl --user set-environment XIBOPLAYER_DEBUG_PORT=9223
+systemctl --user restart xiboplayer-electron
+```
+
+**Disable:**
+```bash
+systemctl --user unset-environment XIBOPLAYER_DEBUG_PORT
+systemctl --user restart xiboplayer-chromium  # or xiboplayer-electron
+```
+
+The port binds to `127.0.0.1` only — not accessible from the network. Query via `http://localhost:9222/json` for targets and `Performance.getMetrics` for FPS, heap size and layout counts.
+
 ## License
 
 AGPLv3+ — see [LICENSE](LICENSE)
