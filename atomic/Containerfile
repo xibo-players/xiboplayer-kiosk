@@ -67,9 +67,9 @@ RUN rpm-ostree install \
     avahi nss-mdns keyd && \
     rpm-ostree cleanup -m
 
-# CLI tools
+# CLI tools + bootc (required for bootc-image-builder ISO generation)
 RUN rpm-ostree install \
-    vim-enhanced && \
+    vim-enhanced bootc && \
     rpm-ostree cleanup -m
 
 # Xiboplayer packages
