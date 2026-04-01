@@ -216,21 +216,50 @@ jobs:
           find artifacts -name "*.iso" -exec mv {} release/ \;
           ls -lah release/
 
-      - name: Generate checksums
+      - name: Upload to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          cd release
-          sha256sum * > SHA256SUMS
-          cat SHA256SUMS
+          pip install awscli 2>/dev/null || true
+          BUCKET="s3://xiboplayer-images"
+          DEST="$BUCKET/xiboplayer-kiosk-atomic/${TAG}"
 
-      - name: Create or update GitHub Release
+          for file in release/*.iso; do
+            [ -f "$file" ] || continue
+            NAME=$(basename "$file")
+            echo "Uploading $NAME"
+            aws s3 cp "$file" "$DEST/$NAME" --endpoint-url "$R2_ENDPOINT"
+          done
+
+          # Generate and upload checksums
+          (cd release && sha256sum *.iso > SHA256SUMS)
+          aws s3 cp release/SHA256SUMS "$DEST/SHA256SUMS" --endpoint-url "$R2_ENDPOINT"
+
+          # Update LATEST pointer
+          echo "$TAG" > /tmp/LATEST
+          aws s3 cp /tmp/LATEST "$BUCKET/xiboplayer-kiosk-atomic/LATEST" --endpoint-url "$R2_ENDPOINT"
+
+      - name: Create GitHub Release with download links
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.version.outputs.tag }}
+          DL: https://images.xiboplayer.org/xiboplayer-kiosk-atomic
         run: |
-          NOTES=$(cat <<'NOTES_EOF'
+          NOTES=$(cat <<NOTES_EOF
           # Xiboplayer Kiosk (Atomic Silverblue)
 
           Self-contained Fedora Atomic kiosk image with immutable OS, automatic updates, and rollback support.
+
+          ## Download
+
+          | Image | Download |
+          |-------|----------|
+          | **x86_64 ISO** | [xiboplayer-kiosk-atomic_${TAG}_x86_64.iso](${DL}/${TAG}/xiboplayer-kiosk-atomic_${TAG}_x86_64.iso) |
+          | **aarch64 ISO** | [xiboplayer-kiosk-atomic_${TAG}_aarch64.iso](${DL}/${TAG}/xiboplayer-kiosk-atomic_${TAG}_aarch64.iso) |
+          | **Checksums** | [SHA256SUMS](${DL}/${TAG}/SHA256SUMS) |
 
           ## What's included
 
@@ -275,4 +304,3 @@ jobs:
           gh release view "$TAG" --json tagName >/dev/null 2>&1 || \
             gh release create "$TAG" --title "Kiosk Atomic $TAG" --notes ""
           gh release edit "$TAG" --notes "$NOTES"
-          gh release upload "$TAG" release/* --clobber
