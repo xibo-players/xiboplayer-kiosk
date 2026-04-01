@@ -131,7 +131,7 @@ jobs:
       - name: List output
         run: ls -lah output/*.iso
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: atomic-iso-x86_64
           path: output/*.iso
@@ -181,7 +181,7 @@ jobs:
       - name: List output
         run: ls -lah output/*.iso
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: atomic-iso-aarch64
           path: output/*.iso
