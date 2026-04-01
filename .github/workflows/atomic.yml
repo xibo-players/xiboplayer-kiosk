@@ -120,12 +120,13 @@ jobs:
             --target-arch x86_64 \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-x86_64
 
-      - name: Rename ISO
+      - name: Rename ISO and fix permissions
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          mv output/bootiso/install.iso \
+          sudo mv output/bootiso/install.iso \
             output/xiboplayer-kiosk-atomic_${VERSION}_x86_64.iso
+          sudo chown -R $(id -u):$(id -g) output/
 
       - name: List output
         run: ls -lah output/*.iso
@@ -169,12 +170,13 @@ jobs:
             --target-arch aarch64 \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-aarch64
 
-      - name: Rename ISO
+      - name: Rename ISO and fix permissions
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          mv output/bootiso/install.iso \
+          sudo mv output/bootiso/install.iso \
             output/xiboplayer-kiosk-atomic_${VERSION}_aarch64.iso
+          sudo chown -R $(id -u):$(id -g) output/
 
       - name: List output
         run: ls -lah output/*.iso
