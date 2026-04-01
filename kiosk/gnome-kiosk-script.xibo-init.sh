@@ -1,8 +1,9 @@
 #!/bin/bash
 # Xibo CMS Registration Wizard
 # =================================
-# First-boot wizard that collects CMS credentials via Zenity dialogs,
-# then hands off to the session holder.
+# First-boot wizard. Asks which player to use, then:
+# - Electron/Chromium: start the player service (has its own setup UI)
+# - Arexibo: collect CMS credentials via Zenity, write cms.json, start service
 
 XIBO_KIOSK_DIR="${XIBO_KIOSK_DIR:-/usr/share/xiboplayer-kiosk}"
 XIBO_DATA_DIR="${XIBO_DATA_DIR:-${HOME}/.local/share/xibo}"
@@ -16,117 +17,85 @@ sleep 2
 # Import display environment into systemd user manager
 systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_RUNTIME_DIR
 
-# Show welcome message
+# Get IP for display
+IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "unknown")
 notify-send "Xibo Setup" "Starting configuration wizard..." -t 3000
 
-# Main registration loop
+# Main loop
 while true; do
-    # Get CMS host from user
-    CMS_HOST=$(zenity --entry \
-        --title="Xibo Setup" \
-        --text="Enter CMS Server URL (e.g., https://xibo.example.com/):" \
-        --entry-text="https://" \
-        --width=400)
-
-    if [ -z "$CMS_HOST" ]; then
-        zenity --question \
-            --title="Xibo Setup" \
-            --text="Setup cancelled. Do you want to try again?" \
-            --width=300
-
-        if [ $? -ne 0 ]; then
-            notify-send "Xibo" "Setup cancelled. Rebooting in 10 seconds..." -t 8000
-            sleep 10
-            doas reboot 2>/dev/null || reboot
-        fi
-        continue
-    fi
-
-    # Ensure URL ends with /
-    [[ "${CMS_HOST}" != */ ]] && CMS_HOST="${CMS_HOST}/"
-
-    # Get CMS key from user (plain text — this is a dedicated kiosk)
-    CMS_KEY=$(zenity --entry \
-        --title="Xibo Setup" \
-        --text="Enter CMS Key:" \
-        --width=400)
-
-    if [ -z "$CMS_KEY" ]; then
-        zenity --warning \
-            --title="Xibo Setup" \
-            --text="CMS Key is required." \
-            --width=300
-        continue
-    fi
-
-    # Generate display ID based on machine-id and timestamp
-    MACHINE_ID=$(cat /etc/machine-id 2>/dev/null || echo "unknown")
-    TIMESTAMP=$(date +%s)
-    DISPLAY_ID=$(echo "${MACHINE_ID}${TIMESTAMP}${CMS_KEY}" | sha256sum | cut -c1-12)
-
-    # Get optional display name
-    HOSTNAME=$(hostname)
-    DISPLAY_NAME=$(zenity --entry \
-        --title="Xibo Setup" \
-        --text="Enter Display Name (optional):" \
-        --entry-text="${HOSTNAME}" \
-        --width=400)
-
-    [ -z "$DISPLAY_NAME" ] && DISPLAY_NAME="${HOSTNAME}"
-
-    # Detect installed players and let user pick
+    # ── Step 1: Choose player ──────────────────────────────────────
     PLAYERS=()
     [ -f /usr/bin/xiboplayer-electron ] && PLAYERS+=(TRUE "Electron" "Web-based player (recommended)")
     [ -f /usr/bin/xiboplayer-chromium ] && PLAYERS+=(FALSE "Chromium" "Chromium kiosk wrapper")
     [ -f /usr/bin/arexibo ] && PLAYERS+=(FALSE "Arexibo" "Rust-based native player")
 
     if [ ${#PLAYERS[@]} -gt 3 ]; then
-        # More than one player available — ask user
         PLAYER_CHOICE=$(zenity --list --radiolist \
             --title="Xibo Setup" \
             --text="Select player:" \
             --column="Select" --column="Player" --column="Description" \
             "${PLAYERS[@]}" \
             --width=450 --height=300)
-
         [ -z "$PLAYER_CHOICE" ] && PLAYER_CHOICE="${PLAYERS[1]}"
     else
-        # Only one player — use it
         PLAYER_CHOICE="${PLAYERS[1]}"
     fi
 
-    # Google Geolocation API key (optional)
-    GEO_API_KEY=$(zenity --entry \
-        --title="Xibo Setup" \
-        --text="Google Geolocation API Key (optional, press Enter to skip):" \
-        --width=400) || true
-
-    # Get IP for confirmation dialog
-    IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "unknown")
-
-    # Show summary and confirm
-    SUMMARY="CMS Host: ${CMS_HOST}\nDisplay ID: xibo-${DISPLAY_ID}\nDisplay Name: ${DISPLAY_NAME}\nPlayer: ${PLAYER_CHOICE}\nIP Address: ${IP}"
-    [ -n "$GEO_API_KEY" ] && SUMMARY="${SUMMARY}\nGeo API Key: ${GEO_API_KEY:0:8}..."
-
-    zenity --question \
-        --title="Xibo Setup - Confirm" \
-        --text="Configuration Summary:\n\n${SUMMARY}\n\nProceed with registration?" \
-        --width=400
-
-    if [ $? -ne 0 ]; then
-        continue
-    fi
-
-    # Set the selected player via alternatives
+    # Set alternatives
     case "$PLAYER_CHOICE" in
         Electron)  doas alternatives --set xiboplayer /usr/bin/xiboplayer-electron ;;
         Chromium)  doas alternatives --set xiboplayer /usr/bin/xiboplayer-chromium ;;
         Arexibo)   doas alternatives --set xiboplayer /usr/bin/arexibo ;;
     esac
 
-    # Create cms.json
-    mkdir -p "${XIBO_DATA_DIR}"
-    cat > "${XIBO_DATA_DIR}/cms.json" << EOF
+    # Map to systemd service
+    case "$PLAYER_CHOICE" in
+        Electron)  PLAYER_SERVICE="xiboplayer-electron.service" ;;
+        Chromium)  PLAYER_SERVICE="xiboplayer-chromium.service" ;;
+        Arexibo)   PLAYER_SERVICE="xibo-player.service" ;;
+    esac
+
+    # ── Step 2: Player-specific setup ──────────────────────────────
+    if [ "$PLAYER_CHOICE" = "Arexibo" ]; then
+        # Arexibo needs CMS credentials — collect via Zenity
+        CMS_HOST=$(zenity --entry \
+            --title="Xibo Setup" \
+            --text="Enter CMS Server URL (e.g., https://xibo.example.com/):" \
+            --entry-text="https://" \
+            --width=400)
+
+        if [ -z "$CMS_HOST" ]; then
+            continue
+        fi
+
+        [[ "${CMS_HOST}" != */ ]] && CMS_HOST="${CMS_HOST}/"
+
+        CMS_KEY=$(zenity --entry \
+            --title="Xibo Setup" \
+            --text="Enter CMS Key:" \
+            --width=400)
+
+        if [ -z "$CMS_KEY" ]; then
+            zenity --warning --title="Xibo Setup" --text="CMS Key is required." --width=300
+            continue
+        fi
+
+        # Generate display ID
+        MACHINE_ID=$(cat /etc/machine-id 2>/dev/null || echo "unknown")
+        TIMESTAMP=$(date +%s)
+        DISPLAY_ID=$(echo "${MACHINE_ID}${TIMESTAMP}${CMS_KEY}" | sha256sum | cut -c1-12)
+
+        HOSTNAME=$(hostname)
+        DISPLAY_NAME=$(zenity --entry \
+            --title="Xibo Setup" \
+            --text="Enter Display Name (optional):" \
+            --entry-text="${HOSTNAME}" \
+            --width=400)
+        [ -z "$DISPLAY_NAME" ] && DISPLAY_NAME="${HOSTNAME}"
+
+        # Write arexibo config
+        mkdir -p "${XIBO_DATA_DIR}"
+        cat > "${XIBO_DATA_DIR}/cms.json" << EOF
 {
     "address": "${CMS_HOST}",
     "key": "${CMS_KEY}",
@@ -136,29 +105,17 @@ while true; do
 }
 EOF
 
-    # Write env file for player service
-    cat > "${XIBO_DATA_DIR}/env" << EOF
-# Player environment — generated by xiboplayer-kiosk setup wizard
-GOOGLE_GEO_API_KEY=${GEO_API_KEY}
-EOF
+        notify-send -r 1 -t 0 "Xibo" "IP: $IP — Configuration saved. Starting Arexibo..." 2>/dev/null || true
 
-    if [ $? -eq 0 ]; then
-        notify-send -r 1 -t 0 "Xibo" "IP: $IP — Configuration saved. Starting player..." 2>/dev/null || true
-
-        # Start the player service and wait for initial registration attempt
-        systemctl --user start xibo-player.service
+        # Enable and start arexibo
+        systemctl --user enable --now "$PLAYER_SERVICE"
         sleep 5
 
-        if systemctl --user is-active --quiet xibo-player.service; then
+        if systemctl --user is-active --quiet "$PLAYER_SERVICE"; then
             notify-send -r 1 -t 5000 "Xibo" "IP: $IP — Connected to CMS" 2>/dev/null || true
-
-            zenity --info \
-                --title="Xibo Setup Complete" \
-                --text="Player is running!\n\nDisplay ID: xibo-${DISPLAY_ID}\nIP Address: ${IP}\n\nIf the display shows no content, authorize it in your Xibo CMS." \
-                --width=400
+            sleep 3
         else
-            # Exit code 2 = not authorized yet (transient), anything else = real error
-            EXIT_CODE=$(systemctl --user show -p ExecMainStatus --value xibo-player.service 2>/dev/null)
+            EXIT_CODE=$(systemctl --user show -p ExecMainStatus --value "$PLAYER_SERVICE" 2>/dev/null)
 
             if [ "$EXIT_CODE" = "2" ]; then
                 notify-send -r 1 -t 0 -u normal "Xibo" \
@@ -169,14 +126,11 @@ EOF
                     --text="Display registered but not yet authorized.\n\nDisplay ID: xibo-${DISPLAY_ID}\nIP Address: ${IP}\n\nPlease authorize this display in your Xibo CMS.\nThe player will retry automatically." \
                     --width=400
             else
-                ERROR=$(journalctl --user -u xibo-player.service --no-pager -n 20 -q 2>/dev/null \
+                ERROR=$(journalctl --user -u "$PLAYER_SERVICE" --no-pager -n 20 -q 2>/dev/null \
                     | grep -iE 'error|fail|denied|refused|timeout' \
                     | tail -1 \
                     | sed 's/.*xibo\[.*\]: //' \
                     | head -c 200)
-
-                notify-send -r 1 -t 0 -u critical "Xibo" \
-                    "IP: $IP — Error: ${ERROR:-player failed to start}" 2>/dev/null || true
 
                 zenity --question \
                     --title="Xibo Setup - Error" \
@@ -190,13 +144,14 @@ EOF
             fi
         fi
 
-        # Hand off to session holder (has monitoring loop)
-        pkill -u "$(whoami)" dunst 2>/dev/null || true
-        exec "${XIBO_KIOSK_DIR}/gnome-kiosk-script.xibo.sh"
     else
-        zenity --error \
-            --title="Xibo Setup" \
-            --text="Failed to save configuration. Please try again." \
-            --width=300
+        # Electron / Chromium — they have their own setup UI
+        notify-send -r 1 -t 3000 "Xibo" "IP: $IP — Starting ${PLAYER_CHOICE}..." 2>/dev/null || true
+        systemctl --user enable --now "$PLAYER_SERVICE"
+        sleep 3
     fi
+
+    # ── Done — close dunst and hand off to session holder ──────────
+    pkill -u "$(whoami)" dunst 2>/dev/null || true
+    exec "${XIBO_KIOSK_DIR}/gnome-kiosk-script.xibo.sh"
 done
