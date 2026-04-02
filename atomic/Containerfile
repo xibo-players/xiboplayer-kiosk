@@ -11,6 +11,9 @@
 
 FROM quay.io/fedora/fedora-bootc:43
 
+# Skip docs for all dnf installs (saves ~100 MB)
+RUN echo "tsflags=nodocs" >> /etc/dnf/dnf.conf
+
 # RPM Fusion free + nonfree (retry on mirror timeout)
 RUN dnf install -y \
     https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-43.noarch.rpm \
@@ -50,10 +53,18 @@ RUN dnf install -y libva-intel-media-driver 2>/dev/null; \
     dnf clean all || true
 
 # Hardware support + media player
+# Install linux-firmware then trim to Intel/AMD/RPi only (saves ~400 MB)
 RUN dnf install -y \
     NetworkManager-wifi linux-firmware wireguard-tools \
     mpv \
-    && dnf clean all
+    && dnf clean all \
+    && cd /usr/lib/firmware \
+    && find . -maxdepth 1 -type d \
+       ! -name '.' ! -name 'i915' ! -name 'amdgpu' ! -name 'intel' \
+       ! -name 'nvidia' ! -name 'brcm' ! -name 'iwlwifi' ! -name 'ath10k' \
+       ! -name 'ath11k' ! -name 'mediatek' ! -name 'rtl_nic' ! -name 'rtlwifi' \
+       ! -name 'rtw88' ! -name 'rtw89' ! -name 'qcom' \
+       -exec rm -rf {} + 2>/dev/null || true
 
 # Kiosk utilities
 RUN dnf install -y \
@@ -96,6 +107,14 @@ RUN systemctl preset-all && \
 
 # Automatic updates via bootc
 RUN systemctl enable bootc-fetch-apply-updates.timer || true
+
+# Final size cleanup — strip man pages, unused locale data, dnf cache
+RUN rm -rf /usr/share/man /usr/share/doc /usr/share/info \
+    && rm -rf /var/cache/dnf /var/log/dnf* /var/log/hawkey* \
+    && find /usr/share/locale -mindepth 1 -maxdepth 1 \
+       ! -name 'en*' ! -name 'ca*' ! -name 'es*' ! -name 'fr*' ! -name 'de*' \
+       ! -name 'it*' ! -name 'pt*' ! -name 'locale.alias' \
+       -exec rm -rf {} + 2>/dev/null || true
 
 # Finalize
 RUN bootc container lint
