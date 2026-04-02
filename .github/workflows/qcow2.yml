@@ -1,0 +1,20 @@
+name: Build QCOW2 (x86_64 only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    uses: xibo-players/.github/.github/workflows/build-iso.yml@main
+    with:
+      package-name: xiboplayer-kiosk
+      kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
+      build-disk-images: true
+      build-self-contained-iso: false
+      build-netinstall: false
+      architectures: 'x86_64'
+      default-version: '0.4.15'
+    secrets: inherit
