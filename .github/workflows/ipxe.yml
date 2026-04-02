@@ -76,7 +76,8 @@ jobs:
           ls -lh dist/
 
       - name: Upload to R2
-        if: env.R2_ENDPOINT != ''
+        if: env.R2_BUCKET != ''
+        continue-on-error: true
         run: |
           aws s3 cp dist/xiboplayer-ipxe.usb s3://${R2_BUCKET}/ipxe/xiboplayer-ipxe.usb \
             --endpoint-url "${R2_ENDPOINT}" --content-type application/octet-stream
@@ -84,10 +85,7 @@ jobs:
             --endpoint-url "${R2_ENDPOINT}" --content-type application/octet-stream
           aws s3 cp dist/boot.ipxe s3://${R2_BUCKET}/ipxe/boot.ipxe \
             --endpoint-url "${R2_ENDPOINT}" --content-type text/plain
-          echo "Uploaded to R2:"
-          echo "  https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe.usb"
-          echo "  https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe.efi"
-          echo "  https://dl.xiboplayer.org/ipxe/boot.ipxe"
+          echo "Uploaded to R2"
 
       - name: Upload to GitHub Release
         if: github.ref_type == 'tag'
