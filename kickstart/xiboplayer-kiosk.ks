@@ -69,11 +69,15 @@ gstreamer1-plugins-ugly-free
 gstreamer1-plugin-openh264
 gstreamer1-plugin-libav
 
-# Kiosk utilities (also pulled by xiboplayer-kiosk, listed for clarity)
+# Kiosk utilities
 zenity
 dunst
 unclutter
 opendoas
+
+# First-boot wizard (libadwaita GTK4 app)
+python3-gobject
+libadwaita
 
 # Networking
 avahi
@@ -136,13 +140,29 @@ dnf install -y \
   dnf install -y \
   https://dl.xiboplayer.org/rpm/fedora/43/noarch/xiboplayer-release-43-7.fc43.noarch.rpm
 
-# Install all available players
-dnf install -y xiboplayer-kiosk xiboplayer-electron xiboplayer-chromium arexibo
+# Install players based on xibo.profile kernel parameter
+# Profiles: full (default), electron, chromium
+# Set via iPXE: kernel vmlinuz inst.ks=... xibo.profile=electron
+PROFILE=$(sed -n 's/.*xibo\.profile=\([^ ]*\).*/\1/p' /proc/cmdline)
+PROFILE="${PROFILE:-full}"
 
-# Register players via alternatives (highest priority = default)
-alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 30
-alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-chromium 20
-alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/arexibo 10
+case "$PROFILE" in
+  electron)
+    dnf install -y xiboplayer-kiosk xiboplayer-electron
+    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 30
+    ;;
+  chromium)
+    dnf install -y xiboplayer-kiosk xiboplayer-chromium
+    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-chromium 20
+    ;;
+  *)
+    dnf install -y xiboplayer-kiosk xiboplayer-electron xiboplayer-chromium arexibo
+    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 30
+    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-chromium 20
+    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/arexibo 10
+    ;;
+esac
+echo "Installed profile: $PROFILE"
 %end
 
 # Configure xibo user and directories

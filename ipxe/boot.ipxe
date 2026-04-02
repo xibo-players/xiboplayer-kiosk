@@ -1,0 +1,108 @@
+#!ipxe
+# =============================================================================
+# xiboplayer — iPXE Network Boot Menu
+#
+# Boot any machine from the network and install xiboplayer-kiosk.
+# Works over the internet — no LAN server needed.
+#
+# Build USB: ./build-ipxe-usb.sh
+# Or chainload from existing PXE: chain https://boot.xiboplayer.org/boot.ipxe
+# =============================================================================
+
+set menu-timeout 30000
+set base-url https://dl.xiboplayer.org/ipxe
+set ks-base https://raw.githubusercontent.com/xibo-players/xiboplayer-kiosk/main/kickstart
+set fedora-mirror https://download.fedoraproject.org/pub/fedora/linux/releases/43/Everything/x86_64/os
+
+# Fedora kernel + initrd (netinstall)
+set kernel-url ${fedora-mirror}/images/pxeboot/vmlinuz
+set initrd-url ${fedora-mirror}/images/pxeboot/initrd.img
+
+# ── DHCP + IP ────────────────────────────────────────────────────────────────
+
+isset ${ip} || dhcp || goto failed
+echo IP: ${ip} / ${netmask} / Gateway: ${gateway} / DNS: ${dns}
+echo
+
+# ── Boot Menu ────────────────────────────────────────────────────────────────
+
+:menu
+menu xiboplayer — Network Install
+item --gap --             ── Kiosk Install ──────────────────────
+item full                 Full Kiosk (Electron + Chromium + arexibo)
+item electron             Electron only
+item chromium             Chromium only (lightweight)
+item --gap --             ── Advanced ────────────────────────────
+item atomic               Atomic image (immutable OS, fedora-bootc)
+item custom               Custom install (Anaconda interactive)
+item --gap --             ── Tools ──────────────────────────────
+item shell                iPXE shell
+item reboot               Reboot
+item --key x exit         Exit to BIOS
+choose --timeout ${menu-timeout} --default full selected || goto menu
+goto ${selected}
+
+# ── Full Kiosk ───────────────────────────────────────────────────────────────
+
+:full
+echo Booting Full Kiosk install (Electron + Chromium + arexibo)...
+kernel ${kernel-url} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=full rd.neednet=1 ip=dhcp
+initrd ${initrd-url}
+boot || goto failed
+
+# ── Electron Only ────────────────────────────────────────────────────────────
+
+:electron
+echo Booting Electron-only install...
+kernel ${kernel-url} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=electron rd.neednet=1 ip=dhcp
+initrd ${initrd-url}
+boot || goto failed
+
+# ── Chromium Only ────────────────────────────────────────────────────────────
+
+:chromium
+echo Booting Chromium-only install...
+kernel ${kernel-url} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=chromium rd.neednet=1 ip=dhcp
+initrd ${initrd-url}
+boot || goto failed
+
+# ── Atomic ───────────────────────────────────────────────────────────────────
+
+:atomic
+echo
+echo The Atomic image is an OCI container — it cannot be installed via kickstart.
+echo Download the Atomic ISO from: https://www.xiboplayer.org/downloads
+echo
+echo Press any key to return to menu...
+prompt
+goto menu
+
+# ── Custom ───────────────────────────────────────────────────────────────────
+
+:custom
+echo Booting Anaconda interactive installer...
+kernel ${kernel-url} rd.neednet=1 ip=dhcp
+initrd ${initrd-url}
+boot || goto failed
+
+# ── Tools ────────────────────────────────────────────────────────────────────
+
+:shell
+echo Type 'exit' to return to menu
+shell
+goto menu
+
+:reboot
+reboot
+
+:exit
+exit
+
+# ── Error ────────────────────────────────────────────────────────────────────
+
+:failed
+echo
+echo Boot failed. Check network connection.
+echo
+prompt Press any key to return to menu...
+goto menu

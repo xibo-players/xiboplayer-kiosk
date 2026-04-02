@@ -53,6 +53,7 @@ install -Dm755 kiosk/xibo-show-ip.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xi
 install -Dm755 kiosk/xibo-show-cms.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-show-cms.sh
 install -Dm644 kiosk/keyd-xibo.conf %{buildroot}%{_sysconfdir}/keyd/xibo.conf
 install -Dm644 kiosk/copr-keyd.repo %{buildroot}%{_sysconfdir}/yum.repos.d/copr-keyd.repo
+install -Dm755 kiosk/xiboplayer-setup.py %{buildroot}%{_datadir}/xiboplayer-kiosk/xiboplayer-setup.py
 
 # Create skel directory for gnome-kiosk-script dispatcher
 install -d %{buildroot}%{_sysconfdir}/skel/.local/bin
@@ -67,6 +68,7 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_datadir}/xiboplayer-kiosk/xibo-keyd-run.sh
 %{_datadir}/xiboplayer-kiosk/xibo-show-ip.sh
 %{_datadir}/xiboplayer-kiosk/xibo-show-cms.sh
+%{_datadir}/xiboplayer-kiosk/xiboplayer-setup.py
 %{_userunitdir}/xibo-player.service
 %{_sysconfdir}/keyd/xibo.conf
 %{_sysconfdir}/yum.repos.d/copr-keyd.repo
