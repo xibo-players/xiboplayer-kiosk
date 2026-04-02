@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.15 (2026-04-02)
+
+- Fix session holder service detection, zenity fallback, arexibo.service, iPXE boot
+
 ## 0.4.14 (2026-04-02)
 
 ### Bug Fixes
