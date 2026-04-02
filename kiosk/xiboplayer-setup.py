@@ -160,6 +160,49 @@ def make_language_page():
     return page
 
 
+def make_display_page():
+    """Display config — launches GNOME Settings display panel."""
+    page = Adw.StatusPage(
+        title='Display',
+        description='Optionally configure resolution, orientation and layout.\nClick Done to skip.',
+    )
+
+    group = Adw.PreferencesGroup()
+
+    # Button to open GNOME display settings
+    row = Adw.ActionRow(
+        title='Open Display Settings',
+        subtitle='Arrange displays, set resolution, rotation and scaling',
+    )
+    row.set_activatable(True)
+
+    icon = Gtk.Image.new_from_icon_name('go-next-symbolic')
+    row.add_suffix(icon)
+
+    def on_activated(_row):
+        try:
+            subprocess.Popen(
+                ['gnome-control-center', 'display'],
+                start_new_session=True,
+            )
+        except Exception:
+            pass
+
+    row.connect('activated', on_activated)
+    group.add(row)
+
+    # Hint for CLI users
+    hint = Adw.ActionRow(
+        title='Command line',
+        subtitle='gdctl set --logical-monitor --monitor HDMI-1 --transform 90 --persistent',
+    )
+    hint.add_css_class('property')
+    group.add(hint)
+
+    page.set_child(group)
+    return page
+
+
 def make_player_page():
     """Player selection — same layout as gnome-initial-setup account page."""
     page = Adw.StatusPage(
@@ -318,13 +361,15 @@ class SetupWindow(Adw.ApplicationWindow):
         self.language_page = make_language_page()
         self.player_page = make_player_page()
         self.cms_page = make_cms_page()
+        self.display_page = make_display_page()
 
         self.stack.add_named(self.language_page, 'language')
         self.stack.add_named(self.player_page, 'player')
         self.stack.add_named(self.cms_page, 'cms')
+        self.stack.add_named(self.display_page, 'display')
 
         # Page order for navigation
-        self.pages = ['language', 'player', 'cms']
+        self.pages = ['language', 'player', 'cms', 'display']
 
         toolbar.set_content(self.stack)
         self.set_content(toolbar)
@@ -334,12 +379,7 @@ class SetupWindow(Adw.ApplicationWindow):
         return self.stack.get_visible_child_name()
 
     def _is_last(self):
-        current = self._current()
-        if current == 'player' and self.player_page.selected != 'Arexibo':
-            return True
-        if current == 'cms':
-            return True
-        return False
+        return self._current() == 'display'
 
     def _update_buttons(self):
         current = self._current()
@@ -360,7 +400,8 @@ class SetupWindow(Adw.ApplicationWindow):
         current = self._current()
 
         if current == 'language':
-            self._apply_locale()
+            import threading
+            threading.Thread(target=self._apply_locale, daemon=True).start()
             self._go('player')
             return
 
@@ -368,20 +409,27 @@ class SetupWindow(Adw.ApplicationWindow):
             if self.player_page.selected == 'Arexibo':
                 self._go('cms')
             else:
-                self._finish()
+                self._go('display')
             return
 
         if current == 'cms':
             if not validate_cms(self.cms_page):
                 return
+            self._go('display')
+            return
+
+        if current == 'display':
             self._finish()
 
     def _apply_locale(self):
         loc = self.language_page.selected_locale
-        subprocess.run(
-            ['doas', 'localectl', 'set-locale', f'LANG={loc}'],
-            capture_output=True,
-        )
+        try:
+            subprocess.run(
+                ['doas', 'localectl', 'set-locale', f'LANG={loc}'],
+                capture_output=True, timeout=5,
+            )
+        except Exception:
+            pass  # non-fatal on dev machines without doas
 
     def _finish(self):
         player = self.player_page.selected
