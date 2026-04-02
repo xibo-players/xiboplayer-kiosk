@@ -133,11 +133,11 @@ dnf install -y \
 
 # Install xiboplayer-release (ships GPG key + repo config + keyd COPR)
 %post --erroronfail
-# Install with --nogpgcheck since the key isn't available yet —
-# xiboplayer-release itself places the key at /etc/pki/rpm-gpg/RPM-GPG-KEY-xiboplayer
-# All subsequent dnf installs will then pass GPG verification
-dnf install -y --nogpgcheck \
-  https://github.com/xibo-players/xibo-players.github.io/releases/latest/download/xiboplayer-release-43.fc43.noarch.rpm || \
+# --nogpgcheck for the release RPM only — it ships the signing key.
+# On Everything ISO: installs from local repo (offline).
+# On netinstall: fetches from network (fallback URL).
+# All subsequent dnf installs verify GPG normally.
+dnf install -y --nogpgcheck xiboplayer-release || \
   dnf install -y --nogpgcheck \
   https://dl.xiboplayer.org/rpm/fedora/43/noarch/xiboplayer-release-43-7.fc43.noarch.rpm
 
