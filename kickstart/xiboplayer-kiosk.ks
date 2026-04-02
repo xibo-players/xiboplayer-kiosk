@@ -56,6 +56,7 @@ google-noto-emoji-color-fonts
 gdm
 gnome-kiosk
 gnome-kiosk-script-session
+mesa-dri-drivers
 
 # gnome-initial-setup: language/keyboard/network/timezone/password on first boot
 gnome-initial-setup

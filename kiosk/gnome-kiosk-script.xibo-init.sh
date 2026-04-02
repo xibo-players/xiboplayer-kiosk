@@ -15,8 +15,14 @@ dunst -conf "${XIBO_KIOSK_DIR}/dunstrc" &
 # Wait for Wayland compositor
 sleep 2
 
+# Software rendering fallback for VMs without GPU
+if ! eglinfo 2>/dev/null | grep -q "EGL_VENDOR"; then
+    export GSK_RENDERER=cairo
+    export LIBGL_ALWAYS_SOFTWARE=1
+fi
+
 # Import display environment into systemd user manager
-systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_RUNTIME_DIR
+systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_RUNTIME_DIR GSK_RENDERER LIBGL_ALWAYS_SOFTWARE
 
 # Disable donation popup
 gsettings set org.gnome.desktop.interface show-donation-popup false 2>/dev/null || true
