@@ -45,7 +45,7 @@ status_notify() {
 
 # Helper: extract error reason from player journal logs
 get_player_error() {
-    journalctl --user -u xibo-player.service --no-pager -n 20 -q 2>/dev/null \
+    journalctl --user -u "$PLAYER_SERVICE" --no-pager -n 20 -q 2>/dev/null \
         | grep -iE 'error|fail|denied|unauthorized|not authorised|refused|timeout' \
         | tail -1 \
         | sed 's/.*xibo\[.*\]: //' \
@@ -55,15 +55,20 @@ get_player_error() {
 # Clear any lingering notifications from previous session/wizard
 dunstctl close-all 2>/dev/null || true
 
+# Determine which service to manage from setup-result.json
+PLAYER_SERVICE="xibo-player.service"
+if [ -f "${XIBO_DATA_DIR}/setup-result.json" ]; then
+    SVC=$(python3 -c "import json; print(json.load(open('${XIBO_DATA_DIR}/setup-result.json'))['service'])" 2>/dev/null)
+    [ -n "$SVC" ] && PLAYER_SERVICE="$SVC"
+fi
+
 # Show initial status briefly (5 seconds)
 IP=$(get_ip)
 CMS=$(grep -oP '"address"\s*:\s*"\K[^"]+' "${XIBO_DATA_DIR}/cms.json" 2>/dev/null || echo "not configured")
-notify-send -t 5000 "Xibo" "IP: $IP\nCMS: $CMS\nStarting player..."
+notify-send -t 5000 "Xibo" "IP: $IP\nCMS: $CMS\nStarting ${PLAYER_SERVICE}..."
 
-# Start player via systemd (handles restarts, resource limits, logging)
-if [ -f "${XIBO_DATA_DIR}/cms.json" ]; then
-    systemctl --user start xibo-player.service
-fi
+# Start player via systemd — always start, Electron/Chromium have their own setup UI
+systemctl --user start "$PLAYER_SERVICE" 2>/dev/null || true
 
 # Monitor player health
 FAIL_COUNT=0
@@ -74,13 +79,13 @@ while true; do
 
     IP=$(get_ip)
 
-    if systemctl --user is-active --quiet xibo-player.service; then
+    if systemctl --user is-active --quiet "$PLAYER_SERVICE"; then
         FAIL_COUNT=0
         # Close notification when connected — player is showing content
         dunstctl close-all 2>/dev/null || notify-send -r "$NOTIFY_ID" -t 1 " " " " 2>/dev/null || true
     else
         # Check exit code: 2 = not authorized yet (transient), 1 = real error
-        EXIT_CODE=$(systemctl --user show -p ExecMainStatus --value xibo-player.service 2>/dev/null)
+        EXIT_CODE=$(systemctl --user show -p ExecMainStatus --value "$PLAYER_SERVICE" 2>/dev/null)
 
         if [ "$EXIT_CODE" = "2" ]; then
             # Display registered but not yet authorized in CMS — wait patiently
@@ -106,6 +111,7 @@ while true; do
                         --width=400 2>/dev/null; then
                         # Remove config so dispatcher picks wizard on next boot
                         rm -f "${XIBO_DATA_DIR}/cms.json"
+                        rm -f "${XIBO_DATA_DIR}/setup-result.json"
                         pkill -u "$(whoami)" dunst 2>/dev/null || true
                         exec "${XIBO_KIOSK_DIR}/gnome-kiosk-script.xibo-init.sh"
                     fi
@@ -114,7 +120,7 @@ while true; do
                 # Reset counter — either user declined reconfigure or no wizard available
                 FAIL_COUNT=0
                 # Try restarting the service
-                systemctl --user restart xibo-player.service 2>/dev/null || true
+                systemctl --user restart "$PLAYER_SERVICE" 2>/dev/null || true
                 status_notify "IP: $IP — Restarting player..." "normal"
             fi
         fi
