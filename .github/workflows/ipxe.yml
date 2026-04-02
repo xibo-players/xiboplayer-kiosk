@@ -26,7 +26,8 @@ jobs:
       - name: Install build dependencies
         run: |
           apt-get update
-          apt-get install -y git gcc make mtools perl liblzma-dev awscli curl
+          apt-get install -y git gcc make mtools perl liblzma-dev curl python3-pip
+          pip install awscli --break-system-packages
 
       - uses: actions/checkout@v4
 
