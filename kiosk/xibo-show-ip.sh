@@ -5,7 +5,7 @@ XIBO_DATA_DIR="${XIBO_DATA_DIR:-${HOME}/.local/share/xibo}"
 IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "unknown")
 # Check all player services, report whichever is active
 STATUS="unknown"
-for svc in xibo-player.service xiboplayer-electron.service xiboplayer-chromium.service; do
+for svc in arexibo.service xiboplayer-electron.service xiboplayer-chromium.service; do
   s=$(systemctl --user is-active "$svc" 2>/dev/null)
   if [ "$s" = "active" ]; then STATUS="active ($svc)"; break; fi
 done

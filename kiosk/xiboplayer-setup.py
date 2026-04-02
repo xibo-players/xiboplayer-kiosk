@@ -51,7 +51,7 @@ PLAYERS = [
      'Web-based player with built-in setup UI (recommended)', True),
     ('Chromium', '/usr/bin/xiboplayer-chromium', 'xiboplayer-chromium.service',
      'Chromium kiosk player with built-in setup UI', False),
-    ('Arexibo', '/usr/bin/arexibo', 'xibo-player.service',
+    ('Arexibo', '/usr/bin/arexibo', 'arexibo.service',
      'Native Rust player — requires CMS credentials', False),
 ]
 

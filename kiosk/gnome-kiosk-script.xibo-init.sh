@@ -51,7 +51,7 @@ if [ ! -f "${XIBO_DATA_DIR}/setup-result.json" ]; then
         case "$PLAYER" in
             xiboplayer-electron) SERVICE="xiboplayer-electron.service" ;;
             xiboplayer-chromium) SERVICE="xiboplayer-chromium.service" ;;
-            arexibo) SERVICE="xibo-player.service" ;;
+            arexibo) SERVICE="arexibo.service" ;;
             *) PLAYER="xiboplayer-electron"; SERVICE="xiboplayer-electron.service" ;;
         esac
 

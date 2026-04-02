@@ -2,7 +2,7 @@
 # Xibo GNOME Kiosk Session Holder
 # ===================================
 # Keeps the gnome-kiosk session alive while delegating player management
-# to systemd (xibo-player.service). Shows persistent status notifications.
+# to systemd (arexibo.service). Shows persistent status notifications.
 
 XIBO_KIOSK_DIR="${XIBO_KIOSK_DIR:-/usr/share/xiboplayer-kiosk}"
 XIBO_DATA_DIR="${XIBO_DATA_DIR:-${HOME}/.local/share/xibo}"
@@ -56,7 +56,7 @@ get_player_error() {
 dunstctl close-all 2>/dev/null || true
 
 # Determine which service to manage from setup-result.json
-PLAYER_SERVICE="xibo-player.service"
+PLAYER_SERVICE="arexibo.service"
 if [ -f "${XIBO_DATA_DIR}/setup-result.json" ]; then
     SVC=$(python3 -c "import json; print(json.load(open('${XIBO_DATA_DIR}/setup-result.json'))['service'])" 2>/dev/null)
     [ -n "$SVC" ] && PLAYER_SERVICE="$SVC"
