@@ -8,7 +8,7 @@
 XIBO_KIOSK_DIR="${XIBO_KIOSK_DIR:-/usr/share/xiboplayer-kiosk}"
 XIBO_DATA_DIR="${XIBO_DATA_DIR:-${HOME}/.local/share/xibo}"
 
-if [ -f "${XIBO_DATA_DIR}/cms.json" ]; then
+if [ -f "${XIBO_DATA_DIR}/setup-result.json" ]; then
     exec "${XIBO_KIOSK_DIR}/gnome-kiosk-script.xibo.sh"
 else
     exec "${XIBO_KIOSK_DIR}/gnome-kiosk-script.xibo-init.sh"

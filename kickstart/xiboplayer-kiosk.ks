@@ -12,7 +12,7 @@
 # Installation settings
 text
 skipx
-firstboot --disable
+firstboot --enable
 reboot --eject
 
 # Localization
@@ -73,8 +73,9 @@ nss-mdns
 wireguard-tools
 NetworkManager-wifi
 
-# Remove unnecessary packages
--gnome-initial-setup
+# gnome-initial-setup shows language/keyboard/network/timezone on first boot
+# (vendor.conf skips account/password/privacy pages)
+gnome-initial-setup
 -gnome-tour
 %end
 
@@ -196,6 +197,20 @@ EOF
 chmod 755 /home/xibo/.local/bin/shutdown
 
 chown xibo:xibo /home/xibo/.local/bin/reboot /home/xibo/.local/bin/shutdown
+%end
+
+# gnome-initial-setup: only show locale/keyboard/network/timezone
+%post --erroronfail
+mkdir -p /usr/share/gnome-initial-setup
+cat > /usr/share/gnome-initial-setup/vendor.conf << 'EOF'
+[pages]
+skip=privacy;software;account;summary;welcome
+EOF
+%end
+
+# Disable GNOME donation popup
+%post --erroronfail
+su - xibo -c "dbus-run-session gsettings set org.gnome.desktop.interface show-donation-popup false" || true
 %end
 
 # Enable services
