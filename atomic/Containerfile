@@ -11,8 +11,8 @@
 
 FROM quay.io/fedora/fedora-bootc:43
 
-# Skip docs for all dnf installs (saves ~100 MB)
-RUN echo "tsflags=nodocs" >> /etc/dnf/dnf.conf
+# Global dnf optimization: skip docs and weak deps (saves ~300-500 MB)
+RUN echo -e "tsflags=nodocs\ninstall_weak_deps=False" >> /etc/dnf/dnf.conf
 
 # RPM Fusion free + nonfree (retry on mirror timeout)
 RUN dnf install -y \
@@ -108,13 +108,17 @@ RUN systemctl preset-all && \
 # Automatic updates via bootc
 RUN systemctl enable bootc-fetch-apply-updates.timer || true
 
-# Final size cleanup — strip man pages, unused locale data, dnf cache
-RUN rm -rf /usr/share/man /usr/share/doc /usr/share/info \
+# Final size cleanup
+RUN rm -rf /usr/share/man /usr/share/doc /usr/share/info /usr/share/gtk-doc \
     && rm -rf /var/cache/dnf /var/log/dnf* /var/log/hawkey* \
+    && rm -rf /usr/share/help /usr/share/gnome/help \
     && find /usr/share/locale -mindepth 1 -maxdepth 1 \
        ! -name 'en*' ! -name 'ca*' ! -name 'es*' ! -name 'fr*' ! -name 'de*' \
        ! -name 'it*' ! -name 'pt*' ! -name 'locale.alias' \
-       -exec rm -rf {} + 2>/dev/null || true
+       -exec rm -rf {} + 2>/dev/null || true \
+    && find /usr/lib/firmware -maxdepth 1 -type f \
+       ! -name '*.bin' \
+       -exec rm -f {} + 2>/dev/null || true
 
 # Finalize
 RUN bootc container lint
