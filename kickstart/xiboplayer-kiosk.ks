@@ -133,8 +133,19 @@ dnf install -y \
 
 # Import GPG key + install xiboplayer-release (adds repos + keyd COPR)
 %post --erroronfail
-# Import the signing key first so subsequent installs pass GPG check
-rpm --import https://dl.xiboplayer.org/rpm/RPM-GPG-KEY 2>/dev/null || true
+# Embed the signing key so it works offline (Everything ISO local repo)
+cat > /etc/pki/rpm-gpg/RPM-GPG-KEY-xiboplayer << 'GPGEOF'
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mDMEacnN0hYJKwYBBAHaRw8BAQdAk/7Od58mGTrL5OCffgj2HvBJBVmN1ZBBqnCh
+ASKbJvm0JlhpYm8gUGxheWVycyA8cGFja2FnZXNAeGlib3BsYXllci5vcmc+iI8E
+ExYKADcWIQQEqReWkuhs8R0QPL9aMOortp0y8gUCacnN0gIbAwQLCQoEBRUKCQgD
+BRYCAwEAAh4FAheAAAoJEFow6iu2nTLyEIIA/1/2UffAtRN8xqXzm/W2sObPxNnl
+LUIHKpBrpKDVoJ6IAQC2twfbihjpW876/x0EDZ2S3dXmyABVItJWhUYFIZ7kAQ==
+=tMTe
+-----END PGP PUBLIC KEY BLOCK-----
+GPGEOF
+rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-xiboplayer
 
 # Install the release RPM — configures xiboplayer repo, keyd COPR, and GPG key
 dnf install -y \
