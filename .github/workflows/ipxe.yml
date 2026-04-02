@@ -1,0 +1,106 @@
+name: Build iPXE Network Boot
+
+on:
+  push:
+    tags: ['v*']
+    paths: ['ipxe/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+  R2_BUCKET: ${{ secrets.R2_BUCKET }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+
+jobs:
+  build-ipxe:
+    name: Build iPXE USB image
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:24.04
+
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y git gcc make mtools perl liblzma-dev awscli curl
+
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Clone iPXE source
+        run: git clone --depth 1 https://github.com/ipxe/ipxe.git /tmp/ipxe
+
+      - name: Enable HTTPS in iPXE
+        run: |
+          cat >> /tmp/ipxe/src/config/general.h << 'EOF'
+          #define DOWNLOAD_PROTO_HTTPS
+          #define IMAGE_TRUST_CMD
+          EOF
+
+      - name: Copy boot script
+        run: cp ipxe/boot.ipxe /tmp/ipxe/src/boot.ipxe
+
+      - name: Build BIOS USB image
+        run: |
+          cd /tmp/ipxe/src
+          make -j$(nproc) bin/ipxe.usb EMBED=boot.ipxe
+          ls -lh bin/ipxe.usb
+
+      - name: Build EFI binary
+        run: |
+          cd /tmp/ipxe/src
+          make -j$(nproc) bin-x86_64-efi/ipxe.efi EMBED=boot.ipxe
+          ls -lh bin-x86_64-efi/ipxe.efi
+
+      - name: Stage artifacts
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p dist
+          cp /tmp/ipxe/src/bin/ipxe.usb dist/xiboplayer-ipxe.usb
+          cp /tmp/ipxe/src/bin-x86_64-efi/ipxe.efi dist/xiboplayer-ipxe.efi
+          cp ipxe/boot.ipxe dist/boot.ipxe
+          ls -lh dist/
+
+      - name: Upload to R2
+        if: env.R2_ENDPOINT != ''
+        run: |
+          aws s3 cp dist/xiboplayer-ipxe.usb s3://${R2_BUCKET}/ipxe/xiboplayer-ipxe.usb \
+            --endpoint-url "${R2_ENDPOINT}" --content-type application/octet-stream
+          aws s3 cp dist/xiboplayer-ipxe.efi s3://${R2_BUCKET}/ipxe/xiboplayer-ipxe.efi \
+            --endpoint-url "${R2_ENDPOINT}" --content-type application/octet-stream
+          aws s3 cp dist/boot.ipxe s3://${R2_BUCKET}/ipxe/boot.ipxe \
+            --endpoint-url "${R2_ENDPOINT}" --content-type text/plain
+          echo "Uploaded to R2:"
+          echo "  https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe.usb"
+          echo "  https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe.efi"
+          echo "  https://dl.xiboplayer.org/ipxe/boot.ipxe"
+
+      - name: Upload to GitHub Release
+        if: github.ref_type == 'tag'
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          for f in dist/*; do
+            gh release upload "$TAG" "$f" --clobber || true
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipxe-images
+          path: dist/
+          retention-days: 90
