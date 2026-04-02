@@ -63,30 +63,21 @@ if [ ! -f "${XIBO_DATA_DIR}/setup-result.json" ]; then
 {"player": "${PLAYER}", "service": "${SERVICE}"}
 SETUPEOF
 
-        # Start the player service
-        systemctl --user start "$SERVICE" 2>/dev/null || true
     fi
 fi
 
-# ── Verify player started ──
-IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "unknown")
-
+# ── Reboot for clean session ──
+# After first-boot wizard, reboot so GDM starts a fresh kiosk session.
+# The session holder will read setup-result.json and start the player.
 if [ -f "${XIBO_DATA_DIR}/setup-result.json" ]; then
-    SERVICE=$(python3 -c "import json; print(json.load(open('${XIBO_DATA_DIR}/setup-result.json'))['service'])" 2>/dev/null)
-    PLAYER=$(python3 -c "import json; print(json.load(open('${XIBO_DATA_DIR}/setup-result.json'))['player'])" 2>/dev/null)
-
-    if [ -n "$SERVICE" ]; then
-        sleep 3
-        if systemctl --user is-active --quiet "$SERVICE"; then
-            notify-send -r $NOTIFY_ID -t 5000 "Xibo" "IP: $IP — ${PLAYER} running" 2>/dev/null || true
-        else
-            notify-send -r $NOTIFY_ID -t 0 "Xibo" "IP: $IP — Waiting for ${PLAYER} to start..." 2>/dev/null || true
-        fi
-    fi
+    notify-send -r $NOTIFY_ID -t 3000 "Xibo" "Setup complete. Rebooting..." 2>/dev/null || true
+    sleep 3
+    pkill -u "$(whoami)" dunst 2>/dev/null || true
+    doas reboot
+else
+    # No setup result — fall through to session holder (shouldn't happen)
+    notify-send -r $NOTIFY_ID -t 0 "Xibo" "Setup incomplete. Starting session holder..." 2>/dev/null || true
+    sleep 2
+    pkill -u "$(whoami)" dunst 2>/dev/null || true
+    exec "${XIBO_KIOSK_DIR}/gnome-kiosk-script.xibo.sh"
 fi
-
-sleep 2
-
-# Close dunst and hand off to session holder
-pkill -u "$(whoami)" dunst 2>/dev/null || true
-exec "${XIBO_KIOSK_DIR}/gnome-kiosk-script.xibo.sh"
