@@ -37,12 +37,16 @@ jobs:
       - name: Clone iPXE source
         run: git clone --depth 1 https://github.com/ipxe/ipxe.git /tmp/ipxe
 
-      - name: Enable HTTPS in iPXE
+      - name: Enable HTTPS and features in iPXE
         run: |
-          cat >> /tmp/ipxe/src/config/general.h << 'EOF'
-          #define DOWNLOAD_PROTO_HTTPS
-          #define IMAGE_TRUST_CMD
-          EOF
+          cat >> /tmp/ipxe/src/config/general.h <<'EOF'
+#define DOWNLOAD_PROTO_HTTPS
+#define DOWNLOAD_PROTO_HTTP
+#define IMAGE_TRUST_CMD
+#define NET_PROTO_IPV4
+EOF
+          # Enable the certificate store for HTTPS verification
+          sed -i 's|//#define\s*CERT_CMD|#define CERT_CMD|' /tmp/ipxe/src/config/general.h || true
 
       - name: Copy boot script
         run: cp ipxe/boot.ipxe /tmp/ipxe/src/boot.ipxe
