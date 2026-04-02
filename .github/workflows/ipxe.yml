@@ -70,7 +70,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           mkdir -p dist
-          cp /tmp/ipxe/src/bin/ipxe.usb dist/xiboplayer-ipxe.usb
+          cp /tmp/ipxe/src/bin/ipxe.usb dist/xiboplayer-ipxe.img
           cp /tmp/ipxe/src/bin-x86_64-efi/ipxe.efi dist/xiboplayer-ipxe.efi
           cp ipxe/boot.ipxe dist/boot.ipxe
           ls -lh dist/
@@ -79,7 +79,7 @@ jobs:
         if: env.R2_BUCKET != ''
         continue-on-error: true
         run: |
-          aws s3 cp dist/xiboplayer-ipxe.usb s3://${R2_BUCKET}/ipxe/xiboplayer-ipxe.usb \
+          aws s3 cp dist/xiboplayer-ipxe.img s3://${R2_BUCKET}/ipxe/xiboplayer-ipxe.img \
             --endpoint-url "${R2_ENDPOINT}" --content-type application/octet-stream
           aws s3 cp dist/xiboplayer-ipxe.efi s3://${R2_BUCKET}/ipxe/xiboplayer-ipxe.efi \
             --endpoint-url "${R2_ENDPOINT}" --content-type application/octet-stream
