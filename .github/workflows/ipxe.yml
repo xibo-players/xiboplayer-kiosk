@@ -9,15 +9,9 @@ on:
 permissions:
   contents: write
 
-env:
-  R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
-  R2_BUCKET: ${{ secrets.R2_BUCKET }}
-  AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-
 jobs:
   build-ipxe:
-    name: Build iPXE USB image
+    name: Build iPXE image
     runs-on: ubuntu-latest
     container:
       image: ubuntu:24.04
@@ -53,7 +47,7 @@ jobs:
       - name: Copy boot script
         run: cp ipxe/boot.ipxe /tmp/ipxe/src/boot.ipxe
 
-      - name: Build BIOS USB image
+      - name: Build BIOS image
         run: |
           cd /tmp/ipxe/src
           make -j$(nproc) bin/ipxe.usb EMBED=boot.ipxe
@@ -66,8 +60,6 @@ jobs:
           ls -lh bin-x86_64-efi/ipxe.efi
 
       - name: Stage artifacts
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
           mkdir -p dist
           cp /tmp/ipxe/src/bin/ipxe.usb dist/xiboplayer-ipxe.img
@@ -76,24 +68,38 @@ jobs:
           ls -lh dist/
 
       - name: Upload to R2
-        if: env.R2_BUCKET != ''
-        continue-on-error: true
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
         run: |
-          aws s3 cp dist/xiboplayer-ipxe.img s3://${R2_BUCKET}/ipxe/xiboplayer-ipxe.img \
-            --endpoint-url "${R2_ENDPOINT}" --content-type application/octet-stream
-          aws s3 cp dist/xiboplayer-ipxe.efi s3://${R2_BUCKET}/ipxe/xiboplayer-ipxe.efi \
-            --endpoint-url "${R2_ENDPOINT}" --content-type application/octet-stream
-          aws s3 cp dist/boot.ipxe s3://${R2_BUCKET}/ipxe/boot.ipxe \
-            --endpoint-url "${R2_ENDPOINT}" --content-type text/plain
-          echo "Uploaded to R2"
+          BUCKET="s3://xiboplayer-images"
+          aws s3 cp dist/xiboplayer-ipxe.img "$BUCKET/ipxe/xiboplayer-ipxe.img" \
+            --endpoint-url "$R2_ENDPOINT" --content-type application/octet-stream
+          aws s3 cp dist/xiboplayer-ipxe.efi "$BUCKET/ipxe/xiboplayer-ipxe.efi" \
+            --endpoint-url "$R2_ENDPOINT" --content-type application/octet-stream
+          aws s3 cp dist/boot.ipxe "$BUCKET/ipxe/boot.ipxe" \
+            --endpoint-url "$R2_ENDPOINT" --content-type text/plain
+          echo "Uploaded to R2:"
+          echo "  https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe.img"
+          echo "  https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe.efi"
+          echo "  https://dl.xiboplayer.org/ipxe/boot.ipxe"
 
       - name: Upload to GitHub Release
-        if: github.ref_type == 'tag'
         run: |
+          # Upload to latest release (tag or most recent)
           TAG="${GITHUB_REF_NAME}"
-          for f in dist/*; do
-            gh release upload "$TAG" "$f" --clobber || true
-          done
+          if [[ "${{ github.ref_type }}" != "tag" ]]; then
+            TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' || echo "")
+          fi
+          if [ -n "$TAG" ]; then
+            for f in dist/*; do
+              gh release upload "$TAG" "$f" --clobber || true
+            done
+            echo "Uploaded to release $TAG"
+          else
+            echo "No release found, skipping"
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
