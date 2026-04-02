@@ -131,10 +131,12 @@ dnf install -y \
   || true
 %end
 
-# Install xiboplayer-release (adds repos + keyd COPR + GPG key) then all players
+# Import GPG key + install xiboplayer-release (adds repos + keyd COPR)
 %post --erroronfail
+# Import the signing key first so subsequent installs pass GPG check
+rpm --import https://dl.xiboplayer.org/rpm/RPM-GPG-KEY 2>/dev/null || true
+
 # Install the release RPM — configures xiboplayer repo, keyd COPR, and GPG key
-# Use GitHub latest release redirect to avoid hardcoding the release version
 dnf install -y \
   https://github.com/xibo-players/xibo-players.github.io/releases/latest/download/xiboplayer-release-43.fc43.noarch.rpm || \
   dnf install -y \
