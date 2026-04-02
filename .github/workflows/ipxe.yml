@@ -62,8 +62,8 @@ jobs:
       - name: Stage artifacts
         run: |
           mkdir -p dist
-          cp /tmp/ipxe/src/bin/ipxe.usb dist/xiboplayer-ipxe.img
-          cp /tmp/ipxe/src/bin-x86_64-efi/ipxe.efi dist/xiboplayer-ipxe.efi
+          cp /tmp/ipxe/src/bin/ipxe.usb dist/xiboplayer-ipxe-bios.img
+          cp /tmp/ipxe/src/bin-x86_64-efi/ipxe.efi dist/xiboplayer-ipxe-uefi.img
           cp ipxe/boot.ipxe dist/boot.ipxe
           ls -lh dist/
 
@@ -75,15 +75,15 @@ jobs:
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: |
           BUCKET="${R2_BUCKET:-s3://xiboplayer-images}"
-          aws s3 cp dist/xiboplayer-ipxe.img "$BUCKET/ipxe/xiboplayer-ipxe.img" \
+          aws s3 cp dist/xiboplayer-ipxe-bios.img "$BUCKET/ipxe/xiboplayer-ipxe-bios.img" \
             --endpoint-url "$R2_ENDPOINT" --content-type application/octet-stream
-          aws s3 cp dist/xiboplayer-ipxe.efi "$BUCKET/ipxe/xiboplayer-ipxe.efi" \
+          aws s3 cp dist/xiboplayer-ipxe-uefi.img "$BUCKET/ipxe/xiboplayer-ipxe-uefi.img" \
             --endpoint-url "$R2_ENDPOINT" --content-type application/octet-stream
           aws s3 cp dist/boot.ipxe "$BUCKET/ipxe/boot.ipxe" \
             --endpoint-url "$R2_ENDPOINT" --content-type text/plain
           echo "Uploaded to R2:"
-          echo "  https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe.img"
-          echo "  https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe.efi"
+          echo "  https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe-bios.img"
+          echo "  https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe-uefi.img"
           echo "  https://dl.xiboplayer.org/ipxe/boot.ipxe"
 
       - name: Upload to GitHub Release

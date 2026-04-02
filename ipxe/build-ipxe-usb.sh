@@ -2,8 +2,8 @@
 # =============================================================================
 # Build a bootable iPXE USB image for xiboplayer network install.
 #
-# Produces: xiboplayer-ipxe.img (~1 MB)
-# Flash:    sudo dd if=xiboplayer-ipxe.img of=/dev/sdX bs=4M
+# Produces: xiboplayer-ipxe-bios.img (~1 MB)
+# Flash:    sudo dd if=xiboplayer-ipxe-bios.img of=/dev/sdX bs=4M
 #
 # The USB boots into an iPXE menu that downloads and installs
 # xiboplayer-kiosk over the internet. No ISO needed.
@@ -18,7 +18,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BOOT_SCRIPT="${SCRIPT_DIR}/boot.ipxe"
 BUILD_DIR="/tmp/ipxe-build-$$"
-OUTPUT="${SCRIPT_DIR}/xiboplayer-ipxe.img"
+OUTPUT="${SCRIPT_DIR}/xiboplayer-ipxe-bios.img"
 
 if [ ! -f "$BOOT_SCRIPT" ]; then
     echo "ERROR: boot.ipxe not found at $BOOT_SCRIPT"
