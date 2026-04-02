@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.14 (2026-04-02)
+
+### Bug Fixes
+
+- **Netinstall wizard fixed** — `xiboplayer-setup.py` was missing from RPM/DEB packages, causing netinstall to skip the first-boot wizard
+- **Offline ISO install source** — added `cdrom` directive so Anaconda finds base packages
+- **python3-gobject + libadwaita** baked into kickstart `%packages` for the wizard
+
+### Features
+
+- **iPXE network boot** — ~1 MB USB stick boots any machine from the internet with install profile menu (Full/Electron/Chromium)
+- **Install profiles** — single kickstart with `xibo.profile=` kernel parameter selects which players to install
+
 ## 0.4.13 (2026-04-02)
 
 ### Features

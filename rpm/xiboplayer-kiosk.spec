@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.13
+Version:        0.4.14
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -75,6 +75,13 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
 
 %changelog
+* Wed Apr 02 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.14-1
+- Fix: package xiboplayer-setup.py in RPM/DEB (missing — broke netinstall wizard)
+- Fix: add python3-gobject + libadwaita to kickstart packages
+- Fix: add cdrom install source for offline ISO
+- Feat: iPXE network boot menu with install profiles
+- Feat: xibo.profile= kernel parameter (full/electron/chromium)
+
 * Thu Apr 02 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.13-1
 - Libadwaita first-boot wizard, fedora-bootc base for smaller atomic images, trimmed offline ISO, GNOME donation popup fix
 
