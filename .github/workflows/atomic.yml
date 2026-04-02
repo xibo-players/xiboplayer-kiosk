@@ -225,7 +225,7 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           pip install awscli 2>/dev/null || true
-          BUCKET="${R2_BUCKET:-s3://xiboplayer-images}"
+          BUCKET="${R2_BUCKET}"
           DEST="$BUCKET/xiboplayer-kiosk-atomic/${TAG}"
 
           for file in release/*.iso; do

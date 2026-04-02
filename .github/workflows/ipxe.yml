@@ -78,7 +78,7 @@ EOF
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: |
-          BUCKET="${R2_BUCKET:-s3://xiboplayer-images}"
+          BUCKET="${R2_BUCKET}"
           aws s3 cp dist/xiboplayer-ipxe-bios.img "$BUCKET/ipxe/xiboplayer-ipxe-bios.img" \
             --endpoint-url "$R2_ENDPOINT" --content-type application/octet-stream
           aws s3 cp dist/xiboplayer-ipxe-uefi.img "$BUCKET/ipxe/xiboplayer-ipxe-uefi.img" \
