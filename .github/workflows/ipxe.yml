@@ -2,7 +2,7 @@ name: Build iPXE Network Boot
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
     paths: ['ipxe/**']
   workflow_dispatch:
 
