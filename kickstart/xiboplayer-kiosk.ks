@@ -43,17 +43,25 @@ bootloader --location=mbr --append="quiet rhgb splash loglevel=3 rd.neednet=1 ip
 %packages
 @core
 @hardware-support
-@fonts
+
+# Fonts — minimal set (saves ~100 MB vs @fonts group)
+dejavu-sans-fonts
+dejavu-sans-mono-fonts
+liberation-sans-fonts
+liberation-mono-fonts
+google-noto-sans-fonts
+google-noto-emoji-color-fonts
 
 # Display manager and kiosk
 gdm
 gnome-kiosk
 gnome-kiosk-script-session
 
-# Media playback
-vlc
+# gnome-initial-setup: language/keyboard/network/timezone/password on first boot
+gnome-initial-setup
+
+# Media playback (mpv only — lighter than VLC, sufficient for kiosk)
 mpv
-firefox
 gstreamer1-plugins-base
 gstreamer1-plugins-good
 gstreamer1-plugins-bad-free
@@ -73,10 +81,26 @@ nss-mdns
 wireguard-tools
 NetworkManager-wifi
 
-# gnome-initial-setup shows language/keyboard/network/timezone on first boot
-# (vendor.conf skips account/password/privacy pages)
-gnome-initial-setup
+# Remove unnecessary packages
 -gnome-tour
+-gnome-software
+-gnome-terminal
+-gnome-text-editor
+-gnome-calculator
+-gnome-characters
+-gnome-clocks
+-gnome-connections
+-gnome-contacts
+-gnome-logs
+-gnome-maps
+-gnome-weather
+-totem
+-cheese
+-evince
+-loupe
+-yelp
+-gnome-user-docs
+-abrt*
 %end
 
 # RPMFusion repositories

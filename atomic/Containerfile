@@ -1,111 +1,101 @@
-# Xiboplayer Kiosk — Atomic Silverblue Image
+# Xiboplayer Kiosk — Atomic Bootable Image
 #
-# Self-contained Fedora Silverblue image with all xiboplayer packages,
-# full multimedia codecs, and kiosk configuration baked in.
+# Minimal bootc-based image: fedora-bootc + gdm + gnome-kiosk + codecs + players.
+# ~1.5 GB smaller than Silverblue-based image by starting from a minimal base.
 #
 # Build:  podman build -t ghcr.io/xibo-players/xiboplayer-kiosk:43 -f atomic/Containerfile .
-# Update: rpm-ostree rebase ostree-unverified-registry:ghcr.io/xibo-players/xiboplayer-kiosk:43
+# Update: bootc switch --transport registry ghcr.io/xibo-players/xiboplayer-kiosk:43
+#
+# Base: fedora-bootc (systemd + kernel + dnf, no desktop) — 1.0 GB compressed
+# vs Silverblue (full GNOME desktop + apps) — 2.5 GB compressed
 
-FROM quay.io/fedora/fedora-silverblue:43
+FROM quay.io/fedora/fedora-bootc:43
 
 # RPM Fusion free + nonfree (retry on mirror timeout)
-RUN rpm-ostree install \
+RUN dnf install -y \
     https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-43.noarch.rpm \
     https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-43.noarch.rpm && \
-    rpm-ostree cleanup -m || \
+    dnf clean all || \
     (echo "Retrying with direct download mirror..." && \
-     rpm-ostree install \
+     dnf install -y \
        https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-43.noarch.rpm \
        https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-43.noarch.rpm && \
-     rpm-ostree cleanup -m)
+     dnf clean all)
 
-# Swap ffmpeg-free for full ffmpeg (codecs)
-RUN rpm-ostree override remove \
-    ffmpeg-free libavcodec-free libavdevice-free libavfilter-free \
-    libavformat-free libavutil-free libpostproc-free libswresample-free \
-    libswscale-free \
-    --install ffmpeg --install ffmpeg-libs && \
-    rpm-ostree cleanup -m
-
-# Install xiboplayer-release (adds repos + keyd COPR + GPG key)
+# Xiboplayer repos (adds keyd COPR + GPG key)
 ARG RELEASE_VER=43-7
-RUN rpm-ostree install \
+RUN dnf install -y \
     https://github.com/xibo-players/xibo-players.github.io/releases/download/v${RELEASE_VER}/xiboplayer-release-${RELEASE_VER}.fc43.noarch.rpm && \
-    rpm-ostree cleanup -m
+    dnf clean all
 
-# Kiosk session + display manager
-RUN rpm-ostree install \
-    gnome-kiosk gnome-kiosk-script-session && \
-    rpm-ostree cleanup -m
+# Display manager + kiosk compositor (minimal GNOME, no apps)
+RUN dnf install -y \
+    gdm gnome-kiosk gnome-kiosk-script-session \
+    gnome-initial-setup \
+    && dnf clean all
 
-# Multimedia players
-RUN rpm-ostree install \
-    vlc mpv showtime && \
-    rpm-ostree cleanup -m
-
-# Full codec + media stack (free + non-free from RPM Fusion)
-RUN rpm-ostree install \
+# Full codec stack (ffmpeg + gstreamer from RPM Fusion)
+RUN dnf install -y \
+    ffmpeg ffmpeg-libs \
     gstreamer1-plugins-base gstreamer1-plugins-good \
     gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld \
     gstreamer1-plugins-ugly-free gstreamer1-plugins-ugly \
     gstreamer1-plugin-openh264 gstreamer1-plugin-libav \
-    mesa-va-drivers libva && \
-    rpm-ostree cleanup -m
+    mesa-va-drivers libva \
+    && dnf clean all
 
-# GPU drivers — arch-specific, best-effort (Intel x86 only, NVIDIA where available)
-RUN rpm-ostree install libva-intel-media-driver 2>/dev/null; \
-    rpm-ostree install libva-nvidia-driver 2>/dev/null; \
-    rpm-ostree cleanup -m || true
+# GPU drivers — best-effort per architecture
+RUN dnf install -y libva-intel-media-driver 2>/dev/null; \
+    dnf install -y libva-nvidia-driver 2>/dev/null; \
+    dnf clean all || true
 
-# Hardware support
-RUN rpm-ostree install \
+# Hardware support + media player
+RUN dnf install -y \
     NetworkManager-wifi linux-firmware wireguard-tools \
-    qt6-qtwebengine zeromq && \
-    rpm-ostree cleanup -m
+    mpv \
+    && dnf clean all
 
 # Kiosk utilities
-RUN rpm-ostree install \
-    avahi nss-mdns keyd && \
-    rpm-ostree cleanup -m
+RUN dnf install -y \
+    avahi nss-mdns keyd opendoas \
+    zenity dunst unclutter \
+    && dnf clean all
 
-# CLI tools + bootc (required for bootc-image-builder ISO generation)
-RUN rpm-ostree install \
-    vim-enhanced bootc && \
-    rpm-ostree cleanup -m
-
-# Xiboplayer packages
-RUN rpm-ostree install \
-    xiboplayer-kiosk xiboplayer-electron xiboplayer-chromium arexibo && \
-    rpm-ostree cleanup -m
+# Xiboplayer packages (arexibo pulls qt6-qtwebengine ~150 MB — skip if size matters)
+RUN dnf install -y \
+    xiboplayer-kiosk xiboplayer-electron xiboplayer-chromium arexibo \
+    && dnf clean all
 
 # Kiosk configuration overlay
-# GDM autologin, kiosk session, doas rules, systemd units, user setup
 COPY mkosi-extra/etc/gdm/custom.conf /etc/gdm/custom.conf
 COPY mkosi-extra/etc/doas.conf /etc/doas.conf
 COPY mkosi-extra/etc/locale.conf /etc/locale.conf
 COPY mkosi-extra/etc/systemd/logind.conf.d/no-idle.conf /etc/systemd/logind.conf.d/no-idle.conf
 COPY mkosi-extra/etc/systemd/system/xiboplayer-kiosk-firstboot.service /etc/systemd/system/xiboplayer-kiosk-firstboot.service
-# Mask unwanted services (symlinks to /dev/null can't be COPYed in container builds)
-RUN ln -sf /dev/null /etc/systemd/system/gnome-initial-setup.service && \
-    ln -sf /dev/null /etc/systemd/system/gnome-initial-setup-first-login.service && \
-    ln -sf /dev/null /etc/systemd/system/systemd-firstboot.service
+
+# gnome-initial-setup: vendor.conf to show only useful pages
+RUN mkdir -p /usr/share/gnome-initial-setup
+COPY kiosk/vendor.conf /usr/share/gnome-initial-setup/vendor.conf
+
+# Mask unwanted services
+RUN ln -sf /dev/null /etc/systemd/system/systemd-firstboot.service
+
 COPY mkosi-extra/usr/lib/systemd/system-preset/80-xiboplayer-kiosk.preset /usr/lib/systemd/system-preset/80-xiboplayer-kiosk.preset
 COPY mkosi-extra/usr/lib/sysusers.d/xiboplayer-kiosk.conf /usr/lib/sysusers.d/xiboplayer-kiosk.conf
 COPY mkosi-extra/usr/local/bin/xiboplayer-kiosk-firstboot.sh /usr/local/bin/xiboplayer-kiosk-firstboot.sh
 COPY mkosi-extra/var/lib/AccountsService/users/xibo /var/lib/AccountsService/users/xibo
 
-# doas.conf must be 600
+# Permissions
 RUN chmod 600 /etc/doas.conf && \
     chmod 755 /usr/local/bin/xiboplayer-kiosk-firstboot.sh
 
-# Enable services via preset
+# Enable services
 RUN systemctl preset-all && \
     systemctl enable gdm.service avahi-daemon.service keyd.service && \
     systemctl set-default graphical.target
 
-# On Atomic, updates come via rpm-ostree, not dnf
-# Remove the dnf-based update timer (replaced by rpm-ostreed-automatic)
-RUN systemctl enable rpm-ostreed-automatic.timer
+# Automatic updates via bootc
+RUN systemctl enable bootc-fetch-apply-updates.timer || true
 
-# Finalize the ostree container
-RUN ostree container commit
+# Finalize
+RUN bootc container lint
