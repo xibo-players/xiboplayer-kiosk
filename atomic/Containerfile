@@ -34,7 +34,7 @@ RUN dnf install -y \
 # Display manager + kiosk compositor (minimal GNOME, no apps)
 RUN dnf install -y \
     gdm gnome-kiosk gnome-kiosk-script-session \
-    gnome-initial-setup \
+    python3-gobject libadwaita \
     && dnf clean all
 
 # Full codec stack (ffmpeg + gstreamer from RPM Fusion)
@@ -84,11 +84,7 @@ COPY mkosi-extra/etc/locale.conf /etc/locale.conf
 COPY mkosi-extra/etc/systemd/logind.conf.d/no-idle.conf /etc/systemd/logind.conf.d/no-idle.conf
 COPY mkosi-extra/etc/systemd/system/xiboplayer-kiosk-firstboot.service /etc/systemd/system/xiboplayer-kiosk-firstboot.service
 
-# gnome-initial-setup: vendor.conf to show only useful pages
-RUN mkdir -p /usr/share/gnome-initial-setup
-COPY kiosk/vendor.conf /usr/share/gnome-initial-setup/vendor.conf
-
-# Mask unwanted services
+# Mask unwanted services (gnome-initial-setup skipped by init script)
 RUN ln -sf /dev/null /etc/systemd/system/systemd-firstboot.service
 
 COPY mkosi-extra/usr/lib/systemd/system-preset/80-xiboplayer-kiosk.preset /usr/lib/systemd/system-preset/80-xiboplayer-kiosk.preset
