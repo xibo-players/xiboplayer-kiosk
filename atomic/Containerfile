@@ -93,10 +93,11 @@ RUN ln -sf /dev/null /etc/systemd/system/systemd-firstboot.service
 
 COPY mkosi-extra/usr/lib/systemd/system-preset/80-xiboplayer-kiosk.preset /usr/lib/systemd/system-preset/80-xiboplayer-kiosk.preset
 COPY mkosi-extra/usr/lib/sysusers.d/xiboplayer-kiosk.conf /usr/lib/sysusers.d/xiboplayer-kiosk.conf
+COPY mkosi-extra/usr/lib/tmpfiles.d/xiboplayer-kiosk.conf /usr/lib/tmpfiles.d/xiboplayer-kiosk.conf
 COPY mkosi-extra/usr/local/bin/xiboplayer-kiosk-firstboot.sh /usr/local/bin/xiboplayer-kiosk-firstboot.sh
 COPY mkosi-extra/var/lib/AccountsService/users/xibo /var/lib/AccountsService/users/xibo
 
-# Permissions (firstboot service copies skel → /home/xibo on first boot)
+# Permissions
 RUN chmod 600 /etc/doas.conf && \
     chmod 755 /usr/local/bin/xiboplayer-kiosk-firstboot.sh
 
