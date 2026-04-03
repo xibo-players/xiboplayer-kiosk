@@ -96,17 +96,15 @@ COPY mkosi-extra/usr/lib/sysusers.d/xiboplayer-kiosk.conf /usr/lib/sysusers.d/xi
 COPY mkosi-extra/usr/local/bin/xiboplayer-kiosk-firstboot.sh /usr/local/bin/xiboplayer-kiosk-firstboot.sh
 COPY mkosi-extra/var/lib/AccountsService/users/xibo /var/lib/AccountsService/users/xibo
 
-# Create xibo user home with dispatcher + directories
-# (sysusers.d creates the user but doesn't copy skel)
-RUN mkdir -p /home/xibo/.local/bin /home/xibo/.local/share/xibo
-COPY mkosi-extra/home/xibo/.local/bin/gnome-kiosk-script /home/xibo/.local/bin/gnome-kiosk-script
-COPY mkosi-extra/home/xibo/.local/bin/reboot /home/xibo/.local/bin/reboot
-COPY mkosi-extra/home/xibo/.local/bin/shutdown /home/xibo/.local/bin/shutdown
+# Create xibo user home with dispatcher from RPM's skel
+# (sysusers.d creates the user but doesn't copy /etc/skel)
+RUN mkdir -p /home/xibo/.local/bin /home/xibo/.local/share/xibo && \
+    cp /etc/skel/.local/bin/gnome-kiosk-script /home/xibo/.local/bin/gnome-kiosk-script
 
 # Permissions
 RUN chmod 600 /etc/doas.conf && \
     chmod 755 /usr/local/bin/xiboplayer-kiosk-firstboot.sh && \
-    chmod 755 /home/xibo/.local/bin/* && \
+    chmod 755 /home/xibo/.local/bin/gnome-kiosk-script && \
     chown -R 1000:1000 /home/xibo
 
 # Enable services
