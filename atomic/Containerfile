@@ -96,16 +96,9 @@ COPY mkosi-extra/usr/lib/sysusers.d/xiboplayer-kiosk.conf /usr/lib/sysusers.d/xi
 COPY mkosi-extra/usr/local/bin/xiboplayer-kiosk-firstboot.sh /usr/local/bin/xiboplayer-kiosk-firstboot.sh
 COPY mkosi-extra/var/lib/AccountsService/users/xibo /var/lib/AccountsService/users/xibo
 
-# Create xibo user home with dispatcher from RPM's skel
-# (sysusers.d creates the user but doesn't copy /etc/skel)
-RUN mkdir -p /home/xibo/.local/bin /home/xibo/.local/share/xibo && \
-    cp /etc/skel/.local/bin/gnome-kiosk-script /home/xibo/.local/bin/gnome-kiosk-script
-
-# Permissions
+# Permissions (firstboot service copies skel → /home/xibo on first boot)
 RUN chmod 600 /etc/doas.conf && \
-    chmod 755 /usr/local/bin/xiboplayer-kiosk-firstboot.sh && \
-    chmod 755 /home/xibo/.local/bin/gnome-kiosk-script && \
-    chown -R 1000:1000 /home/xibo
+    chmod 755 /usr/local/bin/xiboplayer-kiosk-firstboot.sh
 
 # Enable services
 RUN systemctl preset-all && \

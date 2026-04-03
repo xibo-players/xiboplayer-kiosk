@@ -14,6 +14,12 @@ echo "Xibo Kiosk first-boot setup starting..."
 # Set xibo password (user created by sysusers)
 echo "xibo:xibo" | chpasswd
 
+# Copy skel to xibo home (sysusers.d doesn't do this)
+if [ ! -f /home/xibo/.local/bin/gnome-kiosk-script ]; then
+    cp -rn /etc/skel/. /home/xibo/ 2>/dev/null || true
+    echo "Copied skel to /home/xibo"
+fi
+
 # Fix ownership of home directory
 chown -R xibo:xibo /home/xibo
 
