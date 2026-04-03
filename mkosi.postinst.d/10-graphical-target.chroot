@@ -1,16 +1,21 @@
 #!/bin/bash
+# Post-install: configure graphical boot for kiosk
+
 # Set graphical target so GDM starts on boot
 systemctl set-default graphical.target
 
-# Enable required services (preset may not run in mkosi)
-systemctl enable gdm.service
-systemctl enable avahi-daemon.service
-systemctl enable keyd.service
+# Enable required services
+systemctl enable gdm.service avahi-daemon.service keyd.service
 
-# Enable lingering for xibo user so user services start at boot
-loginctl enable-linger xibo 2>/dev/null || mkdir -p /var/lib/systemd/linger && touch /var/lib/systemd/linger/xibo
+# Enable lingering for xibo user (loginctl won't work in chroot)
+mkdir -p /var/lib/systemd/linger
+touch /var/lib/systemd/linger/xibo
 
-# Set permissions
+# Copy skel to xibo home (sysusers.d doesn't do this)
+if [ -d /etc/skel/.local ] && [ -d /home/xibo ]; then
+    cp -rn /etc/skel/. /home/xibo/
+    chown -R xibo:xibo /home/xibo 2>/dev/null || true
+fi
+
+# Permissions
 chmod 600 /etc/doas.conf 2>/dev/null || true
-chmod 755 /home/xibo/.local/bin/* 2>/dev/null || true
-chown -R xibo:xibo /home/xibo

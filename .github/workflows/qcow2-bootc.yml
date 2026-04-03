@@ -15,28 +15,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install podman and deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman qemu-utils
+
       - name: Build OCI image
         run: |
-          podman build -t localhost/xiboplayer-kiosk:test -f atomic/Containerfile .
+          sudo podman build -t localhost/xiboplayer-kiosk:test -f atomic/Containerfile .
 
       - name: Convert to QCOW2 via bootc-image-builder
         run: |
-          mkdir -p output
-          podman run --rm --privileged \
-            --security-opt label=type:unconfined_t \
+          sudo mkdir -p output
+          sudo podman run --rm --privileged \
+            --security-opt label=disable \
             -v ./output:/output \
-            -v /var/lib/containers/storage:/var/lib/containers/storage \
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type qcow2 \
-            --local \
-            localhost/xiboplayer-kiosk:test
+            --rootfs ext4 \
+            containers-storage:localhost/xiboplayer-kiosk:test
 
       - name: List output
-        run: ls -lh output/
+        run: |
+          find output -type f -name "*.qcow2" | while read f; do
+            echo "$f $(du -h "$f" | cut -f1)"
+          done
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: qcow2-bootc
-          path: output/*.qcow2
+          path: output/**/*.qcow2
           retention-days: 7
