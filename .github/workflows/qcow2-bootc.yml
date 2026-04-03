@@ -1,0 +1,42 @@
+name: Build QCOW2 from Atomic (bootc)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  build:
+    name: QCOW2 from bootc
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build OCI image
+        run: |
+          podman build -t localhost/xiboplayer-kiosk:test -f atomic/Containerfile .
+
+      - name: Convert to QCOW2 via bootc-image-builder
+        run: |
+          mkdir -p output
+          podman run --rm --privileged \
+            --security-opt label=type:unconfined_t \
+            -v ./output:/output \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+            --type qcow2 \
+            --local \
+            localhost/xiboplayer-kiosk:test
+
+      - name: List output
+        run: ls -lh output/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qcow2-bootc
+          path: output/*.qcow2
+          retention-days: 7
