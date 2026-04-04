@@ -1,0 +1,3 @@
+#!/bin/sh
+# Passwordless reboot for xibo kiosk user (doas.conf permits this)
+exec doas /usr/sbin/reboot "$@"

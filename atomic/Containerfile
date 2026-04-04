@@ -91,11 +91,15 @@ COPY mkosi-extra/usr/lib/systemd/system-preset/80-xiboplayer-kiosk.preset /usr/l
 COPY mkosi-extra/usr/lib/sysusers.d/xiboplayer-kiosk.conf /usr/lib/sysusers.d/xiboplayer-kiosk.conf
 COPY mkosi-extra/usr/lib/tmpfiles.d/xiboplayer-kiosk.conf /usr/lib/tmpfiles.d/xiboplayer-kiosk.conf
 COPY mkosi-extra/usr/local/bin/xiboplayer-kiosk-firstboot.sh /usr/local/bin/xiboplayer-kiosk-firstboot.sh
+COPY mkosi-extra/usr/local/bin/xibo-reboot /usr/local/bin/xibo-reboot
+COPY mkosi-extra/usr/local/bin/xibo-shutdown /usr/local/bin/xibo-shutdown
 COPY mkosi-extra/var/lib/AccountsService/users/xibo /var/lib/AccountsService/users/xibo
 
 # Permissions
 RUN chmod 600 /etc/doas.conf && \
-    chmod 755 /usr/local/bin/xiboplayer-kiosk-firstboot.sh
+    chmod 755 /usr/local/bin/xiboplayer-kiosk-firstboot.sh \
+              /usr/local/bin/xibo-reboot \
+              /usr/local/bin/xibo-shutdown
 
 # Enable services
 RUN systemctl preset-all && \
