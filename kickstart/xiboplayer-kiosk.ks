@@ -260,9 +260,18 @@ su - xibo -c "dbus-run-session gsettings set org.gnome.desktop.interface show-do
 
 # Enable services
 %post --erroronfail
-systemctl enable gdm
-systemctl enable avahi-daemon
+systemctl enable gdm avahi-daemon keyd
 systemctl set-default graphical.target
+
+# Prevent idle suspend and lid close (kiosk must stay on)
+mkdir -p /etc/systemd/logind.conf.d
+cat > /etc/systemd/logind.conf.d/no-idle.conf << 'LOGINDEOF'
+[Login]
+IdleAction=ignore
+HandleLidSwitch=ignore
+HandleLidSwitchExternalPower=ignore
+HandleLidSwitchDocked=ignore
+LOGINDEOF
 %end
 
 # Final cleanup
