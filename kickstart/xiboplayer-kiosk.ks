@@ -31,9 +31,11 @@ rootpw --lock
 user --name=xibo --groups=wheel --password=xibo --plaintext --gecos="Xibo Kiosk User"
 
 # Disk configuration — use entire first non-removable disk
-# ignoredisk ensures Anaconda doesn't prompt when USB + internal disk are both present
+# reqpart creates EFI + biosboot partitions automatically
+# ignoredisk with no args tells Anaconda to skip any removable/USB drives
 zerombr
 clearpart --all --initlabel --disklabel=gpt
+reqpart --add-boot
 autopart --nolvm --nohome --type=plain --fstype=xfs
 
 # Bootloader — network boot options for dracut, predictable interface naming disabled
