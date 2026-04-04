@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodic internet connectivity check for kiosk
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=60
+AccuracySec=10
+
+[Install]
+WantedBy=timers.target

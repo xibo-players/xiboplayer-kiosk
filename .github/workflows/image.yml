@@ -22,5 +22,4 @@ jobs:
       build-self-contained-iso: true
       build-netinstall: true
       architectures: 'x86_64,aarch64'
-      default-version: '0.4.15'
     secrets: inherit
