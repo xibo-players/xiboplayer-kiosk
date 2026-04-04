@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: false
+
 jobs:
   build:
     uses: xibo-players/.github/.github/workflows/build-iso.yml@main

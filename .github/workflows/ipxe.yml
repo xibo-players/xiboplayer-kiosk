@@ -9,10 +9,15 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
 jobs:
   build-ipxe:
     name: Build iPXE image
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     container:
       image: ubuntu:24.04
 
