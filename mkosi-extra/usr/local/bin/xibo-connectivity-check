@@ -1,0 +1,63 @@
+#!/bin/bash
+# Xibo Kiosk — connectivity health check
+#
+# Probes the CMS endpoint (or fallback DNS). If unreachable for 3
+# consecutive checks, restarts NetworkManager and notifies via dunst.
+# Runs as a systemd user timer every 60 seconds.
+
+XIBO_DATA_DIR="${XIBO_DATA_DIR:-${HOME}/.local/share/xibo}"
+FAIL_FILE="/tmp/xibo-connectivity-failures"
+MAX_FAILURES=3
+
+# Read CMS address from config
+CMS_URL=""
+if [ -f "${XIBO_DATA_DIR}/cms.json" ]; then
+    CMS_URL=$(grep -oP '"address"\s*:\s*"\K[^"]+' "${XIBO_DATA_DIR}/cms.json" 2>/dev/null)
+fi
+
+# Determine what to probe
+if [ -n "$CMS_URL" ]; then
+    # Extract hostname from CMS URL
+    PROBE_HOST=$(echo "$CMS_URL" | sed 's|https\?://||;s|/.*||;s|:.*||')
+    PROBE_CMD="curl -sf --connect-timeout 5 --max-time 10 -o /dev/null ${CMS_URL}"
+else
+    # No CMS configured — just check general internet
+    PROBE_HOST="dns.google"
+    PROBE_CMD="ping -c 1 -W 5 8.8.8.8"
+fi
+
+# Run probe
+if $PROBE_CMD >/dev/null 2>&1; then
+    # Success — reset failure counter
+    rm -f "$FAIL_FILE"
+    exit 0
+fi
+
+# Failed — increment counter
+FAILURES=$(cat "$FAIL_FILE" 2>/dev/null || echo 0)
+FAILURES=$((FAILURES + 1))
+echo "$FAILURES" > "$FAIL_FILE"
+
+logger -t xibo-connectivity "Connectivity check failed ($FAILURES/$MAX_FAILURES) — ${PROBE_HOST} unreachable"
+
+if [ "$FAILURES" -ge "$MAX_FAILURES" ]; then
+    logger -t xibo-connectivity "Max failures reached. Restarting NetworkManager."
+
+    # Notify user via dunst (if available)
+    notify-send "Network Issue" "Internet unreachable for ${FAILURES} checks. Restarting network..." 2>/dev/null
+
+    # Restart NetworkManager (requires doas)
+    doas systemctl restart NetworkManager 2>/dev/null
+
+    # Wait for NM to reconnect
+    sleep 10
+
+    # Re-check
+    if $PROBE_CMD >/dev/null 2>&1; then
+        logger -t xibo-connectivity "Network recovered after restart."
+        notify-send "Network Restored" "Internet connection recovered." 2>/dev/null
+        rm -f "$FAIL_FILE"
+    else
+        logger -t xibo-connectivity "Network still down after restart."
+    fi
+fi

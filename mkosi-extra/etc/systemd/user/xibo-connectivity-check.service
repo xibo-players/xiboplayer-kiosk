@@ -1,0 +1,6 @@
+[Unit]
+Description=Xibo kiosk connectivity health check
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/xibo-connectivity-check

@@ -18,6 +18,5 @@ jobs:
       rpm-spec: 'rpm/xiboplayer-kiosk.spec'
       fedora-matrix: '["43"]'
       source-tarball: 'full'
-      default-version: '0.4.15'
       gpg-sign: true
     secrets: inherit
