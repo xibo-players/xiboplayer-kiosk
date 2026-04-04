@@ -1,0 +1,31 @@
+#!/bin/bash
+# NetworkManager dispatcher script — auto-reconnect WiFi on connectivity loss.
+#
+# When a WiFi connection goes down, this script waits briefly then tells
+# NetworkManager to reconnect. Prevents kiosks from staying offline after
+# transient network drops (common in venues with unreliable WiFi).
+#
+# Dispatcher scripts receive: $1 = interface, $2 = action
+
+IFACE="$1"
+ACTION="$2"
+
+# Only act on WiFi interfaces going down
+case "$ACTION" in
+    down)
+        # Check if this is a WiFi interface
+        if nmcli -t -f TYPE device show "$IFACE" 2>/dev/null | grep -q "wifi"; then
+            logger -t wifi-reconnect "WiFi interface $IFACE went down, scheduling reconnect"
+            # Wait 10 seconds then ask NM to reconnect (run in background to not block dispatcher)
+            (sleep 10 && nmcli device connect "$IFACE" 2>/dev/null) &
+        fi
+        ;;
+    connectivity-change)
+        # If we lost connectivity, try to activate any available WiFi connection
+        CONNECTIVITY=$(nmcli -t -f CONNECTIVITY general status 2>/dev/null)
+        if [ "$CONNECTIVITY" = "none" ] || [ "$CONNECTIVITY" = "limited" ]; then
+            logger -t wifi-reconnect "Connectivity lost ($CONNECTIVITY), attempting WiFi reconnect"
+            (sleep 5 && nmcli connection up "$(nmcli -t -f NAME,TYPE connection show --active 2>/dev/null | grep wifi | head -1 | cut -d: -f1)" 2>/dev/null) &
+        fi
+        ;;
+esac
