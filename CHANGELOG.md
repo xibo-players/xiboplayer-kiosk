@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.16 (2026-04-04)
+
+- Security fixes, wizard fixes (localectl, setup-result), grub hidden, disk partitioning, VLC restored, RPM Fusion codecs, mesa-dri for VMs, bootc naming, WiFi reconnect, connectivity health-check, reboot wrappers, arm64 DEB, mirrorlist for netinstall, CI hardening
+
 ## 0.4.15 (2026-04-02)
 
 - Fix session holder service detection, zenity fallback, arexibo.service, iPXE boot
