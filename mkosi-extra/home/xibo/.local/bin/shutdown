@@ -1,2 +1,0 @@
-#!/bin/bash
-doas shutdown -h now
