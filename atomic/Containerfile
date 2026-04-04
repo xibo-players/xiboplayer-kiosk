@@ -44,7 +44,7 @@ RUN dnf install -y \
     gstreamer1-plugins-bad-free gstreamer1-plugins-bad-freeworld \
     gstreamer1-plugins-ugly-free gstreamer1-plugins-ugly \
     gstreamer1-plugin-openh264 gstreamer1-plugin-libav \
-    mesa-va-drivers libva \
+    mesa-va-drivers mesa-dri-drivers libva \
     && dnf clean all
 
 # GPU drivers — best-effort per architecture
@@ -56,7 +56,7 @@ RUN dnf install -y libva-intel-media-driver 2>/dev/null; \
 # Install linux-firmware then trim to Intel/AMD/RPi only (saves ~400 MB)
 RUN dnf install -y \
     NetworkManager-wifi linux-firmware wireguard-tools \
-    mpv \
+    vlc mpv \
     && dnf clean all \
     && cd /usr/lib/firmware \
     && find . -maxdepth 1 -type d \

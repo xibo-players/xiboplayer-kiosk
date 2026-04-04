@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths: ['atomic/**', 'mkosi-extra/**']
   schedule:
-    # Weekly Monday 06:00 UTC — pick up Silverblue + RPM updates
+    # Weekly Monday 06:00 UTC — pick up Fedora bootc + RPM updates
     - cron: '0 6 * * 1'
   workflow_dispatch:
 
@@ -260,9 +260,9 @@ jobs:
           DL: https://images.xiboplayer.org/xiboplayer-kiosk-atomic
         run: |
           NOTES=$(cat <<NOTES_EOF
-          # Xiboplayer Kiosk (Atomic Silverblue)
+          # Xiboplayer Kiosk (Atomic)
 
-          Self-contained Fedora Atomic kiosk image with immutable OS, automatic updates, and rollback support.
+          Self-contained Fedora bootc kiosk image with immutable OS, automatic updates, and rollback support.
 
           ## Download
 
@@ -274,7 +274,7 @@ jobs:
 
           ## What's included
 
-          - **Fedora Silverblue 43** (immutable, atomic updates)
+          - **Fedora bootc 43** (immutable, container-native updates)
           - **Full codecs**: ffmpeg, gstreamer, VA-API
           - **Players**: xiboplayer-electron, xiboplayer-chromium, arexibo
           - **Multimedia**: VLC, mpv, GNOME Showtime
@@ -289,18 +289,18 @@ jobs:
 
           ## Update existing kiosks
 
-          Kiosks update automatically via `rpm-ostreed-automatic.timer`.
+          Kiosks update automatically via `bootc-fetch-apply-updates.timer`.
 
-          To update manually or rebase from the traditional image:
+          To update manually or switch from the traditional image:
           ```
-          rpm-ostree rebase ostree-unverified-registry:ghcr.io/xibo-players/xiboplayer-kiosk:43
+          bootc switch ghcr.io/xibo-players/xiboplayer-kiosk:43
           systemctl reboot
           ```
 
           ## Rollback
 
           ```
-          rpm-ostree rollback
+          bootc rollback
           systemctl reboot
           ```
 

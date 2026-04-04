@@ -60,7 +60,8 @@ gnome-kiosk-script-session
 # gnome-initial-setup: language/keyboard/network/timezone/password on first boot
 gnome-initial-setup
 
-# Media playback (mpv only — lighter than VLC, sufficient for kiosk)
+# Media playback
+vlc
 mpv
 gstreamer1-plugins-base
 gstreamer1-plugins-good
@@ -128,6 +129,7 @@ dnf install -y \
   libva-intel-media-driver \
   libva-nvidia-driver \
   mesa-va-drivers \
+  mesa-dri-drivers \
   || true
 %end
 
