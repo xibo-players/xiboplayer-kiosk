@@ -14,6 +14,7 @@ if zenity --question --title="Xibo" \
         systemctl --user stop "$svc" 2>/dev/null || true
     done
     rm -f "${XIBO_DATA_DIR}/cms.json"
+    rm -f "${XIBO_DATA_DIR}/setup-result.json"
     rm -f "${XIBO_DATA_DIR}/env"
     pkill -u "$(whoami)" -f gnome-kiosk-script 2>/dev/null || true
     exec "${XIBO_KIOSK_DIR}/gnome-kiosk-script.xibo-init.sh"
