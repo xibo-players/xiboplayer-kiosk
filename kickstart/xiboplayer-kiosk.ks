@@ -9,6 +9,11 @@
 #
 # Or create a custom ISO with this kickstart embedded.
 
+# Installation source — Fedora mirror for netinstall, cdrom for Everything ISO
+# Anaconda auto-detects cdrom when booting from Everything ISO and ignores url.
+# For netinstall, the mirrorlist provides automatic mirror selection.
+url --mirrorlist=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-43&arch=$basearch
+
 # Installation settings
 text
 skipx
