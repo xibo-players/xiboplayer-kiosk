@@ -212,6 +212,7 @@ cat > /etc/doas.conf << 'EOF'
 permit nopass xibo cmd reboot
 permit nopass xibo cmd shutdown
 permit nopass xibo cmd alternatives
+permit nopass xibo cmd localectl
 EOF
 chmod 600 /etc/doas.conf
 %end
