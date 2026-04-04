@@ -330,8 +330,8 @@ class SetupWindow(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(
             application=app,
-            default_width=600,
-            default_height=500,
+            default_width=700,
+            default_height=550,
         )
 
         toolbar = Adw.ToolbarView()

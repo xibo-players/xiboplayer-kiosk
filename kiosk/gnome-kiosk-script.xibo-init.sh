@@ -51,7 +51,7 @@ if [ ! -f "${XIBO_DATA_DIR}/setup-result.json" ]; then
             "xiboplayer-electron" "Electron (recommended)" \
             "xiboplayer-chromium" "Chromium (lightweight)" \
             "arexibo" "arexibo (native Rust)" \
-            --width=400 --height=300 2>&1)
+            --width=500 --height=400 2>&1)
 
         [ -z "$PLAYER" ] && PLAYER="xiboplayer-electron"
 
