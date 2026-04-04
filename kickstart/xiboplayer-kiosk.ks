@@ -37,7 +37,7 @@ clearpart --all --initlabel --disklabel=gpt
 autopart --nolvm --nohome --type=plain --fstype=xfs
 
 # Bootloader — network boot options for dracut, predictable interface naming disabled
-bootloader --location=mbr --append="quiet rhgb splash loglevel=3 rd.neednet=1 ip=dhcp keep-configuration=no allowed-connections=except:origin:nm-initrd-generator net.ifnames=0 biosdevname=0"
+bootloader --location=mbr --timeout=0 --append="quiet rhgb splash loglevel=3 rd.neednet=1 ip=dhcp keep-configuration=no allowed-connections=except:origin:nm-initrd-generator net.ifnames=0 biosdevname=0"
 
 # Package selection
 %packages
@@ -275,6 +275,15 @@ HandleLidSwitch=ignore
 HandleLidSwitchExternalPower=ignore
 HandleLidSwitchDocked=ignore
 LOGINDEOF
+%end
+
+# Hide grub menu — kiosk boots straight to OS
+%post --erroronfail
+if [ -f /etc/default/grub ]; then
+  sed -i 's/^GRUB_TIMEOUT=[0-9]\+$/GRUB_TIMEOUT=0/' /etc/default/grub
+  grep -q GRUB_TIMEOUT_STYLE /etc/default/grub || echo "GRUB_TIMEOUT_STYLE=hidden" >> /etc/default/grub
+  grub2-mkconfig -o /boot/grub2/grub.cfg 2>/dev/null || true
+fi
 %end
 
 # Final cleanup
