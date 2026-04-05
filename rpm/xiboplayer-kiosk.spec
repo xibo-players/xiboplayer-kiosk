@@ -1,6 +1,6 @@
 Name:           xiboplayer-kiosk
 Version:        0.4.17
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
 License:        AGPLv3+
@@ -19,7 +19,9 @@ Requires:       keyd
 Requires:       mesa-va-drivers
 Requires:       libva
 Requires:       alternatives
-Recommends:     (xiboplayer-chromium or xiboplayer-electron or arexibo)
+Recommends:     xiboplayer-chromium
+Suggests:       xiboplayer-electron
+Suggests:       arexibo
 Recommends:     libva-intel-driver
 
 %description
