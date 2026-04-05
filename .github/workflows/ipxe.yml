@@ -61,17 +61,27 @@ jobs:
           make -j$(nproc) bin/ipxe.usb EMBED=boot.ipxe
           ls -lh bin/ipxe.usb
 
-      - name: Build EFI binary
+      - name: Build x86_64 EFI binary
         run: |
           cd /tmp/ipxe/src
           make -j$(nproc) bin-x86_64-efi/ipxe.efi EMBED=boot.ipxe
           ls -lh bin-x86_64-efi/ipxe.efi
 
+      - name: Install ARM64 cross-compiler
+        run: apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build ARM64 EFI binary
+        run: |
+          cd /tmp/ipxe/src
+          make -j$(nproc) CROSS=aarch64-linux-gnu- bin-arm64-efi/ipxe.efi EMBED=boot.ipxe
+          ls -lh bin-arm64-efi/ipxe.efi
+
       - name: Stage artifacts
         run: |
           mkdir -p dist
           cp /tmp/ipxe/src/bin/ipxe.usb dist/xiboplayer-ipxe-bios.img
-          cp /tmp/ipxe/src/bin-x86_64-efi/ipxe.efi dist/xiboplayer-ipxe-uefi.img
+          cp /tmp/ipxe/src/bin-x86_64-efi/ipxe.efi dist/xiboplayer-ipxe-uefi-x86_64.img
+          cp /tmp/ipxe/src/bin-arm64-efi/ipxe.efi dist/xiboplayer-ipxe-uefi-aarch64.img
           cp ipxe/boot.ipxe dist/boot.ipxe
           ls -lh dist/
 
@@ -83,16 +93,15 @@ jobs:
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
         run: |
           BUCKET="${R2_BUCKET}"
-          aws s3 cp dist/xiboplayer-ipxe-bios.img "$BUCKET/ipxe/xiboplayer-ipxe-bios.img" \
-            --endpoint-url "$R2_ENDPOINT" --content-type application/octet-stream
-          aws s3 cp dist/xiboplayer-ipxe-uefi.img "$BUCKET/ipxe/xiboplayer-ipxe-uefi.img" \
-            --endpoint-url "$R2_ENDPOINT" --content-type application/octet-stream
-          aws s3 cp dist/boot.ipxe "$BUCKET/ipxe/boot.ipxe" \
-            --endpoint-url "$R2_ENDPOINT" --content-type text/plain
-          echo "Uploaded to R2:"
-          echo "  https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe-bios.img"
-          echo "  https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe-uefi.img"
-          echo "  https://dl.xiboplayer.org/ipxe/boot.ipxe"
+          for f in dist/*.img dist/boot.ipxe; do
+            [ -f "$f" ] || continue
+            NAME=$(basename "$f")
+            CT="application/octet-stream"
+            [[ "$NAME" == *.ipxe ]] && CT="text/plain"
+            aws s3 cp "$f" "$BUCKET/ipxe/$NAME" \
+              --endpoint-url "$R2_ENDPOINT" --content-type "$CT"
+            echo "  https://dl.xiboplayer.org/ipxe/$NAME"
+          done
 
       - name: Upload to GitHub Release
         run: |
