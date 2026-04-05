@@ -12,7 +12,11 @@
 set menu-timeout 30000
 set base-url https://dl.xiboplayer.org/ipxe
 set ks-base https://raw.githubusercontent.com/xibo-players/xiboplayer-kiosk/main/kickstart
-set fedora-mirror https://download.fedoraproject.org/pub/fedora/linux/releases/43/Everything/x86_64/os
+
+# Auto-detect architecture — iPXE sets ${buildarch} to x86_64 or arm64
+# Map iPXE arch names to Fedora arch names
+iseq ${buildarch} arm64 && set arch aarch64 || set arch x86_64
+set fedora-mirror https://download.fedoraproject.org/pub/fedora/linux/releases/43/Everything/${arch}/os
 
 # Fedora kernel + initrd (netinstall)
 set kernel-url ${fedora-mirror}/images/pxeboot/vmlinuz
