@@ -4,37 +4,55 @@ Turn any PC or Raspberry Pi into a digital signage kiosk. Download a ready-made 
 
 **[Download kiosk images](https://github.com/xibo-players/xiboplayer-kiosk/releases/latest)** | **[Installation guide](https://www.xiboplayer.org/downloads/)** | **[First-boot guide](https://www.xiboplayer.org/guide/first-boot)**
 
-### Available images
+### Images
 
-| Image | Hardware | Description |
-|-------|----------|-------------|
-| **Everything ISO** | PC / laptop | Self-contained offline installer — flash to USB and boot |
-| **Netinstall ISO** | PC / laptop | Lightweight ISO — downloads packages during install |
-| **Raw disk** | Raspberry Pi, NUC | Flash directly to SD card or SSD |
-| **QCOW2** | Virtual machines | Ready-to-boot VM for GNOME Boxes, virt-manager or QEMU |
-| **Atomic ISO** | Any | Immutable Fedora Silverblue with automatic updates and rollback |
+| Image | Arch | Size | File | Use case |
+|-------|------|------|------|----------|
+| **Kickstart (traditional installer)** | | | | |
+| Everything ISO | x86_64 | 1.1GB | `xiboplayer-kiosk-everything_0.4.16_x86_64.iso` | Offline install on PCs, NUCs, signage boxes. No internet needed — all packages bundled. Flash to USB, boot, walk away. |
+| Everything ISO | aarch64 | 1.2GB | `xiboplayer-kiosk-everything_0.4.16_aarch64.iso` | Offline install on Raspberry Pi 5, ARM servers. Same as above for ARM hardware. |
+| Netinstall ISO | x86_64 | 1.1GB | `xiboplayer-kiosk-netinstall_0.4.16_x86_64.iso` | Lightweight installer, downloads packages from Fedora mirrors. Requires internet. Always gets latest packages. |
+| Netinstall ISO | aarch64 | — | `xiboplayer-kiosk-netinstall_0.4.16_aarch64.iso` | Same for ARM64. Available from next release. |
+| **Disk images (ready to boot, no installer)** | | | | |
+| QCOW2 | x86_64 | 1.7GB | `xiboplayer-kiosk_0.4.16_x86_64.qcow2` | Virtual machines (QEMU/KVM, Proxmox, Gnome Boxes). Import and boot — no installation step. |
+| QCOW2 | aarch64 | — | `xiboplayer-kiosk_0.4.16_aarch64.qcow2` | ARM64 VMs. Available from next release. |
+| Raw disk | x86_64 | 1.1GB | `xiboplayer-kiosk_0.4.16_x86_64.raw.xz` | Write directly to SSD/eMMC: `xz -d *.raw.xz && dd if=*.raw of=/dev/sdX`. Industrial/embedded signage. |
+| **Atomic (immutable OS, container-native updates)** | | | | |
+| Atomic ISO | x86_64 | ~1.5GB | `xiboplayer-kiosk-atomic_YYYYMMDD_x86_64.iso` | Immutable Fedora bootc kiosk. Updates via `bootc upgrade` with instant rollback. Best for fleet deployments. |
+| Atomic ISO | aarch64 | ~1.5GB | `xiboplayer-kiosk-atomic_YYYYMMDD_aarch64.iso` | Same for ARM64. RPi5 fleets, ARM kiosks. |
+| OCI Container | multi-arch | — | `ghcr.io/xibo-players/xiboplayer-kiosk:43` | Pull with podman/docker. Base for custom images or `bootc switch` from existing Fedora. |
+| **Network boot (no USB/SD card needed)** | | | | |
+| iPXE BIOS | x86 | 400KB | `xiboplayer-ipxe-bios.img` | Legacy BIOS PCs. Flash to USB or embed in PXE ROM. Boots from network, shows install menu. |
+| iPXE UEFI | x86_64 | 1.1MB | `xiboplayer-ipxe-uefi-x86_64.img` | Modern UEFI PCs. Chainload from existing PXE or flash to USB. |
+| iPXE UEFI | aarch64 | — | `xiboplayer-ipxe-uefi-aarch64.img` | RPi5 with UEFI firmware, ARM servers. Available from next build. |
+| iPXE script | any | 5KB | `boot.ipxe` | Boot menu script. Auto-detects arch. Choose Full/Electron/Chromium/Custom. `chain https://dl.xiboplayer.org/ipxe/boot.ipxe` |
 
 ### Quick start
 
-```bash
-# Option 1: Flash a ready-made image (recommended)
-# Download from https://github.com/xibo-players/xiboplayer-kiosk/releases/latest
+| I want to... | Image |
+|--------------|-------|
+| Install on a PC with USB stick, no internet | `xiboplayer-kiosk-everything_*_x86_64.iso` |
+| Install on RPi5 with USB stick | `xiboplayer-kiosk-everything_*_aarch64.iso` |
+| Test in a VM quickly | `xiboplayer-kiosk_*_x86_64.qcow2` |
+| Deploy 50 identical kiosks with fleet updates | `xiboplayer-kiosk-atomic_*_x86_64.iso` |
+| Network boot a room of PCs | `xiboplayer-ipxe-uefi-x86_64.img` + `boot.ipxe` |
+| Rebase existing Fedora to kiosk | `bootc switch ghcr.io/xibo-players/xiboplayer-kiosk:43` |
+| Write to embedded SSD/eMMC | `xiboplayer-kiosk_*_x86_64.raw.xz` |
+| Custom install with manual partitioning | `xiboplayer-kiosk-netinstall_*_x86_64.iso` |
+| Install on existing Fedora via RPM | `sudo dnf install xiboplayer-release && sudo dnf install xiboplayer-kiosk xiboplayer-electron` |
+| Install on Ubuntu/Debian | See [downloads page](https://www.xiboplayer.org/downloads/) |
 
-# Option 2: Install on existing Fedora
-sudo dnf install https://dl.xiboplayer.org/rpm/fedora/43/noarch/xiboplayer-release-43-7.fc43.noarch.rpm
-sudo dnf install xiboplayer-kiosk xiboplayer-electron
+**[Download images](https://github.com/xibo-players/xiboplayer-kiosk/releases/latest)** — Default login: `xibo` / `xibo` — change your password after first boot.
 
-# Option 3: Install on Ubuntu / Debian
-# See https://www.xiboplayer.org/downloads/
-```
+### What's included
 
-Default login: `xibo` / `xibo` — change your password after first boot.
+All images ship with: xiboplayer-electron + xiboplayer-chromium + arexibo, VLC + mpv + ffmpeg (full codecs) + RPM Fusion plugins, GDM autologin → gnome-kiosk → player selection wizard, VA-API GPU acceleration + mesa-dri fallback, WiFi auto-reconnect + connectivity health-check, Secure Boot chain + GPG-signed packages, iPXE boot profile selection (`xibo.profile=electron|chromium|full`), bootc atomic updates + instant rollback (Atomic images).
 
 ---
 
 ## Features
 
-- **First-boot registration wizard** — Zenity-based CMS credential collector
+- **First-boot registration wizard** — libadwaita GTK4 player selection wizard with zenity fallback
 - **Session holder** — keeps GNOME Kiosk alive with health monitoring and auto-restart
 - **Systemd user service** — manages the player process with resource limits
 - **Keyboard shortcuts** — Ctrl+I (show IP/status), Ctrl+R (reconfigure CMS)
