@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.16
+Version:        0.4.17
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -73,6 +73,9 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
 
 %changelog
+* Sun Apr 05 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.17-1
+- Fix aarch64 mkosi shim, add ARM64 iPXE and netinstall, comprehensive image matrix docs
+
 * Sat Apr 04 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.16-1
 - Security fixes, wizard fixes (localectl, setup-result), grub hidden, disk partitioning, VLC restored, RPM Fusion codecs, mesa-dri for VMs, bootc naming, WiFi reconnect, connectivity health-check, reboot wrappers, arm64 DEB, mirrorlist for netinstall, CI hardening
 
