@@ -1,6 +1,6 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.17
-Release:        2%{?dist}
+Version:        0.4.18
+Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
 License:        AGPLv3+
@@ -75,6 +75,9 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
 
 %changelog
+* Mon Apr 06 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.18-1
+- Fix QCOW2 boot (KernelCommandLine=root=gpt-auto), image matrix docs, download links
+
 * Sun Apr 05 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.17-1
 - Fix aarch64 mkosi shim, add ARM64 iPXE and netinstall, comprehensive image matrix docs
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.18 (2026-04-06)
+
+- Fix QCOW2 boot (KernelCommandLine=root=gpt-auto), image matrix docs, download links
+
 ## 0.4.17 (2026-04-05)
 
 - Fix aarch64 mkosi shim, add ARM64 iPXE and netinstall, comprehensive image matrix docs
