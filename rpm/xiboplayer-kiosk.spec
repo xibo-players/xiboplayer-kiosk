@@ -19,6 +19,9 @@ Requires:       keyd
 Requires:       mesa-va-drivers
 Requires:       libva
 Requires:       alternatives
+Requires:       python3-gobject
+Requires:       libadwaita
+Requires:       gnome-control-center
 Recommends:     xiboplayer-chromium
 Suggests:       xiboplayer-electron
 Suggests:       arexibo
@@ -55,6 +58,9 @@ install -Dm755 kiosk/xibo-show-cms.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/x
 install -Dm644 kiosk/keyd-xibo.conf %{buildroot}%{_sysconfdir}/keyd/xibo.conf
 install -Dm644 kiosk/copr-keyd.repo %{buildroot}%{_sysconfdir}/yum.repos.d/copr-keyd.repo
 install -Dm755 kiosk/xiboplayer-setup.py %{buildroot}%{_datadir}/xiboplayer-kiosk/xiboplayer-setup.py
+install -Dm644 kiosk/xiboplayer-setup.desktop %{buildroot}%{_datadir}/xiboplayer-kiosk/xiboplayer-setup.desktop
+install -Dm755 kiosk/xibo-activate-kiosk.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-activate-kiosk.sh
+install -Dm755 kiosk/xibo-deactivate-kiosk.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-deactivate-kiosk.sh
 
 # Create skel directory for gnome-kiosk-script dispatcher
 install -d %{buildroot}%{_sysconfdir}/skel/.local/bin
@@ -70,11 +76,23 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_datadir}/xiboplayer-kiosk/xibo-show-ip.sh
 %{_datadir}/xiboplayer-kiosk/xibo-show-cms.sh
 %{_datadir}/xiboplayer-kiosk/xiboplayer-setup.py
+%{_datadir}/xiboplayer-kiosk/xiboplayer-setup.desktop
+%{_datadir}/xiboplayer-kiosk/xibo-activate-kiosk.sh
+%{_datadir}/xiboplayer-kiosk/xibo-deactivate-kiosk.sh
 %{_sysconfdir}/keyd/xibo.conf
 %{_sysconfdir}/yum.repos.d/copr-keyd.repo
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
 
 %changelog
+* Mon Apr 07 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.19-1
+- Redesign first-boot: normal GNOME session with setup wizard, then kiosk lockdown
+- Setup wizard uses native GNOME panels for WiFi, timezone, language, display
+- Arexibo CMS config in wizard; Chromium/Electron self-configure
+- ISO boot menu with 3 player entries (all players always installed)
+- Ctrl+R reconfigure: reset player config or return to full GNOME wizard
+- Add xiboplayer-setup.desktop, xibo-activate-kiosk.sh, xibo-deactivate-kiosk.sh
+- Add python3-gobject, libadwaita, gnome-control-center as dependencies
+
 * Mon Apr 06 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.18-1
 - Fix QCOW2 boot (KernelCommandLine=root=gpt-auto), image matrix docs, download links
 
