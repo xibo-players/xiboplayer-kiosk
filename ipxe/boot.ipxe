@@ -31,11 +31,11 @@ echo
 # ── Boot Menu ────────────────────────────────────────────────────────────────
 
 :menu
-menu xiboplayer — Network Install
-item --gap --             ── Kiosk Install ──────────────────────
-item full                 Full Kiosk (Electron + Chromium + arexibo)
-item electron             Electron only
-item chromium             Chromium only (lightweight)
+menu xiboplayer — Network Install (all players installed, use Ctrl+R to switch anytime)
+item --gap --             ── Default player ────────────────────
+item chromium             Chromium player (recommended)
+item electron             Electron player
+item arexibo              Arexibo player
 item --gap --             ── Advanced ────────────────────────────
 item atomic               Atomic image (immutable OS, fedora-bootc)
 item custom               Custom install (Anaconda interactive)
@@ -43,30 +43,30 @@ item --gap --             ── Tools ─────────────�
 item shell                iPXE shell
 item reboot               Reboot
 item --key x exit         Exit to BIOS
-choose --timeout ${menu-timeout} --default full selected || goto menu
+choose --timeout ${menu-timeout} --default chromium selected || goto menu
 goto ${selected}
 
-# ── Full Kiosk ───────────────────────────────────────────────────────────────
+# ── Chromium (default) ──────────────────────────────────────────────────────
 
-:full
-echo Booting Full Kiosk install (Electron + Chromium + arexibo)...
-kernel ${kernel-url} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=full rd.neednet=1 ip=dhcp
+:chromium
+echo Installing xiboplayer kiosk (default: Chromium)...
+kernel ${kernel-url} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=chromium rd.neednet=1 ip=dhcp
 initrd ${initrd-url}
 boot || goto failed
 
-# ── Electron Only ────────────────────────────────────────────────────────────
+# ── Electron ─────────────────────────────────────────────────────────────────
 
 :electron
-echo Booting Electron-only install...
+echo Installing xiboplayer kiosk (default: Electron)...
 kernel ${kernel-url} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=electron rd.neednet=1 ip=dhcp
 initrd ${initrd-url}
 boot || goto failed
 
-# ── Chromium Only ────────────────────────────────────────────────────────────
+# ── Arexibo ──────────────────────────────────────────────────────────────────
 
-:chromium
-echo Booting Chromium-only install...
-kernel ${kernel-url} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=chromium rd.neednet=1 ip=dhcp
+:arexibo
+echo Installing xiboplayer kiosk (default: Arexibo)...
+kernel ${kernel-url} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=arexibo rd.neednet=1 ip=dhcp
 initrd ${initrd-url}
 boot || goto failed
 
