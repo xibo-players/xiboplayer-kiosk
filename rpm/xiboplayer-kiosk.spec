@@ -1,6 +1,6 @@
 Name:           xiboplayer-kiosk
 Version:        0.4.19
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
 License:        AGPLv3+
