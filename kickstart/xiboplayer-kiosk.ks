@@ -159,16 +159,16 @@ PROFILE="${PROFILE:-full}"
 case "$PROFILE" in
   electron)
     dnf install -y xiboplayer-kiosk xiboplayer-electron
-    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 30
+    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 20
     ;;
   chromium)
     dnf install -y xiboplayer-kiosk xiboplayer-chromium
-    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-chromium 20
+    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-chromium 30
     ;;
   *)
     dnf install -y xiboplayer-kiosk xiboplayer-electron xiboplayer-chromium arexibo
-    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 30
-    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-chromium 20
+    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 20
+    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-chromium 30
     alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/arexibo 10
     ;;
 esac

@@ -38,7 +38,7 @@ Turn any PC or Raspberry Pi into a digital signage kiosk. Download a ready-made 
 | Deploy 50 identical kiosks with fleet updates | [Atomic ISO](https://github.com/xibo-players/xiboplayer-kiosk/releases?q=atomic) + `bootc upgrade` |
 | Network boot a room of PCs | [iPXE UEFI](https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe-uefi-x86_64.img) + [boot.ipxe](https://dl.xiboplayer.org/ipxe/boot.ipxe) |
 | Rebase existing Fedora to kiosk | `bootc switch ghcr.io/xibo-players/xiboplayer-kiosk:43` |
-| Install on existing Fedora via RPM | `sudo dnf install xiboplayer-release && sudo dnf install xiboplayer-kiosk xiboplayer-electron` |
+| Install on existing Fedora via RPM | `sudo dnf install xiboplayer-release && sudo dnf install xiboplayer-kiosk xiboplayer-chromium` |
 | Install on Ubuntu/Debian | See [downloads page](https://www.xiboplayer.org/downloads/) |
 
 **[Download images](https://github.com/xibo-players/xiboplayer-kiosk/releases/latest)** — Default login: `xibo` / `xibo` — change your password after first boot.
@@ -64,10 +64,10 @@ The player binary is managed via the Linux alternatives system (`/usr/bin/xibopl
 
 ```bash
 # xiboplayer-electron (priority 30 — highest = default)
-sudo alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 30
+sudo alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 20
 
 # xiboplayer-chromium (priority 20)
-sudo alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-chromium 20
+sudo alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-chromium 30
 
 # arexibo (priority 10)
 sudo alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/arexibo 10
@@ -89,7 +89,7 @@ sudo dnf install \
 sudo dnf install xiboplayer-kiosk
 
 # Install a player (pick one)
-sudo dnf install xiboplayer-electron  # Electron-based (recommended)
+sudo dnf install xiboplayer-chromium  # Chromium-based (recommended)
 sudo dnf install xiboplayer-chromium  # Chromium kiosk wrapper
 sudo dnf install arexibo              # Rust-based native player
 ```

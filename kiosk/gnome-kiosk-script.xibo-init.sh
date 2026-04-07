@@ -48,17 +48,17 @@ if [ ! -f "${XIBO_DATA_DIR}/setup-result.json" ]; then
         PLAYER=$(zenity --list --title="Xibo Player Setup" \
             --text="Select a player:" \
             --column="Player" --column="Description" \
-            "xiboplayer-electron" "Electron (recommended)" \
-            "xiboplayer-chromium" "Chromium (lightweight)" \
+            "xiboplayer-chromium" "Chromium (recommended)" \
+            "xiboplayer-electron" "Electron" \
             "arexibo" "arexibo (native Rust)" \
             --width=500 --height=400 2>&1)
 
-        [ -z "$PLAYER" ] && PLAYER="xiboplayer-electron"
+        [ -z "$PLAYER" ] && PLAYER="xiboplayer-chromium"
 
         case "$PLAYER" in
             xiboplayer-chromium) SERVICE="xiboplayer-chromium.service" ;;
             arexibo) SERVICE="arexibo.service" ;;
-            *) PLAYER="xiboplayer-electron"; SERVICE="xiboplayer-electron.service" ;;
+            *) PLAYER="xiboplayer-chromium"; SERVICE="xiboplayer-chromium.service" ;;
         esac
 
         doas alternatives --set xiboplayer "/usr/bin/${PLAYER}" 2>/dev/null || true

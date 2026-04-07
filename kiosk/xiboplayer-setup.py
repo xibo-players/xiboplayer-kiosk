@@ -48,9 +48,9 @@ COMMON_LOCALES = [
 
 PLAYERS = [
     ('Electron', '/usr/bin/xiboplayer-electron', 'xiboplayer-electron.service',
-     'Web-based player with built-in setup UI (recommended)', True),
+     'Web-based player with built-in setup UI', False),
     ('Chromium', '/usr/bin/xiboplayer-chromium', 'xiboplayer-chromium.service',
-     'Chromium kiosk player with built-in setup UI', False),
+     'Chromium kiosk player with built-in setup UI (recommended)', True),
     ('Arexibo', '/usr/bin/arexibo', 'arexibo.service',
      'Native Rust player — requires CMS credentials', False),
 ]
