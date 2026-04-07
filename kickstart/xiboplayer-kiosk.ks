@@ -35,11 +35,11 @@ rootpw --lock
 # User configuration
 user --name=xibo --groups=wheel --password=xibo --plaintext --gecos="Xibo Kiosk User"
 
-# Disk configuration — use entire first non-removable disk
-# autopart creates EFI/biosboot/boot + root partitions automatically
-zerombr
-clearpart --all --initlabel --disklabel=gpt
-autopart --nolvm --nohome --type=plain --fstype=xfs
+# Disk configuration — auto-detect first non-USB, non-removable disk
+# The %pre script writes the disk name to /tmp/install-disk
+# which is included here via %include
+%include /tmp/disk-config
+
 
 # Bootloader — network boot options for dracut, predictable interface naming disabled
 bootloader --location=mbr --timeout=0 --append="quiet rhgb splash loglevel=3 rd.neednet=1 ip=dhcp keep-configuration=no allowed-connections=except:origin:nm-initrd-generator net.ifnames=0 biosdevname=0"
@@ -319,4 +319,35 @@ chown -R xibo:xibo /home/xibo
 
 # Clean dnf cache
 dnf clean all
+%end
+
+# Auto-detect install disk — find the first non-USB, non-removable disk.
+# Writes disk partitioning commands to /tmp/disk-config for %include.
+%pre --erroronfail
+DISK=""
+for dev in /sys/block/nvme* /sys/block/vd* /sys/block/sd*; do
+  [ -e "$dev" ] || continue
+  name=$(basename "$dev")
+  # Skip removable devices (USB sticks, CD-ROMs)
+  [ "$(cat "$dev/removable" 2>/dev/null)" = "1" ] && continue
+  # Skip devices smaller than 8GB (likely USB sticks)
+  size_bytes=$(( $(cat "$dev/size") * 512 ))
+  [ "$size_bytes" -lt 8000000000 ] && continue
+  DISK="$name"
+  break
+done
+
+if [ -z "$DISK" ]; then
+  echo "ERROR: No suitable install disk found" >&2
+  # Fallback to sda
+  DISK="sda"
+fi
+
+echo "Selected install disk: $DISK" >&2
+cat > /tmp/disk-config << EOF
+zerombr
+clearpart --all --initlabel --disklabel=gpt --drives=$DISK
+ignoredisk --only-use=$DISK
+autopart --nolvm --nohome --type=plain --fstype=xfs
+EOF
 %end
