@@ -17,7 +17,7 @@ url --mirrorlist=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-43&arc
 # Installation settings
 text
 skipx
-firstboot --enable
+firstboot --disable
 reboot --eject
 
 # Localization
@@ -150,29 +150,38 @@ dnf install -y --nogpgcheck xiboplayer-release || \
   dnf install -y --nogpgcheck \
   https://dl.xiboplayer.org/rpm/fedora/43/noarch/xiboplayer-release-43-7.fc43.noarch.rpm
 
-# Install players based on xibo.profile kernel parameter
-# Profiles: full (default), electron, chromium
-# Set via iPXE: kernel vmlinuz inst.ks=... xibo.profile=electron
+# Install ALL players — the boot menu selects the default via xibo.profile=
+# Profiles: chromium (default), electron, arexibo
+# Set via ISO boot menu or iPXE: kernel vmlinuz inst.ks=... xibo.profile=electron
+dnf install -y xiboplayer-kiosk xiboplayer-chromium xiboplayer-electron arexibo
+
+# Register all players with alternatives
+alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-chromium 30
+alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 20
+alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/arexibo 10
+
+# Set default player from xibo.profile kernel parameter
 PROFILE=$(sed -n 's/.*xibo\.profile=\([^ ]*\).*/\1/p' /proc/cmdline)
-PROFILE="${PROFILE:-full}"
+PROFILE="${PROFILE:-chromium}"
 
 case "$PROFILE" in
   electron)
-    dnf install -y xiboplayer-kiosk xiboplayer-electron
-    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 20
-    ;;
-  chromium)
-    dnf install -y xiboplayer-kiosk xiboplayer-chromium
-    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-chromium 30
-    ;;
+    alternatives --set xiboplayer /usr/bin/xiboplayer-electron
+    PLAYER="Electron"; SERVICE="xiboplayer-electron.service" ;;
+  arexibo)
+    alternatives --set xiboplayer /usr/bin/arexibo
+    PLAYER="Arexibo"; SERVICE="arexibo.service" ;;
   *)
-    dnf install -y xiboplayer-kiosk xiboplayer-electron xiboplayer-chromium arexibo
-    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 20
-    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-chromium 30
-    alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/arexibo 10
-    ;;
+    alternatives --set xiboplayer /usr/bin/xiboplayer-chromium
+    PLAYER="Chromium"; SERVICE="xiboplayer-chromium.service" ;;
 esac
-echo "Installed profile: $PROFILE"
+
+# Write setup-result.json so the kiosk knows which player to start
+cat > /home/xibo/.local/share/xibo/setup-result.json << SETUPEOF
+{"player": "$PLAYER", "service": "$SERVICE"}
+SETUPEOF
+chown xibo:xibo /home/xibo/.local/share/xibo/setup-result.json
+echo "Default player: $PLAYER ($SERVICE)"
 %end
 
 # Configure xibo user and directories
@@ -205,12 +214,13 @@ AutomaticLogin=xibo
 EOF
 %end
 
-# Configure AccountsService
+# Configure AccountsService — default GNOME session for first boot
+# The setup wizard will switch to gnome-kiosk-script-wayland after configuration
 %post --erroronfail
 mkdir -p /var/lib/AccountsService/users
 cat > /var/lib/AccountsService/users/xibo << 'EOF'
 [User]
-Session=gnome-kiosk-script-wayland
+Session=gnome
 SystemAccount=false
 EOF
 %end
@@ -222,6 +232,9 @@ permit nopass xibo cmd reboot
 permit nopass xibo cmd shutdown
 permit nopass xibo cmd alternatives
 permit nopass xibo cmd localectl
+permit nopass xibo cmd timedatectl
+permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-activate-kiosk.sh
+permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-deactivate-kiosk.sh
 EOF
 chmod 600 /etc/doas.conf
 %end
@@ -254,13 +267,21 @@ chmod 755 /home/xibo/.local/bin/shutdown
 chown xibo:xibo /home/xibo/.local/bin/reboot /home/xibo/.local/bin/shutdown
 %end
 
-# gnome-initial-setup: only show locale/keyboard/network/timezone
+# Skip gnome-initial-setup completely — our wizard handles system config
 %post --erroronfail
 mkdir -p /usr/share/gnome-initial-setup
 cat > /usr/share/gnome-initial-setup/vendor.conf << 'EOF'
 [pages]
-skip=privacy;software;account;summary;welcome
+skip=language;keyboard;network;timezone;privacy;software;account;summary;welcome;password
 EOF
+systemctl mask gnome-initial-setup.service gnome-initial-setup-first-login.service
+%end
+
+# Install setup wizard autostart for first boot (normal GNOME session)
+%post --erroronfail
+mkdir -p /home/xibo/.config/autostart
+cp /usr/share/xiboplayer-kiosk/xiboplayer-setup.desktop /home/xibo/.config/autostart/
+chown -R xibo:xibo /home/xibo/.config/autostart
 %end
 
 # Disable GNOME donation popup

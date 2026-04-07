@@ -27,6 +27,9 @@ install -m755 kiosk/xibo-keyd-run.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-show-ip.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-show-cms.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xiboplayer-setup.py "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m644 kiosk/xiboplayer-setup.desktop "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m755 kiosk/xibo-activate-kiosk.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m755 kiosk/xibo-deactivate-kiosk.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 
 # Install dispatcher to skel (copied to new users' ~/.local/bin/)
 install -m755 kiosk/gnome-kiosk-script.sh "${DEB_DIR}/etc/skel/.local/bin/gnome-kiosk-script"
