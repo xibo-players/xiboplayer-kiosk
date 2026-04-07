@@ -24,8 +24,9 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Gtk, Adw, GLib
 
+XIBO_CONFIG_DIR = os.path.expanduser('~/.config/xiboplayer')
 XIBO_DATA_DIR = os.path.expanduser('~/.local/share/xibo')
-SETUP_RESULT = os.path.join(XIBO_DATA_DIR, 'setup-result.json')
+SETUP_RESULT = os.path.join(XIBO_CONFIG_DIR, 'setup-result.json')
 KIOSK_DIR = '/usr/share/xiboplayer-kiosk'
 AUTOSTART_FILE = os.path.expanduser('~/.config/autostart/xiboplayer-setup.desktop')
 

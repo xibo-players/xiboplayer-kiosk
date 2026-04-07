@@ -2,11 +2,12 @@
 # Show CMS/player status, offer reconfiguration.
 # Triggered by Ctrl+R (via keyd).
 XIBO_KIOSK_DIR="${XIBO_KIOSK_DIR:-/usr/share/xiboplayer-kiosk}"
-XIBO_DATA_DIR="${XIBO_DATA_DIR:-${HOME}/.local/share/xibo}"
+XIBO_CONFIG_DIR="${HOME}/.config/xiboplayer"
+XIBO_DATA_DIR="${HOME}/.local/share/xibo"
 
 # Read current player
-PLAYER=$(python3 -c "import json; print(json.load(open('${XIBO_DATA_DIR}/setup-result.json'))['player'])" 2>/dev/null || echo "unknown")
-SERVICE=$(python3 -c "import json; print(json.load(open('${XIBO_DATA_DIR}/setup-result.json'))['service'])" 2>/dev/null || echo "unknown")
+PLAYER=$(python3 -c "import json; print(json.load(open('${XIBO_CONFIG_DIR}/setup-result.json'))['player'])" 2>/dev/null || echo "unknown")
+SERVICE=$(python3 -c "import json; print(json.load(open('${XIBO_CONFIG_DIR}/setup-result.json'))['service'])" 2>/dev/null || echo "unknown")
 
 # Get CMS info based on player type
 case "$PLAYER" in

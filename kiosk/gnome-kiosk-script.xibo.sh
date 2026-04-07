@@ -5,7 +5,8 @@
 # to systemd (arexibo.service). Shows persistent status notifications.
 
 XIBO_KIOSK_DIR="${XIBO_KIOSK_DIR:-/usr/share/xiboplayer-kiosk}"
-XIBO_DATA_DIR="${XIBO_DATA_DIR:-${HOME}/.local/share/xibo}"
+XIBO_CONFIG_DIR="${HOME}/.config/xiboplayer"
+XIBO_DATA_DIR="${HOME}/.local/share/xibo"
 NOTIFY_ID=1
 
 # Start supporting services
@@ -57,8 +58,8 @@ dunstctl close-all 2>/dev/null || true
 
 # Determine which service to manage from setup-result.json
 PLAYER_SERVICE="arexibo.service"
-if [ -f "${XIBO_DATA_DIR}/setup-result.json" ]; then
-    SVC=$(python3 -c "import json; print(json.load(open('${XIBO_DATA_DIR}/setup-result.json'))['service'])" 2>/dev/null)
+if [ -f "${XIBO_CONFIG_DIR}/setup-result.json" ]; then
+    SVC=$(python3 -c "import json; print(json.load(open('${XIBO_CONFIG_DIR}/setup-result.json'))['service'])" 2>/dev/null)
     [ -n "$SVC" ] && PLAYER_SERVICE="$SVC"
 fi
 
@@ -68,25 +69,30 @@ CMS=$(grep -oP '"address"\s*:\s*"\K[^"]+' "${XIBO_DATA_DIR}/cms.json" 2>/dev/nul
 notify-send -t 5000 "Xibo" "IP: $IP\nCMS: $CMS\nStarting ${PLAYER_SERVICE}..."
 
 # Start player via systemd — Electron/Chromium show their own setup UI if unconfigured.
-# If player has no CMS config yet, clear stale session data to prevent auto-retry loops.
-case "$PLAYER_SERVICE" in
-    xiboplayer-chromium.service)
-        CONFIG_FILE="$HOME/.config/xiboplayer/chromium/config.json"
-        if [ ! -f "$CONFIG_FILE" ] || ! grep -q '"cmsUrl"' "$CONFIG_FILE" 2>/dev/null || \
-           [ "$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('cmsUrl',''))" 2>/dev/null)" = "" ]; then
-            rm -rf "$HOME/.config/xiboplayer/chromium/Default/Service Worker" 2>/dev/null
-            rm -rf "$HOME/.config/xiboplayer/chromium/Default/Local Storage" 2>/dev/null
-        fi
-        ;;
-    xiboplayer-electron.service)
-        CONFIG_FILE="$HOME/.config/xiboplayer/electron/config.json"
-        if [ ! -f "$CONFIG_FILE" ] || ! grep -q '"cmsUrl"' "$CONFIG_FILE" 2>/dev/null || \
-           [ "$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('cmsUrl',''))" 2>/dev/null)" = "" ]; then
-            rm -rf "$HOME/.config/xiboplayer/electron/Service Worker" 2>/dev/null
-            rm -rf "$HOME/.config/xiboplayer/electron/Local Storage" 2>/dev/null
-        fi
-        ;;
-esac
+# On first boot with no CMS config, wipe ALL player profile data to prevent stale
+# Service Worker / Local Storage from triggering auto-registration loops.
+has_cms_config() {
+    case "$PLAYER_SERVICE" in
+        xiboplayer-chromium.service)
+            local cf="$HOME/.config/xiboplayer/chromium/config.json"
+            [ -f "$cf" ] && python3 -c "import json,sys; sys.exit(0 if json.load(open('$cf')).get('cmsUrl') else 1)" 2>/dev/null
+            ;;
+        xiboplayer-electron.service)
+            local cf="$HOME/.config/xiboplayer/electron/config.json"
+            [ -f "$cf" ] && python3 -c "import json,sys; sys.exit(0 if json.load(open('$cf')).get('cmsUrl') else 1)" 2>/dev/null
+            ;;
+        arexibo.service)
+            [ -f "${XIBO_DATA_DIR}/cms.json" ]
+            ;;
+    esac
+}
+
+if ! has_cms_config; then
+    case "$PLAYER_SERVICE" in
+        xiboplayer-chromium.service) rm -rf "$HOME/.config/xiboplayer/chromium/Default" 2>/dev/null ;;
+        xiboplayer-electron.service) rm -rf "$HOME/.config/xiboplayer/electron/Default" 2>/dev/null ;;
+    esac
+fi
 systemctl --user start "$PLAYER_SERVICE" 2>/dev/null || true
 
 # Monitor player health
@@ -103,44 +109,52 @@ while true; do
         # Close notification when connected — player is showing content
         dunstctl close-all 2>/dev/null || notify-send -r "$NOTIFY_ID" -t 1 " " " " 2>/dev/null || true
     else
-        # Check exit code: 2 = not authorized yet (transient), 1 = real error
-        EXIT_CODE=$(systemctl --user show -p ExecMainStatus --value "$PLAYER_SERVICE" 2>/dev/null)
+        # If player has no CMS config, don't restart — let the user interact with the setup screen.
+        # The player shows its own setup UI when unconfigured; restarting creates a loop.
+        HAS_CONFIG=false
+        case "$PLAYER_SERVICE" in
+            xiboplayer-chromium.service)
+                CF="$HOME/.config/xiboplayer/chromium/config.json"
+                [ -f "$CF" ] && grep -q '"cmsUrl"' "$CF" 2>/dev/null && \
+                    [ "$(python3 -c "import json; c=json.load(open('$CF')).get('cmsUrl',''); print('yes' if c else 'no')" 2>/dev/null)" = "yes" ] && HAS_CONFIG=true
+                ;;
+            xiboplayer-electron.service)
+                CF="$HOME/.config/xiboplayer/electron/config.json"
+                [ -f "$CF" ] && grep -q '"cmsUrl"' "$CF" 2>/dev/null && \
+                    [ "$(python3 -c "import json; c=json.load(open('$CF')).get('cmsUrl',''); print('yes' if c else 'no')" 2>/dev/null)" = "yes" ] && HAS_CONFIG=true
+                ;;
+            arexibo.service)
+                [ -f "${XIBO_DATA_DIR}/cms.json" ] && HAS_CONFIG=true
+                ;;
+        esac
 
-        if [ "$EXIT_CODE" = "2" ]; then
-            # Display registered but not yet authorized in CMS — wait patiently
-            status_notify "IP: $IP — Waiting for CMS authorization..." "normal"
+        if [ "$HAS_CONFIG" = "false" ]; then
+            # No CMS config — player is showing setup screen, don't restart
+            status_notify "IP: $IP — Waiting for CMS configuration..." "normal"
+            # Start it once if not running
+            systemctl --user is-failed --quiet "$PLAYER_SERVICE" && \
+                systemctl --user restart "$PLAYER_SERVICE" 2>/dev/null || true
         else
-            FAIL_COUNT=$((FAIL_COUNT + 1))
+            # Has config but player stopped — real error, handle normally
+            EXIT_CODE=$(systemctl --user show -p ExecMainStatus --value "$PLAYER_SERVICE" 2>/dev/null)
 
-            # Extract error from journal
-            ERROR=$(get_player_error)
-            if [ -n "$ERROR" ]; then
-                status_notify "IP: $IP — Error: $ERROR" "critical"
+            if [ "$EXIT_CODE" = "2" ]; then
+                status_notify "IP: $IP — Waiting for CMS authorization..." "normal"
             else
-                status_notify "IP: $IP — Player not running (attempt $FAIL_COUNT/$MAX_FAILS)" "critical"
-            fi
-
-            if [ "$FAIL_COUNT" -ge "$MAX_FAILS" ]; then
-                # Offer to reconfigure if wizard is available
-                if [ -f "${XIBO_KIOSK_DIR}/gnome-kiosk-script.xibo-init.sh" ]; then
-                    status_notify "IP: $IP — Player failed. Reconfigure?" "critical"
-                    if zenity --question \
-                        --title="Xibo - Player Failed" \
-                        --text="The player has failed $MAX_FAILS times.\n\nLast error: ${ERROR:-unknown}\n\nDo you want to reconfigure?" \
-                        --width=400 2>/dev/null; then
-                        # Remove config so dispatcher picks wizard on next boot
-                        rm -f "${XIBO_DATA_DIR}/cms.json"
-                        rm -f "${XIBO_DATA_DIR}/setup-result.json"
-                        pkill -u "$(whoami)" dunst 2>/dev/null || true
-                        exec "${XIBO_KIOSK_DIR}/gnome-kiosk-script.xibo-init.sh"
-                    fi
+                FAIL_COUNT=$((FAIL_COUNT + 1))
+                ERROR=$(get_player_error)
+                if [ -n "$ERROR" ]; then
+                    status_notify "IP: $IP — Error: $ERROR" "critical"
+                else
+                    status_notify "IP: $IP — Player not running (attempt $FAIL_COUNT/$MAX_FAILS)" "critical"
                 fi
 
-                # Reset counter — either user declined reconfigure or no wizard available
-                FAIL_COUNT=0
-                # Try restarting the service
-                systemctl --user restart "$PLAYER_SERVICE" 2>/dev/null || true
-                status_notify "IP: $IP — Restarting player..." "normal"
+                if [ "$FAIL_COUNT" -ge "$MAX_FAILS" ]; then
+                    status_notify "IP: $IP — Player failed $MAX_FAILS times." "critical"
+                    FAIL_COUNT=0
+                    systemctl --user restart "$PLAYER_SERVICE" 2>/dev/null || true
+                    status_notify "IP: $IP — Restarting player..." "normal"
+                fi
             fi
         fi
     fi

@@ -7,7 +7,8 @@
 # This only runs if the dispatcher is somehow reached without setup.
 
 XIBO_KIOSK_DIR="${XIBO_KIOSK_DIR:-/usr/share/xiboplayer-kiosk}"
-XIBO_DATA_DIR="${XIBO_DATA_DIR:-${HOME}/.local/share/xibo}"
+XIBO_CONFIG_DIR="${HOME}/.config/xiboplayer"
+XIBO_DATA_DIR="${HOME}/.local/share/xibo"
 LOGFILE="/tmp/xibo-init.log"
 
 exec > >(tee -a "$LOGFILE") 2>&1
@@ -25,9 +26,9 @@ mkdir -p "${HOME}/.config"
 touch "${HOME}/.config/gnome-initial-setup-done"
 
 # If no setup-result.json, create one with Chromium default
-if [ ! -f "${XIBO_DATA_DIR}/setup-result.json" ]; then
-    mkdir -p "${XIBO_DATA_DIR}"
-    cat > "${XIBO_DATA_DIR}/setup-result.json" << 'EOF'
+if [ ! -f "${XIBO_CONFIG_DIR}/setup-result.json" ]; then
+    mkdir -p "${XIBO_CONFIG_DIR}"
+    cat > "${XIBO_CONFIG_DIR}/setup-result.json" << 'EOF'
 {"player": "Chromium", "service": "xiboplayer-chromium.service"}
 EOF
     echo "[Init] Created default setup-result.json (Chromium)"

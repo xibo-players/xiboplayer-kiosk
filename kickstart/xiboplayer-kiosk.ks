@@ -175,10 +175,11 @@ case "$PROFILE" in
 esac
 
 # Write setup-result.json so the kiosk knows which player to start
-cat > /home/xibo/.local/share/xibo/setup-result.json << SETUPEOF
+mkdir -p /home/xibo/.config/xiboplayer
+cat > /home/xibo/.config/xiboplayer/setup-result.json << SETUPEOF
 {"player": "$PLAYER", "service": "$SERVICE"}
 SETUPEOF
-chown xibo:xibo /home/xibo/.local/share/xibo/setup-result.json
+chown -R xibo:xibo /home/xibo/.config/xiboplayer
 echo "Default player: $PLAYER ($SERVICE)"
 %end
 
