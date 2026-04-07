@@ -2,18 +2,21 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (c) 2026 Pau Aliagas <linuxnow@gmail.com>
 """
-Xibo Player Setup — follows gnome-initial-setup style exactly.
+xiboplayer first-boot setup wizard.
 
-Uses AdwStatusPage + AdwPreferencesGroup — same widget pattern as
-gnome-initial-setup language/timezone/account pages.
+Runs as autostart in a normal GNOME session on first boot.
+Provides buttons to launch native GNOME settings panels (WiFi, Date/Time,
+Language) and CMS configuration fields for Arexibo.
+
+On finish, activates kiosk mode via AccountsService and logs out.
+Subsequent boots go directly to gnome-kiosk with the selected player.
 """
 
-import locale
-import subprocess
 import hashlib
 import json
 import os
 import socket
+import subprocess
 import time
 
 import gi
@@ -22,56 +25,54 @@ gi.require_version('Adw', '1')
 from gi.repository import Gtk, Adw, GLib
 
 XIBO_DATA_DIR = os.path.expanduser('~/.local/share/xibo')
-
-# Common locales shown at the top of the language list.
-# Full list is loaded from localectl and searchable.
-COMMON_LOCALES = [
-    ('English (US)', 'en_US.UTF-8'),
-    ('English (UK)', 'en_GB.UTF-8'),
-    ('Español (España)', 'es_ES.UTF-8'),
-    ('Català', 'ca_ES.UTF-8'),
-    ('Français', 'fr_FR.UTF-8'),
-    ('Deutsch', 'de_DE.UTF-8'),
-    ('Italiano', 'it_IT.UTF-8'),
-    ('Português (Brasil)', 'pt_BR.UTF-8'),
-    ('Português (Portugal)', 'pt_PT.UTF-8'),
-    ('Nederlands', 'nl_NL.UTF-8'),
-    ('Polski', 'pl_PL.UTF-8'),
-    ('日本語', 'ja_JP.UTF-8'),
-    ('中文 (简体)', 'zh_CN.UTF-8'),
-    ('中文 (繁體)', 'zh_TW.UTF-8'),
-    ('한국어', 'ko_KR.UTF-8'),
-    ('العربية', 'ar_SA.UTF-8'),
-    ('Türkçe', 'tr_TR.UTF-8'),
-    ('Русский', 'ru_RU.UTF-8'),
-]
-
-PLAYERS = [
-    ('Electron', '/usr/bin/xiboplayer-electron', 'xiboplayer-electron.service',
-     'Web-based player with built-in setup UI', False),
-    ('Chromium', '/usr/bin/xiboplayer-chromium', 'xiboplayer-chromium.service',
-     'Chromium kiosk player with built-in setup UI (recommended)', True),
-    ('Arexibo', '/usr/bin/arexibo', 'arexibo.service',
-     'Native Rust player — requires CMS credentials', False),
-]
+SETUP_RESULT = os.path.join(XIBO_DATA_DIR, 'setup-result.json')
+KIOSK_DIR = '/usr/share/xiboplayer-kiosk'
+AUTOSTART_FILE = os.path.expanduser('~/.config/autostart/xiboplayer-setup.desktop')
 
 
-# ── Pages ─────────────────────────────────────────────────────
+def read_setup_result():
+    """Read the player selection written by kickstart."""
+    try:
+        with open(SETUP_RESULT) as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {'player': 'Chromium', 'service': 'xiboplayer-chromium.service'}
 
-def get_available_locales():
-    """Get all available locales from localectl."""
+
+def get_wifi_status():
+    """Get current WiFi SSID or connection status."""
     try:
         result = subprocess.run(
-            ['localectl', 'list-locales'],
+            ['nmcli', '-t', '-f', 'NAME,TYPE', 'connection', 'show', '--active'],
             capture_output=True, text=True, timeout=5,
         )
-        return [l.strip() for l in result.stdout.splitlines() if l.strip()]
+        for line in result.stdout.splitlines():
+            parts = line.split(':')
+            if len(parts) >= 2 and 'wireless' in parts[-1]:
+                return parts[0]
+        for line in result.stdout.splitlines():
+            parts = line.split(':')
+            if len(parts) >= 2 and 'ethernet' in parts[-1]:
+                return f'{parts[0]} (wired)'
     except Exception:
-        return [loc for _, loc in COMMON_LOCALES]
+        pass
+    return 'Not connected'
 
 
-def get_current_locale():
-    """Get the current system locale."""
+def get_timezone():
+    """Get current system timezone."""
+    try:
+        result = subprocess.run(
+            ['timedatectl', 'show', '-p', 'Timezone', '--value'],
+            capture_output=True, text=True, timeout=5,
+        )
+        return result.stdout.strip()
+    except Exception:
+        return 'Unknown'
+
+
+def get_locale():
+    """Get current system locale."""
     try:
         result = subprocess.run(
             ['localectl', 'status'],
@@ -85,174 +86,108 @@ def get_current_locale():
     return os.environ.get('LANG', 'en_US.UTF-8')
 
 
-def make_language_page():
-    """Language selection — searchable list like gnome-initial-setup language page."""
+def generate_display_id(key):
+    """Generate a unique display ID from machine-id + timestamp + key."""
+    machine_id = ''
+    try:
+        with open('/etc/machine-id') as f:
+            machine_id = f.read().strip()
+    except OSError:
+        pass
+    raw = f'{machine_id}{int(time.time())}{key}'
+    return f'xibo-{hashlib.sha256(raw.encode()).hexdigest()[:12]}'
+
+
+def launch_settings_panel(panel):
+    """Open a GNOME Settings panel."""
+    try:
+        subprocess.Popen(
+            ['gnome-control-center', panel],
+            start_new_session=True,
+        )
+    except Exception:
+        pass
+
+
+# ── Pages ─────────────────────────────────────────────────────
+
+
+def make_system_page():
+    """System configuration — buttons to launch native GNOME panels."""
     page = Adw.StatusPage(
-        title='Language',
-        description='Select the language for this device.',
+        title='System Setup',
+        description='Configure network and system settings for this device.',
+        icon_name='preferences-system-symbolic',
     )
-    page.selected_locale = get_current_locale()
 
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
 
-    # Search entry
-    search = Gtk.SearchEntry(placeholder_text='Search languages…')
-    search.set_margin_start(24)
-    search.set_margin_end(24)
-    box.append(search)
+    # Network / WiFi
+    net_group = Adw.PreferencesGroup(title='Network')
 
-    # Scrollable list of locales
-    scrolled = Gtk.ScrolledWindow(
-        vexpand=True,
-        min_content_height=300,
-        margin_start=24,
-        margin_end=24,
+    page.wifi_row = Adw.ActionRow(
+        title='WiFi',
+        subtitle=get_wifi_status(),
     )
+    page.wifi_row.set_activatable(True)
+    page.wifi_row.add_suffix(Gtk.Image.new_from_icon_name('go-next-symbolic'))
+    page.wifi_row.connect('activated', lambda _: launch_settings_panel('wifi'))
+    net_group.add(page.wifi_row)
 
-    listbox = Gtk.ListBox(selection_mode=Gtk.SelectionMode.SINGLE)
-    listbox.add_css_class('boxed-list')
-    listbox.set_filter_func(lambda row: True)
+    box.append(net_group)
 
-    # Build locale → display name map from common locales
-    locale_names = {loc: name for name, loc in COMMON_LOCALES}
-    all_locales = get_available_locales()
+    # Date & Time
+    time_group = Adw.PreferencesGroup(title='Date & Time')
 
-    # Common locales first, then the rest
-    common_codes = {loc for _, loc in COMMON_LOCALES}
-    ordered = [loc for _, loc in COMMON_LOCALES if loc in all_locales]
-    ordered += sorted(loc for loc in all_locales if loc not in common_codes)
+    page.tz_row = Adw.ActionRow(
+        title='Timezone',
+        subtitle=get_timezone(),
+    )
+    page.tz_row.set_activatable(True)
+    page.tz_row.add_suffix(Gtk.Image.new_from_icon_name('go-next-symbolic'))
+    page.tz_row.connect('activated', lambda _: launch_settings_panel('datetime'))
+    time_group.add(page.tz_row)
 
-    rows = []
-    first_selected = None
-    for loc in ordered:
-        display = locale_names.get(loc, loc)
-        row = Adw.ActionRow(title=display, subtitle=loc)
-        row._locale = loc
-        row._search_text = f'{display} {loc}'.lower()
-        listbox.append(row)
-        rows.append(row)
+    box.append(time_group)
 
-        if loc == page.selected_locale and first_selected is None:
-            first_selected = row
+    # Language (optional)
+    lang_group = Adw.PreferencesGroup(title='Language')
 
-    if first_selected:
-        listbox.select_row(first_selected)
+    page.lang_row = Adw.ActionRow(
+        title='Language & Region',
+        subtitle=get_locale(),
+    )
+    page.lang_row.set_activatable(True)
+    page.lang_row.add_suffix(Gtk.Image.new_from_icon_name('go-next-symbolic'))
+    page.lang_row.connect('activated', lambda _: launch_settings_panel('region'))
+    lang_group.add(page.lang_row)
 
-    def on_row_selected(lb, row):
-        if row:
-            page.selected_locale = row._locale
+    box.append(lang_group)
 
-    listbox.connect('row-selected', on_row_selected)
+    # Display (optional)
+    display_group = Adw.PreferencesGroup(title='Display')
 
-    # Search filtering
-    def on_search_changed(entry):
-        text = entry.get_text().lower()
-        listbox.set_filter_func(
-            lambda row: not text or text in row._search_text
-        )
+    display_row = Adw.ActionRow(
+        title='Display Settings',
+        subtitle='Resolution, rotation and scaling',
+    )
+    display_row.set_activatable(True)
+    display_row.add_suffix(Gtk.Image.new_from_icon_name('go-next-symbolic'))
+    display_row.connect('activated', lambda _: launch_settings_panel('display'))
+    display_group.add(display_row)
 
-    search.connect('search-changed', on_search_changed)
-
-    scrolled.set_child(listbox)
-    box.append(scrolled)
+    box.append(display_group)
 
     page.set_child(box)
     return page
 
 
-def make_display_page():
-    """Display config — launches GNOME Settings display panel."""
-    page = Adw.StatusPage(
-        title='Display',
-        description='Optionally configure resolution, orientation and layout.\nClick Done to skip.',
-    )
-
-    group = Adw.PreferencesGroup()
-
-    # Button to open GNOME display settings
-    row = Adw.ActionRow(
-        title='Open Display Settings',
-        subtitle='Arrange displays, set resolution, rotation and scaling',
-    )
-    row.set_activatable(True)
-
-    icon = Gtk.Image.new_from_icon_name('go-next-symbolic')
-    row.add_suffix(icon)
-
-    def on_activated(_row):
-        try:
-            subprocess.Popen(
-                ['gnome-control-center', 'display'],
-                start_new_session=True,
-            )
-        except Exception:
-            pass
-
-    row.connect('activated', on_activated)
-    group.add(row)
-
-    # Hint for CLI users
-    hint = Adw.ActionRow(
-        title='Command line',
-        subtitle='gdctl set --logical-monitor --monitor HDMI-1 --transform 90 --persistent',
-    )
-    hint.add_css_class('property')
-    group.add(hint)
-
-    page.set_child(group)
-    return page
-
-
-def make_player_page():
-    """Player selection — same layout as gnome-initial-setup account page."""
-    page = Adw.StatusPage(
-        title='Player',
-        description='Select the digital signage player for this device.',
-    )
-    page.selected = None
-    page.service = None
-
-    group = Adw.PreferencesGroup()
-    first_check = None
-
-    def on_toggled(check, name, service):
-        if check.get_active():
-            page.selected = name
-            page.service = service
-
-    for name, binary, service, desc, default in PLAYERS:
-        if not os.path.isfile(binary):
-            continue
-
-        row = Adw.ActionRow(title=name, subtitle=desc)
-
-        check = Gtk.CheckButton()
-        if first_check is None:
-            first_check = check
-            if default:
-                check.set_active(True)
-                page.selected = name
-                page.service = service
-        else:
-            check.set_group(first_check)
-
-        check.connect('toggled', on_toggled, name, service)
-        row.add_prefix(check)
-        row.set_activatable_widget(check)
-        group.add(row)
-
-    if page.selected is None and first_check is not None:
-        first_check.set_active(True)
-
-    page.set_child(group)
-    return page
-
-
 def make_cms_page():
-    """CMS configuration — same layout as gnome-initial-setup network page."""
+    """CMS configuration for Arexibo — URL, key, display name."""
     page = Adw.StatusPage(
         title='CMS Connection',
-        description='Enter your Xibo CMS server details.',
+        description='Enter your Xibo CMS server details.\nArexibo requires manual CMS configuration.',
+        icon_name='network-server-symbolic',
     )
 
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
@@ -280,6 +215,7 @@ def make_cms_page():
 
 
 def validate_cms(page):
+    """Validate CMS fields. Returns True if valid."""
     url = page.url_row.get_text().strip()
     key = page.key_row.get_text().strip()
 
@@ -296,36 +232,11 @@ def validate_cms(page):
     return True
 
 
-def get_cms_config(page):
-    url = page.url_row.get_text().strip()
-    if not url.endswith('/'):
-        url += '/'
-    key = page.key_row.get_text().strip()
-    name = page.name_row.get_text().strip() or socket.gethostname()
-
-    machine_id = ''
-    try:
-        with open('/etc/machine-id') as f:
-            machine_id = f.read().strip()
-    except OSError:
-        pass
-
-    raw = f'{machine_id}{int(time.time())}{key}'
-    display_id = hashlib.sha256(raw.encode()).hexdigest()[:12]
-
-    return {
-        'address': url,
-        'key': key,
-        'display_id': f'xibo-{display_id}',
-        'display_name': name,
-        'proxy': None,
-    }
-
-
 # ── Window ────────────────────────────────────────────────────
 
+
 class SetupWindow(Adw.ApplicationWindow):
-    """Matches gnome-initial-setup window: header bar + content + nav buttons."""
+    """First-boot setup wizard."""
 
     def __init__(self, app):
         super().__init__(
@@ -334,139 +245,125 @@ class SetupWindow(Adw.ApplicationWindow):
             default_height=550,
         )
 
+        self.player_info = read_setup_result()
+        self.needs_cms = self.player_info.get('player') == 'Arexibo'
+
         toolbar = Adw.ToolbarView()
 
         # Header bar
         header = Adw.HeaderBar()
-        header.set_title_widget(Gtk.Label(label='Xibo Player Setup'))
+        header.set_title_widget(Gtk.Label(label='xiboplayer setup'))
 
         self.back_btn = Gtk.Button(label='Previous')
         self.back_btn.connect('clicked', self._on_back)
         self.back_btn.set_visible(False)
         header.pack_start(self.back_btn)
 
-        self.next_btn = Gtk.Button(label='Next')
+        self.next_btn = Gtk.Button(label='Done' if not self.needs_cms else 'Next')
         self.next_btn.add_css_class('suggested-action')
         self.next_btn.connect('clicked', self._on_next)
         header.pack_end(self.next_btn)
 
         toolbar.add_top_bar(header)
 
-        # Stack for pages (matches gnome-initial-setup's GtkStack with crossfade)
+        # Pages
         self.stack = Gtk.Stack(
             transition_type=Gtk.StackTransitionType.CROSSFADE,
             transition_duration=300,
         )
 
-        self.language_page = make_language_page()
-        self.player_page = make_player_page()
-        self.cms_page = make_cms_page()
-        self.display_page = make_display_page()
+        self.system_page = make_system_page()
+        self.stack.add_named(self.system_page, 'system')
 
-        self.stack.add_named(self.language_page, 'language')
-        self.stack.add_named(self.player_page, 'player')
-        self.stack.add_named(self.cms_page, 'cms')
-        self.stack.add_named(self.display_page, 'display')
-
-        # Page order for navigation
-        self.pages = ['language', 'player', 'cms', 'display']
+        if self.needs_cms:
+            self.cms_page = make_cms_page()
+            self.stack.add_named(self.cms_page, 'cms')
 
         toolbar.set_content(self.stack)
         self.set_content(toolbar)
-        self._update_buttons()
-
-    def _current(self):
-        return self.stack.get_visible_child_name()
-
-    def _is_last(self):
-        return self._current() == 'display'
-
-    def _update_buttons(self):
-        current = self._current()
-        self.back_btn.set_visible(current != 'language')
-        self.next_btn.set_label('Done' if self._is_last() else 'Next')
-
-    def _go(self, name):
-        self.stack.set_visible_child_name(name)
-        self._update_buttons()
 
     def _on_back(self, _btn):
-        current = self._current()
-        idx = self.pages.index(current)
-        if idx > 0:
-            self._go(self.pages[idx - 1])
+        if self.stack.get_visible_child_name() == 'cms':
+            self.stack.set_visible_child_name('system')
+            self.back_btn.set_visible(False)
+            self.next_btn.set_label('Next')
 
     def _on_next(self, _btn):
-        current = self._current()
+        current = self.stack.get_visible_child_name()
 
-        if current == 'language':
-            import threading
-            threading.Thread(target=self._apply_locale, daemon=True).start()
-            self._go('player')
-            return
+        if current == 'system':
+            # Refresh status indicators
+            self.system_page.wifi_row.set_subtitle(get_wifi_status())
+            self.system_page.tz_row.set_subtitle(get_timezone())
+            self.system_page.lang_row.set_subtitle(get_locale())
 
-        if current == 'player':
-            if self.player_page.selected == 'Arexibo':
-                self._go('cms')
+            if self.needs_cms:
+                self.stack.set_visible_child_name('cms')
+                self.back_btn.set_visible(True)
+                self.next_btn.set_label('Done')
             else:
-                self._go('display')
+                self._finish()
             return
 
         if current == 'cms':
             if not validate_cms(self.cms_page):
                 return
-            self._go('display')
-            return
-
-        if current == 'display':
+            self._write_cms_config()
             self._finish()
 
-    def _apply_locale(self):
-        loc = self.language_page.selected_locale
-        try:
-            subprocess.run(
-                ['doas', 'localectl', 'set-locale', f'LANG={loc}'],
-                capture_output=True, timeout=5,
-            )
-        except Exception:
-            pass  # non-fatal on dev machines without doas
+    def _write_cms_config(self):
+        """Write Arexibo cms.json."""
+        url = self.cms_page.url_row.get_text().strip()
+        if not url.endswith('/'):
+            url += '/'
+        key = self.cms_page.key_row.get_text().strip()
+        name = self.cms_page.name_row.get_text().strip() or socket.gethostname()
 
-    def _finish(self):
-        player = self.player_page.selected
-        service = self.player_page.service
-
-        binary_map = {
-            'Electron': '/usr/bin/xiboplayer-electron',
-            'Chromium': '/usr/bin/xiboplayer-chromium',
-            'Arexibo': '/usr/bin/arexibo',
+        config = {
+            'address': url,
+            'key': key,
+            'display_id': generate_display_id(key),
+            'display_name': name,
+            'proxy': None,
         }
-        binary = binary_map.get(player)
-        if binary:
-            subprocess.run(
-                ['doas', 'alternatives', '--set', 'xiboplayer', binary],
-                capture_output=True,
-            )
-
-        if player == 'Arexibo':
-            config = get_cms_config(self.cms_page)
-            os.makedirs(XIBO_DATA_DIR, exist_ok=True)
-            with open(os.path.join(XIBO_DATA_DIR, 'cms.json'), 'w') as f:
-                json.dump(config, f, indent=4)
-
-        if service:
-            subprocess.run(
-                ['systemctl', '--user', 'enable', '--now', service],
-                capture_output=True,
-            )
 
         os.makedirs(XIBO_DATA_DIR, exist_ok=True)
-        with open(os.path.join(XIBO_DATA_DIR, 'setup-result.json'), 'w') as f:
-            json.dump({'player': player, 'service': service}, f)
+        with open(os.path.join(XIBO_DATA_DIR, 'cms.json'), 'w') as f:
+            json.dump(config, f, indent=4)
+
+    def _finish(self):
+        """Activate kiosk mode and log out."""
+        # Activate kiosk session for all future logins
+        subprocess.run(
+            ['doas', os.path.join(KIOSK_DIR, 'xibo-activate-kiosk.sh')],
+            capture_output=True,
+        )
+
+        # Remove autostart so wizard doesn't run again
+        try:
+            os.remove(AUTOSTART_FILE)
+        except OSError:
+            pass
+
+        # Mark gnome-initial-setup as done (belt and suspenders)
+        os.makedirs(os.path.expanduser('~/.config'), exist_ok=True)
+        open(os.path.expanduser('~/.config/gnome-initial-setup-done'), 'a').close()
 
         self.close()
 
+        # Logout — GDM will re-login into kiosk session
+        GLib.timeout_add(500, self._logout)
+
+    def _logout(self):
+        subprocess.run(
+            ['gnome-session-quit', '--logout', '--no-prompt'],
+            capture_output=True,
+        )
+        return False
+
 
 # ── Application ───────────────────────────────────────────────
+
 
 class SetupApp(Adw.Application):
     def __init__(self):

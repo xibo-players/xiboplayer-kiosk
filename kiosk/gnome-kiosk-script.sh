@@ -1,15 +1,10 @@
 #!/bin/bash
 # Xibo Kiosk Dispatcher
 # =====================
-# Dispatches to the registration wizard or session holder based on
-# whether cms.json exists. This script is installed as the GNOME Kiosk
-# session script (gnome-kiosk-script in $PATH).
+# Runs inside gnome-kiosk-script-wayland session (after first-boot wizard
+# has already completed in the normal GNOME session).
+# Always starts the session holder which manages the selected player.
 
 XIBO_KIOSK_DIR="${XIBO_KIOSK_DIR:-/usr/share/xiboplayer-kiosk}"
-XIBO_DATA_DIR="${XIBO_DATA_DIR:-${HOME}/.local/share/xibo}"
 
-if [ -f "${XIBO_DATA_DIR}/setup-result.json" ]; then
-    exec "${XIBO_KIOSK_DIR}/gnome-kiosk-script.xibo.sh"
-else
-    exec "${XIBO_KIOSK_DIR}/gnome-kiosk-script.xibo-init.sh"
-fi
+exec "${XIBO_KIOSK_DIR}/gnome-kiosk-script.xibo.sh"
