@@ -31,19 +31,19 @@ goto ${selected}
 
 :chromium
 echo Installing xiboplayer kiosk (default: Chromium)...
-kernel ${kernel-url} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=chromium rd.neednet=1 ip=dhcp
+kernel ${kernel-url} inst.stage2=${fedora-mirror} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=chromium rd.neednet=1 ip=dhcp
 initrd ${initrd-url}
 boot || goto failed
 
 :electron
 echo Installing xiboplayer kiosk (default: Electron)...
-kernel ${kernel-url} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=electron rd.neednet=1 ip=dhcp
+kernel ${kernel-url} inst.stage2=${fedora-mirror} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=electron rd.neednet=1 ip=dhcp
 initrd ${initrd-url}
 boot || goto failed
 
 :arexibo
 echo Installing xiboplayer kiosk (default: Arexibo)...
-kernel ${kernel-url} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=arexibo rd.neednet=1 ip=dhcp
+kernel ${kernel-url} inst.stage2=${fedora-mirror} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=arexibo rd.neednet=1 ip=dhcp
 initrd ${initrd-url}
 boot || goto failed
 
