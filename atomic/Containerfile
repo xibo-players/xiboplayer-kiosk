@@ -32,9 +32,10 @@ RUN dnf install -y \
     dnf clean all
 
 # Display manager + kiosk compositor (minimal GNOME, no apps)
+# gnome-control-center needed for first-boot setup wizard (WiFi, timezone, etc.)
 RUN dnf install -y \
     gdm gnome-kiosk gnome-kiosk-script-session \
-    python3-gobject libadwaita \
+    python3-gobject libadwaita gnome-control-center \
     && dnf clean all
 
 # Full codec stack (ffmpeg + gstreamer from RPM Fusion)
@@ -84,8 +85,11 @@ COPY mkosi-extra/etc/locale.conf /etc/locale.conf
 COPY mkosi-extra/etc/systemd/logind.conf.d/no-idle.conf /etc/systemd/logind.conf.d/no-idle.conf
 COPY mkosi-extra/etc/systemd/system/xiboplayer-kiosk-firstboot.service /etc/systemd/system/xiboplayer-kiosk-firstboot.service
 
-# Mask unwanted services (gnome-initial-setup skipped by init script)
-RUN ln -sf /dev/null /etc/systemd/system/systemd-firstboot.service
+# Skip gnome-initial-setup completely — our wizard handles system config
+COPY mkosi-extra/usr/share/gnome-initial-setup/vendor.conf /usr/share/gnome-initial-setup/vendor.conf
+RUN ln -sf /dev/null /etc/systemd/system/systemd-firstboot.service && \
+    ln -sf /dev/null /etc/systemd/system/gnome-initial-setup.service && \
+    ln -sf /dev/null /etc/systemd/system/gnome-initial-setup-first-login.service
 
 COPY mkosi-extra/usr/lib/systemd/system-preset/80-xiboplayer-kiosk.preset /usr/lib/systemd/system-preset/80-xiboplayer-kiosk.preset
 COPY mkosi-extra/usr/lib/sysusers.d/xiboplayer-kiosk.conf /usr/lib/sysusers.d/xiboplayer-kiosk.conf
