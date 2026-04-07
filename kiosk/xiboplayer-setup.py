@@ -230,7 +230,7 @@ class SetupWindow(Adw.ApplicationWindow):
         self.back_btn.set_visible(False)
         header.pack_start(self.back_btn)
 
-        self.next_btn = Gtk.Button(label='Done' if not self.needs_cms else 'Next')
+        self.next_btn = Gtk.Button(label='Reboot into kiosk' if not self.needs_cms else 'Next')
         self.next_btn.add_css_class('suggested-action')
         self.next_btn.connect('clicked', self._on_next)
         header.pack_end(self.next_btn)
@@ -271,7 +271,7 @@ class SetupWindow(Adw.ApplicationWindow):
             if self.needs_cms:
                 self.stack.set_visible_child_name('cms')
                 self.back_btn.set_visible(True)
-                self.next_btn.set_label('Done')
+                self.next_btn.set_label('Reboot into kiosk')
             else:
                 self._finish()
             return

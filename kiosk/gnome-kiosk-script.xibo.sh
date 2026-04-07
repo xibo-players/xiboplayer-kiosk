@@ -67,7 +67,26 @@ IP=$(get_ip)
 CMS=$(grep -oP '"address"\s*:\s*"\K[^"]+' "${XIBO_DATA_DIR}/cms.json" 2>/dev/null || echo "not configured")
 notify-send -t 5000 "Xibo" "IP: $IP\nCMS: $CMS\nStarting ${PLAYER_SERVICE}..."
 
-# Start player via systemd — always start, Electron/Chromium have their own setup UI
+# Start player via systemd — Electron/Chromium show their own setup UI if unconfigured.
+# If player has no CMS config yet, clear stale session data to prevent auto-retry loops.
+case "$PLAYER_SERVICE" in
+    xiboplayer-chromium.service)
+        CONFIG_FILE="$HOME/.config/xiboplayer/chromium/config.json"
+        if [ ! -f "$CONFIG_FILE" ] || ! grep -q '"cmsUrl"' "$CONFIG_FILE" 2>/dev/null || \
+           [ "$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('cmsUrl',''))" 2>/dev/null)" = "" ]; then
+            rm -rf "$HOME/.config/xiboplayer/chromium/Default/Service Worker" 2>/dev/null
+            rm -rf "$HOME/.config/xiboplayer/chromium/Default/Local Storage" 2>/dev/null
+        fi
+        ;;
+    xiboplayer-electron.service)
+        CONFIG_FILE="$HOME/.config/xiboplayer/electron/config.json"
+        if [ ! -f "$CONFIG_FILE" ] || ! grep -q '"cmsUrl"' "$CONFIG_FILE" 2>/dev/null || \
+           [ "$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('cmsUrl',''))" 2>/dev/null)" = "" ]; then
+            rm -rf "$HOME/.config/xiboplayer/electron/Service Worker" 2>/dev/null
+            rm -rf "$HOME/.config/xiboplayer/electron/Local Storage" 2>/dev/null
+        fi
+        ;;
+esac
 systemctl --user start "$PLAYER_SERVICE" 2>/dev/null || true
 
 # Monitor player health
