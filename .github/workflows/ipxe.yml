@@ -13,6 +13,9 @@ concurrency:
   group: "${{ github.workflow }}-${{ github.ref }}"
   cancel-in-progress: true
 
+env:
+  FEDORA_VERSION: '43'
+
 jobs:
   build-ipxe:
     name: Build iPXE image
@@ -25,19 +28,10 @@ jobs:
       - name: Install build dependencies
         run: |
           apt-get update
-          apt-get install -y git gcc make mtools perl liblzma-dev curl python3-pip
+          apt-get install -y git gcc make mtools perl liblzma-dev curl python3-pip dosfstools syslinux syslinux-common
           pip install awscli --break-system-packages
 
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - name: Determine version
-        id: version
-        run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=latest" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Clone iPXE source
         run: git clone --depth 1 https://github.com/ipxe/ipxe.git /tmp/ipxe
@@ -55,11 +49,12 @@ jobs:
       - name: Copy boot script
         run: cp ipxe/boot.ipxe /tmp/ipxe/src/boot.ipxe
 
-      - name: Build BIOS image
+      - name: Build BIOS iPXE
         run: |
           cd /tmp/ipxe/src
+          make -j$(nproc) bin/ipxe.lkrn EMBED=boot.ipxe
           make -j$(nproc) bin/ipxe.usb EMBED=boot.ipxe
-          ls -lh bin/ipxe.usb
+          ls -lh bin/ipxe.lkrn bin/ipxe.usb
 
       - name: Build x86_64 EFI binary
         run: |
@@ -76,9 +71,77 @@ jobs:
           make -j$(nproc) CROSS=aarch64-linux-gnu- bin-arm64-efi/ipxe.efi EMBED=boot.ipxe
           ls -lh bin-arm64-efi/ipxe.efi
 
+      - name: Download Fedora kernel + initrd
+        run: |
+          MIRROR="https://dl.fedoraproject.org/pub/fedora/linux/releases/${FEDORA_VERSION}/Everything"
+          mkdir -p /tmp/fedora-x86_64 /tmp/fedora-aarch64
+
+          echo "Downloading x86_64 kernel + initrd..."
+          curl -fSL -o /tmp/fedora-x86_64/vmlinuz "${MIRROR}/x86_64/os/images/pxeboot/vmlinuz"
+          curl -fSL -o /tmp/fedora-x86_64/initrd.img "${MIRROR}/x86_64/os/images/pxeboot/initrd.img"
+
+          echo "Downloading aarch64 kernel + initrd..."
+          curl -fSL -o /tmp/fedora-aarch64/vmlinuz "${MIRROR}/aarch64/os/images/pxeboot/vmlinuz"
+          curl -fSL -o /tmp/fedora-aarch64/initrd.img "${MIRROR}/aarch64/os/images/pxeboot/initrd.img"
+
+          ls -lh /tmp/fedora-x86_64/ /tmp/fedora-aarch64/
+
+      - name: Create BIOS bootable USB image (x86_64 + kernel + initrd)
+        run: |
+          # Size: iPXE (~1MB) + vmlinuz (~15MB) + initrd (~95MB) + margin
+          IMG=/tmp/xiboplayer-ipxe-f${FEDORA_VERSION}-bios-x86_64.img
+          dd if=/dev/zero of=$IMG bs=1M count=140
+          # Create MBR partition table + FAT32 partition
+          printf 'o\nn\np\n1\n\n\nt\nc\na\nw\n' | fdisk $IMG || true
+          LOOP=$(losetup --find --show --partscan $IMG)
+          mkfs.vfat -F32 ${LOOP}p1
+          mkdir -p /mnt/usb
+          mount ${LOOP}p1 /mnt/usb
+          # Install syslinux bootloader
+          syslinux --install ${LOOP}p1
+          dd if=/usr/lib/syslinux/mbr/mbr.bin of=${LOOP} bs=440 count=1 conv=notrunc
+          # Copy kernel + initrd + iPXE chainloader
+          cp /tmp/fedora-x86_64/vmlinuz /mnt/usb/
+          cp /tmp/fedora-x86_64/initrd.img /mnt/usb/
+          cp /tmp/ipxe/src/bin/ipxe.lkrn /mnt/usb/
+          cp ipxe/boot.ipxe /mnt/usb/
+          # Syslinux config — boot kernel directly with kickstart params
+          # iPXE is only needed for DHCP + menu, then it chainloads local kernel
+          KS_BASE="https://raw.githubusercontent.com/xibo-players/xiboplayer-kiosk/main/kickstart"
+          MIRROR="http://download.fedoraproject.org/pub/fedora/linux/releases/${FEDORA_VERSION}/Everything/x86_64/os"
+          cat > /mnt/usb/syslinux.cfg << SYSEOF
+          DEFAULT menu.c32
+          TIMEOUT 100
+          MENU TITLE xiboplayer kiosk F${FEDORA_VERSION} - select default player (Ctrl+R to switch)
+
+          LABEL chromium
+            MENU LABEL Chromium (recommended)
+            MENU DEFAULT
+            KERNEL vmlinuz
+            APPEND initrd=initrd.img inst.stage2=${MIRROR} inst.ks=${KS_BASE}/xiboplayer-kiosk.ks xibo.profile=chromium rd.neednet=1 ip=dhcp quiet
+
+          LABEL electron
+            MENU LABEL Electron
+            KERNEL vmlinuz
+            APPEND initrd=initrd.img inst.stage2=${MIRROR} inst.ks=${KS_BASE}/xiboplayer-kiosk.ks xibo.profile=electron rd.neednet=1 ip=dhcp quiet
+
+          LABEL arexibo
+            MENU LABEL Arexibo
+            KERNEL vmlinuz
+            APPEND initrd=initrd.img inst.stage2=${MIRROR} inst.ks=${KS_BASE}/xiboplayer-kiosk.ks xibo.profile=arexibo rd.neednet=1 ip=dhcp quiet
+          SYSEOF
+          # Remove leading whitespace from heredoc
+          sed -i 's/^          //' /mnt/usb/syslinux.cfg
+          cp /usr/lib/syslinux/modules/bios/menu.c32 /mnt/usb/
+          cp /usr/lib/syslinux/modules/bios/libutil.c32 /mnt/usb/
+          ls -lh /mnt/usb/
+          umount /mnt/usb
+          losetup -d ${LOOP}
+
       - name: Stage artifacts
         run: |
           mkdir -p dist
+          cp /tmp/xiboplayer-ipxe-f${FEDORA_VERSION}-bios-x86_64.img dist/
           cp /tmp/ipxe/src/bin/ipxe.usb dist/xiboplayer-ipxe-bios.img
           cp /tmp/ipxe/src/bin-x86_64-efi/ipxe.efi dist/xiboplayer-ipxe-uefi-x86_64.img
           cp /tmp/ipxe/src/bin-arm64-efi/ipxe.efi dist/xiboplayer-ipxe-uefi-aarch64.img
@@ -105,7 +168,6 @@ jobs:
 
       - name: Upload to GitHub Release
         run: |
-          # Upload to latest release (tag or most recent)
           TAG="${GITHUB_REF_NAME}"
           if [[ "${{ github.ref_type }}" != "tag" ]]; then
             TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' || echo "")
