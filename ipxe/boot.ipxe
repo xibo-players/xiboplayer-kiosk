@@ -10,7 +10,9 @@ set ks-base https://raw.githubusercontent.com/xibo-players/xiboplayer-kiosk/main
 
 # Auto-detect architecture
 iseq ${buildarch} arm64 && set arch aarch64 || set arch x86_64
-set fedora-mirror https://download.fedoraproject.org/pub/fedora/linux/releases/43/Everything/${arch}/os
+# Use HTTP mirror — iPXE BIOS builds have limited HTTPS/TLS support
+# and Fedora's HTTPS redirector triggers "Operation not permitted"
+set fedora-mirror http://download.fedoraproject.org/pub/fedora/linux/releases/43/Everything/${arch}/os
 set kernel-url ${fedora-mirror}/images/pxeboot/vmlinuz
 set initrd-url ${fedora-mirror}/images/pxeboot/initrd.img
 
