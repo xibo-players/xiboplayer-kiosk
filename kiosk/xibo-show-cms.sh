@@ -32,19 +32,55 @@ ACTION=$(zenity --list --title="xiboplayer" \
     "reconfigure" "Reset player config and restart" \
     "full-setup" "Return to first-boot wizard (WiFi, timezone, etc.)" \
     "cancel" "Do nothing" \
-    --width=450 --height=350 2>/dev/null)
+    --width=350 --height=280 2>/dev/null)
 
 case "$ACTION" in
     reconfigure)
         # Stop player
         systemctl --user stop "$SERVICE" 2>/dev/null || true
 
-        # Delete player config so it re-shows its setup UI on restart
         case "$PLAYER" in
             Arexibo)
+                # Arexibo has no built-in setup UI — ask for new CMS details via zenity
                 rm -f "${XIBO_DATA_DIR}/cms.json"
+
+                URL=$(zenity --entry --title="xiboplayer — CMS URL" \
+                    --text="Enter the CMS server URL:" \
+                    --entry-text="https://" --width=400 2>/dev/null) || true
+                [ -z "$URL" ] && return
+
+                KEY=$(zenity --entry --title="xiboplayer — CMS Key" \
+                    --text="Enter the CMS key:" --width=400 2>/dev/null) || true
+                [ -z "$KEY" ] && return
+
+                NAME=$(zenity --entry --title="xiboplayer — Display Name" \
+                    --text="Enter a display name:" \
+                    --entry-text="$(hostname)" --width=400 2>/dev/null) || true
+                [ -z "$NAME" ] && NAME="$(hostname)"
+
+                # Ensure URL ends with /
+                [[ "$URL" != */ ]] && URL="${URL}/"
+
+                # Generate display ID
+                MACHINE_ID=$(cat /etc/machine-id 2>/dev/null || echo "")
+                DISPLAY_ID="xibo-$(echo -n "${MACHINE_ID}$(date +%s)${KEY}" | sha256sum | cut -c1-12)"
+
+                mkdir -p "${XIBO_DATA_DIR}"
+                cat > "${XIBO_DATA_DIR}/cms.json" << CMSEOF
+{
+    "address": "$URL",
+    "key": "$KEY",
+    "display_id": "$DISPLAY_ID",
+    "display_name": "$NAME",
+    "proxy": null
+}
+CMSEOF
+                zenity --info --title="xiboplayer" \
+                    --text="CMS configured.\nAuthorise this display in the CMS admin panel." \
+                    --width=350 2>/dev/null || true
                 ;;
             Chromium|Electron)
+                # Delete config — player will re-show its own setup UI on restart
                 SUBDIR=$(echo "$PLAYER" | tr '[:upper:]' '[:lower:]')
                 rm -f "$HOME/.config/xiboplayer/${SUBDIR}/config.json"
                 ;;

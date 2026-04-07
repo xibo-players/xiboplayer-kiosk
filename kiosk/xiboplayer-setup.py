@@ -5,8 +5,8 @@
 xiboplayer first-boot setup wizard.
 
 Runs as autostart in a normal GNOME session on first boot.
-Provides buttons to launch native GNOME settings panels (WiFi, Date/Time,
-Language) and CMS configuration fields for Arexibo.
+Page 1: recommends opening System Settings to configure WiFi, timezone,
+language and display. Page 2 (Arexibo only): CMS connection fields.
 
 On finish, activates kiosk mode via AccountsService and logs out.
 Subsequent boots go directly to gnome-kiosk with the selected player.
@@ -98,85 +98,50 @@ def generate_display_id(key):
     return f'xibo-{hashlib.sha256(raw.encode()).hexdigest()[:12]}'
 
 
-def launch_settings_panel(panel):
-    """Open a GNOME Settings panel."""
-    try:
-        subprocess.Popen(
-            ['gnome-control-center', panel],
-            start_new_session=True,
-        )
-    except Exception:
-        pass
-
-
 # ── Pages ─────────────────────────────────────────────────────
 
 
 def make_system_page():
-    """System configuration — buttons to launch native GNOME panels."""
+    """System configuration — recommend opening GNOME Settings."""
     page = Adw.StatusPage(
         title='System Setup',
-        description='Configure network and system settings for this device.',
+        description=(
+            'Before starting the kiosk, open System Settings to configure:\n'
+            '• WiFi or network connection\n'
+            '• Date, time and timezone\n'
+            '• Language and region\n'
+            '• Display resolution and rotation'
+        ),
         icon_name='preferences-system-symbolic',
     )
 
-    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
 
-    # Network / WiFi
-    net_group = Adw.PreferencesGroup(title='Network')
+    # Open Settings button
+    settings_btn = Gtk.Button(label='Open System Settings')
+    settings_btn.add_css_class('suggested-action')
+    settings_btn.add_css_class('pill')
+    settings_btn.set_halign(Gtk.Align.CENTER)
+    settings_btn.connect('clicked', lambda _: subprocess.Popen(
+        ['gnome-control-center'], start_new_session=True))
+    box.append(settings_btn)
 
-    page.wifi_row = Adw.ActionRow(
-        title='WiFi',
-        subtitle=get_wifi_status(),
-    )
-    page.wifi_row.set_activatable(True)
-    page.wifi_row.add_suffix(Gtk.Image.new_from_icon_name('go-next-symbolic'))
-    page.wifi_row.connect('activated', lambda _: launch_settings_panel('wifi'))
-    net_group.add(page.wifi_row)
+    # Current status summary
+    status_group = Adw.PreferencesGroup(title='Current status')
 
-    box.append(net_group)
+    page.net_row = Adw.ActionRow(title='Network', subtitle=get_wifi_status())
+    page.net_row.add_prefix(Gtk.Image.new_from_icon_name('network-wireless-symbolic'))
+    status_group.add(page.net_row)
 
-    # Date & Time
-    time_group = Adw.PreferencesGroup(title='Date & Time')
+    page.tz_row = Adw.ActionRow(title='Timezone', subtitle=get_timezone())
+    page.tz_row.add_prefix(Gtk.Image.new_from_icon_name('preferences-system-time-symbolic'))
+    status_group.add(page.tz_row)
 
-    page.tz_row = Adw.ActionRow(
-        title='Timezone',
-        subtitle=get_timezone(),
-    )
-    page.tz_row.set_activatable(True)
-    page.tz_row.add_suffix(Gtk.Image.new_from_icon_name('go-next-symbolic'))
-    page.tz_row.connect('activated', lambda _: launch_settings_panel('datetime'))
-    time_group.add(page.tz_row)
+    page.lang_row = Adw.ActionRow(title='Language', subtitle=get_locale())
+    page.lang_row.add_prefix(Gtk.Image.new_from_icon_name('preferences-desktop-locale-symbolic'))
+    status_group.add(page.lang_row)
 
-    box.append(time_group)
-
-    # Language (optional)
-    lang_group = Adw.PreferencesGroup(title='Language')
-
-    page.lang_row = Adw.ActionRow(
-        title='Language & Region',
-        subtitle=get_locale(),
-    )
-    page.lang_row.set_activatable(True)
-    page.lang_row.add_suffix(Gtk.Image.new_from_icon_name('go-next-symbolic'))
-    page.lang_row.connect('activated', lambda _: launch_settings_panel('region'))
-    lang_group.add(page.lang_row)
-
-    box.append(lang_group)
-
-    # Display (optional)
-    display_group = Adw.PreferencesGroup(title='Display')
-
-    display_row = Adw.ActionRow(
-        title='Display Settings',
-        subtitle='Resolution, rotation and scaling',
-    )
-    display_row.set_activatable(True)
-    display_row.add_suffix(Gtk.Image.new_from_icon_name('go-next-symbolic'))
-    display_row.connect('activated', lambda _: launch_settings_panel('display'))
-    display_group.add(display_row)
-
-    box.append(display_group)
+    box.append(status_group)
 
     page.set_child(box)
     return page
@@ -186,7 +151,12 @@ def make_cms_page():
     """CMS configuration for Arexibo — URL, key, display name."""
     page = Adw.StatusPage(
         title='CMS Connection',
-        description='Enter your Xibo CMS server details.\nArexibo requires manual CMS configuration.',
+        description=(
+            'Enter your Xibo CMS server details.\n\n'
+            'After clicking Done, this device will restart in kiosk mode\n'
+            'and connect to the CMS. Log in to your CMS admin panel\n'
+            'and authorise the display to start showing content.'
+        ),
         icon_name='network-server-symbolic',
     )
 
@@ -241,7 +211,7 @@ class SetupWindow(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(
             application=app,
-            default_width=700,
+            default_width=350,
             default_height=550,
         )
 
@@ -292,8 +262,8 @@ class SetupWindow(Adw.ApplicationWindow):
         current = self.stack.get_visible_child_name()
 
         if current == 'system':
-            # Refresh status indicators
-            self.system_page.wifi_row.set_subtitle(get_wifi_status())
+            # Refresh status before moving on
+            self.system_page.net_row.set_subtitle(get_wifi_status())
             self.system_page.tz_row.set_subtitle(get_timezone())
             self.system_page.lang_row.set_subtitle(get_locale())
 
