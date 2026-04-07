@@ -1,52 +1,31 @@
 #!ipxe
-# =============================================================================
-# xiboplayer — iPXE Network Boot Menu
+# xiboplayer kiosk - iPXE Network Boot
 #
 # Boot any machine from the network and install xiboplayer-kiosk.
-# Works over the internet — no LAN server needed.
-#
-# Build USB: ./build-ipxe-usb.sh
-# Or chainload from existing PXE: chain https://boot.xiboplayer.org/boot.ipxe
-# =============================================================================
+# All three players are installed. The menu selects the default.
+# Use Ctrl+R after boot to switch player anytime.
 
 set menu-timeout 30000
-set base-url https://dl.xiboplayer.org/ipxe
 set ks-base https://raw.githubusercontent.com/xibo-players/xiboplayer-kiosk/main/kickstart
 
-# Auto-detect architecture — iPXE sets ${buildarch} to x86_64 or arm64
-# Map iPXE arch names to Fedora arch names
+# Auto-detect architecture
 iseq ${buildarch} arm64 && set arch aarch64 || set arch x86_64
 set fedora-mirror https://download.fedoraproject.org/pub/fedora/linux/releases/43/Everything/${arch}/os
-
-# Fedora kernel + initrd (netinstall)
 set kernel-url ${fedora-mirror}/images/pxeboot/vmlinuz
 set initrd-url ${fedora-mirror}/images/pxeboot/initrd.img
 
-# ── DHCP + IP ────────────────────────────────────────────────────────────────
-
+# DHCP
 isset ${ip} || dhcp || goto failed
 echo IP: ${ip} / ${netmask} / Gateway: ${gateway} / DNS: ${dns}
 echo
 
-# ── Boot Menu ────────────────────────────────────────────────────────────────
-
 :menu
-menu xiboplayer — Network Install (all players installed, use Ctrl+R to switch anytime)
-item --gap --             ── Default player ────────────────────
-item chromium             Chromium player (recommended)
-item electron             Electron player
-item arexibo              Arexibo player
-item --gap --             ── Advanced ────────────────────────────
-item atomic               Atomic image (immutable OS, fedora-bootc)
-item custom               Custom install (Anaconda interactive)
-item --gap --             ── Tools ──────────────────────────────
-item shell                iPXE shell
-item reboot               Reboot
-item --key x exit         Exit to BIOS
+menu xiboplayer kiosk - select default player (Ctrl+R to switch anytime)
+item chromium             Chromium (recommended)
+item electron             Electron
+item arexibo              Arexibo
 choose --timeout ${menu-timeout} --default chromium selected || goto menu
 goto ${selected}
-
-# ── Chromium (default) ──────────────────────────────────────────────────────
 
 :chromium
 echo Installing xiboplayer kiosk (default: Chromium)...
@@ -54,15 +33,11 @@ kernel ${kernel-url} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=chromiu
 initrd ${initrd-url}
 boot || goto failed
 
-# ── Electron ─────────────────────────────────────────────────────────────────
-
 :electron
 echo Installing xiboplayer kiosk (default: Electron)...
 kernel ${kernel-url} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=electron rd.neednet=1 ip=dhcp
 initrd ${initrd-url}
 boot || goto failed
-
-# ── Arexibo ──────────────────────────────────────────────────────────────────
 
 :arexibo
 echo Installing xiboplayer kiosk (default: Arexibo)...
@@ -70,47 +45,9 @@ kernel ${kernel-url} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=arexibo
 initrd ${initrd-url}
 boot || goto failed
 
-# ── Atomic ───────────────────────────────────────────────────────────────────
-
-:atomic
-echo
-echo The Atomic image is an OCI container — it cannot be installed via kickstart.
-echo Download the Atomic ISO from: https://www.xiboplayer.org/downloads
-echo
-echo Press any key to return to menu...
-prompt
-goto menu
-
-# ── Custom ───────────────────────────────────────────────────────────────────
-
-:custom
-echo Booting Anaconda interactive installer...
-kernel ${kernel-url} rd.neednet=1 ip=dhcp
-initrd ${initrd-url}
-boot || goto failed
-
-# ── Tools ────────────────────────────────────────────────────────────────────
-
-:shell
-echo Type 'exit' to return to menu
-shell
-goto menu
-
-:reboot
-reboot
-
-:exit
-exit
-
-# ── Error ────────────────────────────────────────────────────────────────────
-
 :failed
 echo
 echo Boot failed. Check network connection.
 echo
 prompt Press any key to return to menu...
 goto menu
-# Thu Apr  2 11:09:44 UTC 2026
-# rebuilt 2026-04-02T14:02:18+00:00
-# 2026-04-02T14:15:44+00:00
-# 2026-04-02T14:19:56+00:00
