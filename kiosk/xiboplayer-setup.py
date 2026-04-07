@@ -110,7 +110,8 @@ def make_system_page():
             '• WiFi or network connection\n'
             '• Date, time and timezone\n'
             '• Language and region\n'
-            '• Display resolution and rotation'
+            '• Display resolution and rotation\n\n'
+            'Click Done when ready — the system will reboot into kiosk mode.'
         ),
         icon_name='preferences-system-symbolic',
     )
@@ -321,14 +322,11 @@ class SetupWindow(Adw.ApplicationWindow):
 
         self.close()
 
-        # Logout — GDM will re-login into kiosk session
-        GLib.timeout_add(500, self._logout)
+        # Reboot — next boot will use kiosk session
+        GLib.timeout_add(500, self._reboot)
 
-    def _logout(self):
-        subprocess.run(
-            ['gnome-session-quit', '--logout', '--no-prompt'],
-            capture_output=True,
-        )
+    def _reboot(self):
+        subprocess.run(['doas', 'reboot'], capture_output=True)
         return False
 
 
