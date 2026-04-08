@@ -113,11 +113,24 @@ jobs:
             echo "version=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Pull OCI image and build ISO
+      - name: Pull OCI image (with retry)
+        run: |
+          sudo podman login -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} ${{ env.REGISTRY }}
+          IMG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-x86_64"
+          for attempt in 1 2 3; do
+            if sudo podman pull "$IMG"; then
+              echo "Pulled on attempt $attempt"
+              exit 0
+            fi
+            echo "Pull attempt $attempt failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "ERROR: Failed to pull $IMG after 3 attempts"
+          exit 1
+
+      - name: Build ISO
         run: |
           mkdir -p output
-          sudo podman login -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} ${{ env.REGISTRY }}
-          sudo podman pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-x86_64
           sudo podman run --rm --privileged \
             --security-opt label=type:unconfined_t \
             -v ./output:/output \
@@ -129,21 +142,25 @@ jobs:
             --target-arch x86_64 \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-x86_64
 
-      - name: Rename ISO and fix permissions
+      - name: Verify and rename ISO
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          if [ ! -f output/bootiso/install.iso ]; then
+            echo "ERROR: ISO not produced by bootc-image-builder"
+            find output -type f
+            exit 1
+          fi
           sudo mv output/bootiso/install.iso \
             output/xiboplayer-kiosk-atomic_${VERSION}_x86_64.iso
           sudo chown -R $(id -u):$(id -g) output/
-
-      - name: List output
-        run: ls -lah output/*.iso
+          ls -lah output/*.iso
 
       - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: atomic-iso-x86_64
           path: output/*.iso
+          if-no-files-found: error
           retention-days: 30
 
   build-iso-aarch64:
@@ -164,11 +181,24 @@ jobs:
             echo "version=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Pull OCI image and build ISO
+      - name: Pull OCI image (with retry)
+        run: |
+          sudo podman login -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} ${{ env.REGISTRY }}
+          IMG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-aarch64"
+          for attempt in 1 2 3; do
+            if sudo podman pull "$IMG"; then
+              echo "Pulled on attempt $attempt"
+              exit 0
+            fi
+            echo "Pull attempt $attempt failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "ERROR: Failed to pull $IMG after 3 attempts"
+          exit 1
+
+      - name: Build ISO
         run: |
           mkdir -p output
-          sudo podman login -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} ${{ env.REGISTRY }}
-          sudo podman pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-aarch64
           sudo podman run --rm --privileged \
             --security-opt label=type:unconfined_t \
             -v ./output:/output \
@@ -180,21 +210,25 @@ jobs:
             --target-arch aarch64 \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-aarch64
 
-      - name: Rename ISO and fix permissions
+      - name: Verify and rename ISO
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          if [ ! -f output/bootiso/install.iso ]; then
+            echo "ERROR: ISO not produced by bootc-image-builder"
+            find output -type f
+            exit 1
+          fi
           sudo mv output/bootiso/install.iso \
             output/xiboplayer-kiosk-atomic_${VERSION}_aarch64.iso
           sudo chown -R $(id -u):$(id -g) output/
-
-      - name: List output
-        run: ls -lah output/*.iso
+          ls -lah output/*.iso
 
       - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: atomic-iso-aarch64
           path: output/*.iso
+          if-no-files-found: error
           retention-days: 30
 
   release:
@@ -317,9 +351,18 @@ jobs:
             gh release create "$TAG" --title "Kiosk Atomic $TAG" --notes ""
           gh release edit "$TAG" --notes "$NOTES"
 
-          # Upload ISOs + checksums to GitHub Release (< 2GB each, fits GH limits)
+          # Upload files to GH Release only if they fit the 2 GB per-file limit.
+          # Larger files (e.g. atomic ISOs at 3+ GB) stay on R2 only.
+          GH_MAX_BYTES=$((2 * 1024 * 1024 * 1024))
           for f in release/*.iso release/SHA256SUMS; do
             [ -f "$f" ] || continue
-            echo "Uploading $(basename $f) to GH Release..."
-            gh release upload "$TAG" "$f" --clobber || true
+            SIZE=$(stat -c%s "$f")
+            NAME=$(basename "$f")
+            if [ "$SIZE" -gt "$GH_MAX_BYTES" ]; then
+              SIZE_GB=$(echo "scale=1; $SIZE / 1024 / 1024 / 1024" | bc)
+              echo "Skipping $NAME (${SIZE_GB} GB > 2 GB GH limit) — available on R2"
+              continue
+            fi
+            echo "Uploading $NAME to GH Release..."
+            gh release upload "$TAG" "$f" --clobber
           done
