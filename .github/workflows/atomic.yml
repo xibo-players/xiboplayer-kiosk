@@ -3,7 +3,8 @@ name: Build Atomic Kiosk Image
 on:
   push:
     branches: [main]
-    paths: ['atomic/**', 'mkosi-extra/**']
+    paths: ['atomic/**', 'mkosi-extra/**', 'kiosk/**', 'rpm/**']
+    tags: ['v*']
   schedule:
     # Weekly Monday 06:00 UTC — pick up Fedora bootc + RPM updates
     - cron: '0 6 * * 1'
