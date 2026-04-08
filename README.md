@@ -19,8 +19,8 @@ Turn any PC or Raspberry Pi into a digital signage kiosk. Download a ready-made 
 | Raw disk | x86_64 | 1.1GB | [xiboplayer-kiosk_x86_64.raw.xz](https://images.xiboplayer.org/xiboplayer-kiosk/0.0.0-dev/xiboplayer-kiosk_0.0.0-dev_x86_64.raw.xz) | Write to SSD/eMMC: `xz -d *.raw.xz && dd if=*.raw of=/dev/sdX`. Industrial/embedded. |
 | Raw disk | aarch64 | ~1.1GB | [xiboplayer-kiosk_aarch64.raw.xz](https://images.xiboplayer.org/xiboplayer-kiosk/0.0.0-dev/xiboplayer-kiosk_0.0.0-dev_aarch64.raw.xz) | **Raspberry Pi 5 SD card**: `xz -d *.raw.xz && sudo dd if=*.raw of=/dev/mmcblkX bs=4M status=progress`. |
 | **Atomic (immutable OS, container-native updates)** | | | | |
-| Atomic ISO | x86_64 | ~1.5GB | [Latest Atomic release](https://github.com/xibo-players/xiboplayer-kiosk/releases?q=atomic) | Immutable Fedora bootc kiosk. `bootc upgrade` with instant rollback. Best for fleet deployments. |
-| Atomic ISO | aarch64 | ~1.5GB | [Latest Atomic release](https://github.com/xibo-players/xiboplayer-kiosk/releases?q=atomic) | Same for ARM64. RPi5 fleets, ARM kiosks. |
+| Atomic ISO | x86_64 | ~3.1GB | [xiboplayer-kiosk-atomic_x86_64.iso](https://images.xiboplayer.org/xiboplayer-kiosk-atomic/atomic-20260407/xiboplayer-kiosk-atomic_20260407_x86_64.iso) | Immutable Fedora bootc kiosk. `bootc upgrade` with instant rollback. Best for fleet deployments. |
+| Atomic ISO | aarch64 | ~2.9GB | [xiboplayer-kiosk-atomic_aarch64.iso](https://images.xiboplayer.org/xiboplayer-kiosk-atomic/atomic-20260407/xiboplayer-kiosk-atomic_20260407_aarch64.iso) | Same for ARM64. RPi5 fleets, ARM kiosks. |
 | OCI Container | multi-arch | — | `ghcr.io/xibo-players/xiboplayer-kiosk:43` | Pull with podman/docker. Base for custom images or `bootc switch` from existing Fedora. |
 | **Network boot (no USB/SD card needed)** | | | | |
 | iPXE BIOS | x86 | 400KB | [xiboplayer-ipxe-bios.img](https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe-bios.img) | Legacy BIOS PCs. Flash to USB or embed in PXE ROM. Boots from network, shows install menu. |
@@ -35,7 +35,7 @@ Turn any PC or Raspberry Pi into a digital signage kiosk. Download a ready-made 
 | Install on a PC with USB stick, no internet | [Everything ISO x86_64](https://github.com/xibo-players/xiboplayer-kiosk/releases/latest) |
 | Install on Raspberry Pi 5 | [Raw disk aarch64](https://github.com/xibo-players/xiboplayer-kiosk/releases/latest) — dd to SD card |
 | Test in a VM quickly | [QCOW2 x86_64](https://github.com/xibo-players/xiboplayer-kiosk/releases/latest) — import into Gnome Boxes |
-| Deploy 50 identical kiosks with fleet updates | [Atomic ISO](https://github.com/xibo-players/xiboplayer-kiosk/releases?q=atomic) + `bootc upgrade` |
+| Deploy 50 identical kiosks with fleet updates | [Atomic ISO](https://images.xiboplayer.org/xiboplayer-kiosk-atomic/atomic-20260407/xiboplayer-kiosk-atomic_20260407_x86_64.iso) + `bootc upgrade` |
 | Network boot a room of PCs | [iPXE UEFI](https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe-uefi-x86_64.img) + [boot.ipxe](https://dl.xiboplayer.org/ipxe/boot.ipxe) |
 | Rebase existing Fedora to kiosk | `bootc switch ghcr.io/xibo-players/xiboplayer-kiosk:43` |
 | Install on existing Fedora via RPM | `sudo dnf install xiboplayer-release && sudo dnf install xiboplayer-kiosk xiboplayer-chromium` |
