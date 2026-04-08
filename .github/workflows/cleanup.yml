@@ -1,0 +1,33 @@
+name: Cleanup old releases
+
+# Weekly cleanup of old kiosk releases.
+#   - Keeps latest 3 versioned releases (v0.4.x)
+#   - Keeps latest 7 dated atomic releases (atomic-YYYYMMDD)
+#   - Deletes matching R2 directories
+#
+# Run manually with dry-run first:
+#   gh workflow run cleanup.yml -f dry-run=true
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'  # Sunday 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        type: boolean
+        default: true
+        description: 'Preview deletions without executing'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    uses: xibo-players/.github/.github/workflows/cleanup-releases.yml@main
+    with:
+      keep-versioned: 3
+      keep-dated: 7
+      r2-prefix: xiboplayer-kiosk
+      r2-atomic-prefix: xiboplayer-kiosk-atomic
+      dry-run: ${{ inputs.dry-run || false }}
+    secrets: inherit
