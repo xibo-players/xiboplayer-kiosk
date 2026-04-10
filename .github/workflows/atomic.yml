@@ -292,6 +292,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.version.outputs.tag }}
+          # ISO filenames use the bare date version, NOT the full tag —
+          # see the "Verify and rename ISO" build step where output is
+          # named "xiboplayer-kiosk-atomic_${VERSION}_{arch}.iso".
+          # Without this separation the release body generates 404 URLs
+          # with the "atomic-" prefix in the filename (issue #65).
+          VERSION: ${{ steps.version.outputs.version }}
           DL: https://images.xiboplayer.org/xiboplayer-kiosk-atomic
         run: |
           NOTES=$(cat <<NOTES_EOF
@@ -303,8 +309,8 @@ jobs:
 
           | Image | Download |
           |-------|----------|
-          | **x86_64 ISO** | [xiboplayer-kiosk-atomic_${TAG}_x86_64.iso](${DL}/${TAG}/xiboplayer-kiosk-atomic_${TAG}_x86_64.iso) |
-          | **aarch64 ISO** | [xiboplayer-kiosk-atomic_${TAG}_aarch64.iso](${DL}/${TAG}/xiboplayer-kiosk-atomic_${TAG}_aarch64.iso) |
+          | **x86_64 ISO** | [xiboplayer-kiosk-atomic_${VERSION}_x86_64.iso](${DL}/${TAG}/xiboplayer-kiosk-atomic_${VERSION}_x86_64.iso) |
+          | **aarch64 ISO** | [xiboplayer-kiosk-atomic_${VERSION}_aarch64.iso](${DL}/${TAG}/xiboplayer-kiosk-atomic_${VERSION}_aarch64.iso) |
           | **Checksums** | [SHA256SUMS](${DL}/${TAG}/SHA256SUMS) |
 
           ## What's included
