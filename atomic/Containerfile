@@ -32,10 +32,13 @@ RUN dnf install -y \
     dnf clean all
 
 # Display manager + kiosk compositor (minimal GNOME, no apps)
-# gnome-control-center needed for first-boot setup wizard (WiFi, timezone, etc.)
+# First-boot config (WiFi/timezone/CMS) runs via zenity — NO gnome-control-center,
+# NO libadwaita/python3-gobject. The zenity menu calls nmcli/timedatectl directly
+# through validated doas helpers. Per user directive 2026-04-11: "avoid at all
+# cost to use gnome-settings" — if this RUN ever reintroduces gnome-control-center,
+# the build breaks and forces the maintainer to use the direct helper path.
 RUN dnf install -y \
     gdm gnome-kiosk gnome-kiosk-script-session \
-    python3-gobject libadwaita gnome-control-center \
     && dnf clean all
 
 # Full codec stack (ffmpeg + gstreamer from RPM Fusion)
@@ -73,9 +76,10 @@ RUN dnf install -y \
     zenity dunst unclutter \
     && dnf clean all
 
-# Xiboplayer packages (arexibo pulls qt6-qtwebengine ~150 MB — skip if size matters)
+# Xiboplayer packages — arexibo excluded from default image (~150 MB qt6 pull).
+# Still available via netinstall with xibo.profile=arexibo kernel param.
 RUN dnf install -y \
-    xiboplayer-kiosk xiboplayer-electron xiboplayer-chromium arexibo \
+    xiboplayer-kiosk xiboplayer-electron xiboplayer-chromium \
     && dnf clean all
 
 # Kiosk configuration overlay

@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.24
+Version:        0.4.25
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -21,26 +21,24 @@ Requires:       libva
 Requires:       dconf
 Requires:       glib2
 Requires:       alternatives
-Requires:       python3-gobject
-Requires:       libadwaita
-Requires:       gnome-control-center
 Recommends:     xiboplayer-chromium
 Suggests:       xiboplayer-electron
-Suggests:       arexibo
 Recommends:     libva-intel-driver
 
 %description
 Kiosk session scripts for running Xibo digital signage players as full-screen
-displays under GNOME Kiosk. Includes a first-boot registration wizard,
-session holder with health monitoring, dunst notification config, and
-a systemd user unit for the player process.
+displays under GNOME Kiosk. Includes a zenity first-boot menu (Wi-Fi /
+Timezone / CMS / Debug), session holder with health monitoring, dunst
+notification config, and a systemd user unit for the player process.
 
 The player binary is managed via the alternatives system (/usr/bin/xiboplayer).
 Each player package registers itself:
 
   sudo alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 30
   sudo alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-chromium 20
-  sudo alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/arexibo 10
+
+Arexibo is a netinstall opt-in — pulled on demand when xibo.profile=arexibo
+is set on the kernel cmdline at install time.
 
 Select the active player:
 
@@ -59,8 +57,6 @@ install -Dm755 kiosk/xibo-show-ip.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xi
 install -Dm755 kiosk/xibo-show-cms.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-show-cms.sh
 install -Dm644 kiosk/keyd-xibo.conf %{buildroot}%{_sysconfdir}/keyd/xibo.conf
 install -Dm644 kiosk/copr-keyd.repo %{buildroot}%{_sysconfdir}/yum.repos.d/copr-keyd.repo
-install -Dm755 kiosk/xiboplayer-setup.py %{buildroot}%{_datadir}/xiboplayer-kiosk/xiboplayer-setup.py
-install -Dm644 kiosk/xiboplayer-setup.desktop %{buildroot}%{_datadir}/xiboplayer-kiosk/xiboplayer-setup.desktop
 install -Dm755 kiosk/xibo-activate-kiosk.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-activate-kiosk.sh
 install -Dm755 kiosk/xibo-deactivate-kiosk.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-deactivate-kiosk.sh
 # Issue #68 — NM keyfile writer (called by doas from the xibo user or directly
@@ -109,8 +105,6 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_datadir}/xiboplayer-kiosk/xibo-keyd-run.sh
 %{_datadir}/xiboplayer-kiosk/xibo-show-ip.sh
 %{_datadir}/xiboplayer-kiosk/xibo-show-cms.sh
-%{_datadir}/xiboplayer-kiosk/xiboplayer-setup.py
-%{_datadir}/xiboplayer-kiosk/xiboplayer-setup.desktop
 %{_datadir}/xiboplayer-kiosk/xibo-activate-kiosk.sh
 %{_datadir}/xiboplayer-kiosk/xibo-deactivate-kiosk.sh
 %{_datadir}/xiboplayer-kiosk/xibo-set-wifi.sh
@@ -142,6 +136,49 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.25-1
+- Drop arexibo from the default image (#71). Arexibo is now a netinstall
+  opt-in only: the kickstart %post pulls the arexibo package on demand
+  when xibo.profile=arexibo was passed on the kernel cmdline. Default
+  image shrinks by ~150 MB (qt6-qtwebengine + qt6-qtbase + qt6-qtdeclarative
+  + qt6-qtpdf + arexibo itself).
+- Delete kiosk/xiboplayer-setup.py (347 lines) + kiosk/xiboplayer-setup.desktop.
+  The libadwaita/GTK4 Python first-boot wizard was rejected by 0x0 in
+  Singularity 6 #313-378 and superseded by the zenity first-boot menu
+  in #67 (landed in 0.4.24).
+- Drop python3-gobject + libadwaita + gnome-control-center from Requires
+  (spec), Packages= (mkosi.conf), dnf install (atomic/Containerfile + ks
+  %packages). Per user directive 2026-04-11 "avoid at all cost to use
+  gnome-settings": removing gnome-control-center from the image means any
+  future maintainer who tries to shell out to `gnome-control-center wifi`
+  hits a build-time ENOENT and is forced to use the validated nmcli/
+  timedatectl helpers we already ship. Image shrinks by another ~250 MB.
+  Combined with the arexibo removal: ~400 MB smaller default ISO.
+- Drop arexibo menu entries from kickstart/grub.cfg and kickstart/isolinux.cfg
+  (2 entries remain: Chromium default + Electron). Boot menu labels now
+  include the explicit "ERASES ALL DATA ON DISK" warning per Phase 6-sexies
+  safety review — an operator who boots the ISO by mistake on repurposed
+  hardware now has a chance to cancel before clearpart wipes the disk.
+- Drop the :arexibo section + menu item from ipxe/boot.ipxe. The header
+  comment block now documents every xibo.* kernel param the kickstart
+  %post consumes, so MSPs baking custom USBs have a single reference.
+- Remove the old %post --erroronfail autostart block in the kickstart
+  that copied xiboplayer-setup.desktop into /home/xibo/.config/autostart/.
+  With the desktop file deleted, this block would fail on every install.
+- Security: the spec no longer ships /usr/share/xiboplayer-kiosk/xiboplayer-setup.py
+  or xiboplayer-setup.desktop — a future %files build would fail with
+  "File not found" if the source files were reintroduced accidentally,
+  making wizard-resurrection attempts visible at build time.
+- The kickstart alternatives --install line for arexibo is conditional on
+  profile=arexibo and only fires AFTER a successful on-demand `dnf install
+  -y arexibo`. If the on-demand install fails (no network / arexibo repo
+  missing), the kickstart logs a warning and falls back to chromium — the
+  install still produces a working kiosk rather than a booted-but-broken
+  machine.
+- Closes #71. Deferred to later issues: xibo-show-cms.sh Ctrl+R full-setup
+  refactor to call xibo-first-boot.sh (low-risk polish, can land after
+  the post-merge smoke tests on built ISOs).
+
 * Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.24-1
 - Zenity first-boot menu for XPC/XPE on x86_64 (#67). 0x0's direct ask
   in horizon2026-2 #1: a zenity main menu that runs inside the kiosk

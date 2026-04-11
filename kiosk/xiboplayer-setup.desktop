@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=xiboplayer setup
-Comment=First-boot system configuration for xiboplayer kiosk
-Exec=/usr/share/xiboplayer-kiosk/xiboplayer-setup.py
-Icon=preferences-system
-X-GNOME-Autostart-enabled=true
-OnlyShowIn=GNOME;
