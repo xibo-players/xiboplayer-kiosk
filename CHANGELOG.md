@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.20 (2026-04-11)
+
+Version bump. Planned feature scope tracked as GitHub issues for separate implementation:
+
+- **#67** — zenity first-boot menu (XPC/XPE) — direct `nmcli` + `timedatectl`, no GNOME Settings
+- **#68** — iPXE / kernel preseed infrastructure + `xibo.config_url=` JSON fetch + best-available-disk autodetect
+- **#69** — 4-layer power management + GNOME donation popup correction (S6 #370 + S4 #374)
+- **#70** — `xibo-debug-dump` support bundle (Ctrl+D / zenity / labelled USB trigger)
+- **#71** — drop arexibo from default image (keep netinstall opt-in via `xibo.profile=arexibo`)
+- **#72** — pre-anaconda whiptail WiFi TUI for netinstall / iPXE
+- **#73** — USB auto-detect for `setup.json` preseed (2x-USB MSP flow)
+- **#74** — bats test suite + shellcheck CI
+
+Authoritative spec for all items: `xiboplayer-memory/public/plan_consolidated-kiosk-plan-singularity-6-horizon-2026-2-release.md` (1334 lines, hardened through 7 review passes + 2 research reports).
+
+No functional changes in this release — rebuilds images with current main-branch state.
+
 ## 0.4.18 (2026-04-06)
 
 - Fix QCOW2 boot (KernelCommandLine=root=gpt-auto), image matrix docs, download links
