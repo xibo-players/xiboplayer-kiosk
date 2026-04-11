@@ -19,6 +19,17 @@ idle-delay=uint32 0
 [org/gnome/desktop/screensaver]
 lock-enabled=false
 idle-activation-enabled=false
+picture-uri=''
+picture-options='none'
+primary-color='#000000'
+
+# Solid black GDM greeter background (#102) — the Fedora branded
+# wallpaper would otherwise flash briefly between boot and auto-login.
+[org/gnome/desktop/background]
+picture-uri=''
+picture-uri-dark=''
+picture-options='none'
+primary-color='#000000'
 
 [org/gnome/settings-daemon/plugins/power]
 idle-dim=false

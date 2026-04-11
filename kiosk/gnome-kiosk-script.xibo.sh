@@ -50,6 +50,16 @@ gsettings set org.gnome.desktop.wm.preferences theme 'Adwaita' 2>/dev/null || tr
 gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
 gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark' 2>/dev/null || true
 
+# Solid black GNOME session background (#102). Kills the Fedora
+# branded wallpaper that would otherwise flash on kiosk entry.
+gsettings set org.gnome.desktop.background picture-uri '' 2>/dev/null || true
+gsettings set org.gnome.desktop.background picture-uri-dark '' 2>/dev/null || true
+gsettings set org.gnome.desktop.background picture-options 'none' 2>/dev/null || true
+gsettings set org.gnome.desktop.background primary-color '#000000' 2>/dev/null || true
+gsettings set org.gnome.desktop.screensaver picture-uri '' 2>/dev/null || true
+gsettings set org.gnome.desktop.screensaver picture-options 'none' 2>/dev/null || true
+gsettings set org.gnome.desktop.screensaver primary-color '#000000' 2>/dev/null || true
+
 # Set audio volume (90%)
 wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.9 2>/dev/null || true
 

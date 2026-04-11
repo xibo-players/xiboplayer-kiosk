@@ -18,6 +18,10 @@ idle-delay=uint32 0
 [org.gnome.desktop.screensaver]
 lock-enabled=false
 idle-activation-enabled=false
+# Solid black screensaver background (#102) — see desktop.background below.
+picture-uri=''
+picture-options='none'
+primary-color='#000000'
 
 [org.gnome.settings-daemon.plugins.power]
 idle-dim=false
@@ -58,3 +62,21 @@ gtk-theme='Adwaita-dark'
 # the player to be the only thing visible.
 [org.gnome.desktop.wm.preferences]
 theme='Adwaita'
+
+# Solid black GNOME session background (#102).
+#
+# During the kiosk entry transition (GDM auto-login → gnome-kiosk
+# session startup → player window paints), the default Fedora branded
+# wallpaper would be visible for 500-2000 ms. Solid black is the only
+# sensible default for a signage kiosk — the player covers the screen
+# moments later anyway.
+#
+# picture-uri='' + picture-options='none' → no wallpaper image
+# primary-color='#000000' → solid black fill
+# Set the same values on screensaver in case a lock-screen transition
+# fires before the player paints.
+[org.gnome.desktop.background]
+picture-uri=''
+picture-uri-dark=''
+picture-options='none'
+primary-color='#000000'

@@ -483,6 +483,13 @@ su - xibo -c "dbus-run-session bash -c '
   gsettings set org.gnome.desktop.wm.preferences theme \"Adwaita\"
   gsettings set org.gnome.desktop.interface color-scheme \"prefer-dark\"
   gsettings set org.gnome.desktop.interface gtk-theme \"Adwaita-dark\"
+  gsettings set org.gnome.desktop.background picture-uri \"\"
+  gsettings set org.gnome.desktop.background picture-uri-dark \"\"
+  gsettings set org.gnome.desktop.background picture-options \"none\"
+  gsettings set org.gnome.desktop.background primary-color \"#000000\"
+  gsettings set org.gnome.desktop.screensaver picture-uri \"\"
+  gsettings set org.gnome.desktop.screensaver picture-options \"none\"
+  gsettings set org.gnome.desktop.screensaver primary-color \"#000000\"
 '" || true
 %end
 
