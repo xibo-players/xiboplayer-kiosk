@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.29
+Version:        0.4.30
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -150,6 +150,9 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.30-1
+- Kiosk UX and branding fixes: dark mode, dark background.
+
 * Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.29-1
 - Revert the /etc/machine-id regen %post block added in 0.4.28.
   The regen was unnecessary for the anaconda-install path: anaconda
