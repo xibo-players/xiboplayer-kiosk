@@ -437,7 +437,7 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
   USB auto-detect, bats + shellcheck CI). No functional changes in this
   release — rebuilds images with current main-branch state.
 
-* Mon Apr 07 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.19-1
+* Tue Apr 07 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.19-1
 - Redesign first-boot: normal GNOME session with setup wizard, then kiosk lockdown
 - Setup wizard uses native GNOME panels for WiFi, timezone, language, display
 - Arexibo CMS config in wizard; Chromium/Electron self-configure
@@ -458,7 +458,7 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 * Thu Apr 02 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.15-1
 - Fix session holder service detection, zenity fallback, arexibo.service, iPXE boot
 
-* Wed Apr 02 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.14-1
+* Thu Apr 02 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.14-1
 - Fix: package xiboplayer-setup.py in RPM/DEB (missing — broke netinstall wizard)
 - Fix: add python3-gobject + libadwaita to kickstart packages
 - Fix: add cdrom install source for offline ISO
@@ -477,10 +477,10 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 * Mon Mar 30 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.4-3
 - Ship keyd COPR repo file so dnf can resolve keyd dependency (fixes #4)
 
-* Sun Feb 23 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.4-2
+* Mon Feb 23 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.4-2
 - Update homepage URL to https://xiboplayer.org
 
-* Sun Feb 23 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.4-1
+* Mon Feb 23 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.4-1
 - Rename package from xibo-kiosk to xiboplayer-kiosk
 - Update custom domain to dl.xiboplayer.org
 
