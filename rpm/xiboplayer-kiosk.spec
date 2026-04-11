@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.23
+Version:        0.4.24
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -74,6 +74,11 @@ install -Dm755 kiosk/xibo-debug-dump.sh %{buildroot}%{_datadir}/xiboplayer-kiosk
 # SSH session by just typing `xibo-debug-dump`.
 install -d %{buildroot}%{_bindir}
 ln -sf %{_datadir}/xiboplayer-kiosk/xibo-debug-dump.sh %{buildroot}%{_bindir}/xibo-debug-dump
+# Issue #67 — zenity first-boot menu scripts
+install -Dm755 kiosk/xibo-zenity-lib.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-zenity-lib.sh
+install -Dm755 kiosk/xibo-first-boot.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-first-boot.sh
+install -Dm755 kiosk/xibo-set-timezone.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-timezone.sh
+install -Dm755 kiosk/xibo-set-locale.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-locale.sh
 
 # System config files — the kiosk RPM IS the kiosk definition, so the
 # system-level config that makes a kiosk stay on forever + suppresses the
@@ -111,6 +116,10 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_datadir}/xiboplayer-kiosk/xibo-set-wifi.sh
 %{_datadir}/xiboplayer-kiosk/xibo-debug-dump.sh
 %{_bindir}/xibo-debug-dump
+%{_datadir}/xiboplayer-kiosk/xibo-zenity-lib.sh
+%{_datadir}/xiboplayer-kiosk/xibo-first-boot.sh
+%{_datadir}/xiboplayer-kiosk/xibo-set-timezone.sh
+%{_datadir}/xiboplayer-kiosk/xibo-set-locale.sh
 %{_sysconfdir}/keyd/xibo.conf
 %{_sysconfdir}/yum.repos.d/copr-keyd.repo
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
@@ -133,6 +142,53 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.24-1
+- Zenity first-boot menu for XPC/XPE on x86_64 (#67). 0x0's direct ask
+  in horizon2026-2 #1: a zenity main menu that runs inside the kiosk
+  session, BEFORE the player starts, with Wi-Fi / Timezone / CMS /
+  Debug / Done rows and a live status column.
+- New kiosk/xibo-zenity-lib.sh — shared helper library. Contains
+  _preseed_get (reads /etc/xiboplayer-preseed.env via grep+cut, never
+  source), zlib_notify (notify-send wrapper), zlib_status_wifi/tz/cms
+  (live status strings), zlib_cms_form (zenity --forms for URL/key/
+  name with preseed defaults), zlib_write_chromium_config /
+  zlib_write_electron_config / zlib_write_arexibo_cms_json (player-
+  specific config writers), zlib_write_player_config (dispatcher).
+- New kiosk/xibo-first-boot.sh — the menu itself. Main loop re-
+  displays the menu after each row action, so operators can configure
+  multiple things in one sitting. Two-minute inactivity timeout (exit
+  code 5) falls through to "start player" automatically to prevent
+  walkaway lockout.
+  - Wi-Fi row: nmcli dev wifi rescan + list + zenity picker +
+    zenity --password (secured nets only) + doas xibo-set-wifi.sh.
+    Connectivity check via detectportal.firefox.com catches captive
+    portals and warns the operator before they think they're connected.
+  - Timezone row: two-stage filter — zenity --entry for a
+    substring, then zenity --list filtered by grep -i. Avoids the
+    593-row IANA scroll and is much faster on non-technical operators
+    who know "Madrid" but not "Europe/Madrid".
+  - CMS row: zenity --forms with URL/key/display-name, pre-filled
+    from preseed.env. Post-save zenity --info explains "display is
+    pending in CMS admin panel" — prevents the "why is the screen
+    blank" confusion on every first deployment.
+  - Debug row: calls xibo-debug-dump.sh (#70).
+  - Done row: writes the sentinel and returns.
+- New kiosk/xibo-set-timezone.sh + xibo-set-locale.sh — validated
+  doas helpers that check their argument against
+  'timedatectl list-timezones' / 'localectl list-locales' before
+  invoking the real command. Narrower than the blanket timedatectl/
+  localectl permits (Phase 6-quinquies security hardening).
+- gnome-kiosk-script.xibo.sh gains a first-boot gate: after the gsettings
+  block and before systemctl --user start, if
+  ~/.local/share/xibo/first-boot-done is absent and
+  /usr/share/xiboplayer-kiosk/xibo-first-boot.sh is executable, run
+  the menu and then touch the sentinel. Errors are swallowed with
+  '|| true' so the kiosk never stalls on first boot.
+- mkosi-extra/etc/doas.conf AND the kickstart doas heredoc both gain
+  permits for the two new helpers (xibo-set-timezone.sh,
+  xibo-set-locale.sh) + the xibo-set-wifi.sh permit (carried over
+  from #68).
+
 * Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.23-1
 - Support bundle collector xibo-debug-dump.sh (#70). Gathers logs
   (journalctl user + kernel + services), configs (preseed.env, player

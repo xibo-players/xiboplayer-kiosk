@@ -361,11 +361,11 @@ cat > /etc/doas.conf << 'EOF'
 permit nopass xibo cmd reboot
 permit nopass xibo cmd shutdown
 permit nopass xibo cmd alternatives
-permit nopass xibo cmd localectl
-permit nopass xibo cmd timedatectl
 permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-activate-kiosk.sh
 permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-deactivate-kiosk.sh
 permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-set-wifi.sh
+permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-set-timezone.sh
+permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-set-locale.sh
 EOF
 chmod 600 /etc/doas.conf
 %end
