@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.27
+Version:        0.4.28
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -140,6 +140,35 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.28-1
+- bats test suite + shellcheck CI (#74). New tests/ directory with 5
+  bats files covering xibo-set-wifi.sh, xibo-zenity-lib.sh,
+  xibo-debug-dump.sh, xibo-usb-preseed.sh, and the kickstart preseed
+  parser + security contracts. Focus is on static grep assertions
+  (security contracts that must never regress) + jq allowlist regex
+  exercise (injection rejection verified against real jq).
+- New .github/workflows/shellcheck.yml — runs shellcheck -S error on
+  all kiosk/*.sh scripts on every PR. Kickstart %pre/%post blocks
+  are extracted with awk and checked continue-on-error (existing
+  code has style/warning issues to be cleaned up incrementally).
+- New .github/workflows/test.yml — installs bats + jq + zstd and
+  runs bats tests/unit/ on every PR.
+- .shellcheckrc with project-wide exclusions (SC2034 unused vars,
+  SC1091 sourcing, SC2155 declare-and-assign).
+- The bats tests enforce key security invariants:
+  - /etc/xiboplayer-preseed.env is NEVER sourced (grep+cut only)
+  - xibo-debug-dump tarball NEVER includes NM keyfiles, /etc/shadow,
+    browser Cookies, or /etc/doas.conf
+  - jq allowlist regex rejects $, ;, backtick, and other shell
+    metacharacters BEFORE they reach the preseed env file
+  - Display IDs use uuidgen, not machine-id sha256 derivation
+  - kickstart doas.conf uses script-specific permits (no blanket
+    timedatectl/localectl)
+- Closes #74. First post-MVP follow-up: a bats test that diffs the
+  two _validate_nm_string copies (xibo-set-wifi.sh + kickstart inline)
+  to catch drift. Current test uses behavioral grep assertions which
+  are less fragile but don't catch all drift.
+
 * Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.27-1
 - USB auto-detect /setup.json (#73). New kiosk/xibo-usb-preseed.sh
   script that scans USB-transport block devices for /setup.json at
