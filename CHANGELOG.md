@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.29 (2026-04-11)
+
+**Revert the `/etc/machine-id` regen `%post` block added in 0.4.28.**
+
+The regen was unnecessary for the anaconda-install path: anaconda already runs `systemd-machine-id-setup` during install, so every kickstart-installed machine gets a fresh, unique machine-id on first boot. The "image clone hygiene" rationale I invoked only applies to bootc/mkosi direct-deploy paths that bypass an installer — which is **not** how xiboplayer-kiosk images ship.
+
+Nothing in the repo reads `/etc/machine-id`. Display IDs are generated via `uuidgen` and are completely independent of any system identifier — that's been the case since #67 and #74 regardless of whether machine-id gets regenerated or not.
+
+### Modified files
+
+- **`kickstart/xiboplayer-kiosk.ks`** — removed the `%post --erroronfail` / `: > /etc/machine-id` / `%end` block.
+- **`tests/unit/preseed-extractor.bats`** — removed the matching assertion that grepped for the regen.
+- **`kiosk/xibo-zenity-lib.sh`** — cleaned up the comment above `zlib_write_arexibo_cms_json` that referenced the regen as the rationale for `uuidgen`.
+- **`kiosk/xibo-show-cms.sh`** — same cleanup for the Arexibo reconfigure branch.
+- **`rpm/xiboplayer-kiosk.spec`** — bump to 0.4.29, new `%changelog` entry.
+
 ## 0.4.28 (2026-04-11)
 
 **bats test suite + shellcheck CI** ([#74](https://github.com/xibo-players/xiboplayer-kiosk/issues/74)).
