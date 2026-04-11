@@ -34,6 +34,7 @@ install -m755 kiosk/xiboplayer-setup.py "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m644 kiosk/xiboplayer-setup.desktop "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-activate-kiosk.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-deactivate-kiosk.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m755 kiosk/xibo-set-wifi.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 
 # System config files — the kiosk DEB IS the kiosk definition, so the
 # system-level config that makes a kiosk stay on forever + suppresses the
