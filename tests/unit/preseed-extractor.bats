@@ -53,10 +53,6 @@ KS="$REPO_ROOT/kickstart/xiboplayer-kiosk.ks"
     grep -q 'xibo-set-locale.sh' "$KS"
 }
 
-@test "kickstart regenerates /etc/machine-id for image clone hygiene" {
-    grep -qE '/etc/machine-id|dbus-uuidgen' "$KS"
-}
-
 @test "kickstart has no active (non-comment) reference to the Python wizard" {
     # #71 removed the cp xiboplayer-setup.desktop block entirely. Comments
     # documenting the historical removal are OK; active code referencing

@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.28
+Version:        0.4.29
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -140,6 +140,22 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.29-1
+- Revert the /etc/machine-id regen %post block added in 0.4.28.
+  The regen was unnecessary for the anaconda-install path: anaconda
+  runs systemd-machine-id-setup during install, so every
+  kickstart-installed machine already gets a fresh, unique machine-id
+  on first boot. The "image clone hygiene" rationale only applies to
+  bootc/mkosi direct-deploy paths that bypass an installer, which is
+  not how xiboplayer-kiosk images ship. Nothing in the repo reads
+  /etc/machine-id — display IDs use uuidgen, completely independent
+  of any system identifier.
+- Remove the matching bats assertion in tests/unit/preseed-extractor.bats
+- Clean up misleading comments in kiosk/xibo-zenity-lib.sh and
+  kiosk/xibo-show-cms.sh that referenced the now-removed regen as
+  a rationale for the uuidgen switch. uuidgen is the right choice
+  regardless of what happens (or doesn't) to machine-id.
+
 * Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.28-1
 - bats test suite + shellcheck CI (#74). New tests/ directory with 5
   bats files covering xibo-set-wifi.sh, xibo-zenity-lib.sh,

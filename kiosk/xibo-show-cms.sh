@@ -62,9 +62,9 @@ case "$ACTION" in
                 # Ensure URL ends with /
                 [[ "$URL" != */ ]] && URL="${URL}/"
 
-                # Generate display ID via uuidgen (NOT machine-id derived,
-                # per #74 hwkeys directive — decouples identity from
-                # /etc/machine-id which is regenerated on image clone).
+                # Generate display ID via uuidgen. Display IDs are
+                # independent of any system identifier — they're a
+                # per-install hwKey that the CMS uses to route content.
                 DISPLAY_ID="xibo-$(uuidgen | tr -d - | cut -c1-12)"
 
                 mkdir -p "${XIBO_DATA_DIR}"
