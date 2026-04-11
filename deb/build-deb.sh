@@ -35,6 +35,12 @@ install -m644 kiosk/xiboplayer-setup.desktop "${DEB_DIR}/usr/share/xiboplayer-ki
 install -m755 kiosk/xibo-activate-kiosk.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-deactivate-kiosk.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-set-wifi.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m755 kiosk/xibo-debug-dump.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+
+# /usr/bin/xibo-debug-dump symlink (mirrors the RPM spec) — lets techs run
+# `xibo-debug-dump` from any shell without typing the full share path.
+mkdir -p "${DEB_DIR}/usr/bin"
+ln -sf /usr/share/xiboplayer-kiosk/xibo-debug-dump.sh "${DEB_DIR}/usr/bin/xibo-debug-dump"
 
 # System config files — the kiosk DEB IS the kiosk definition, so the
 # system-level config that makes a kiosk stay on forever + suppresses the

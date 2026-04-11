@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.22
+Version:        0.4.23
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -67,6 +67,13 @@ install -Dm755 kiosk/xibo-deactivate-kiosk.sh %{buildroot}%{_datadir}/xiboplayer
 # by root from kickstart %post). Never passes the PSK on the nmcli CLI,
 # closing the /proc/<pid>/cmdline leak window.
 install -Dm755 kiosk/xibo-set-wifi.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-wifi.sh
+# Issue #70 — support bundle collector (Ctrl+D via keyd, zenity row in
+# the first-boot + reconfigure menus, /usr/bin/xibo-debug-dump CLI).
+install -Dm755 kiosk/xibo-debug-dump.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-debug-dump.sh
+# /usr/bin/xibo-debug-dump symlink so technicians can run it from an
+# SSH session by just typing `xibo-debug-dump`.
+install -d %{buildroot}%{_bindir}
+ln -sf %{_datadir}/xiboplayer-kiosk/xibo-debug-dump.sh %{buildroot}%{_bindir}/xibo-debug-dump
 
 # System config files — the kiosk RPM IS the kiosk definition, so the
 # system-level config that makes a kiosk stay on forever + suppresses the
@@ -102,6 +109,8 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_datadir}/xiboplayer-kiosk/xibo-activate-kiosk.sh
 %{_datadir}/xiboplayer-kiosk/xibo-deactivate-kiosk.sh
 %{_datadir}/xiboplayer-kiosk/xibo-set-wifi.sh
+%{_datadir}/xiboplayer-kiosk/xibo-debug-dump.sh
+%{_bindir}/xibo-debug-dump
 %{_sysconfdir}/keyd/xibo.conf
 %{_sysconfdir}/yum.repos.d/copr-keyd.repo
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
@@ -124,6 +133,30 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.23-1
+- Support bundle collector xibo-debug-dump.sh (#70). Gathers logs
+  (journalctl user + kernel + services), configs (preseed.env, player
+  config.json, cms.json, setup-result.json), hardware inventory
+  (lscpu, lspci, lsusb, lsblk, GPU), NetworkManager state, timedate,
+  locale, and kiosk-specific state (firstboot sentinels, alternatives,
+  logind.conf) into a zstd-compressed tarball at
+  \$HOME/Downloads/xibo-debug-<hostname>-<timestamp>.tar.zst.
+- Sensitive values (CMS keys, Wi-Fi PSKs, basic-auth URL credentials)
+  redacted before staging via an inline _redact() helper with 5 sed
+  patterns. Post-tar SECURITY assertion refuses to ship the bundle if
+  any NetworkManager keyfile, /etc/shadow, browser Cookies directory,
+  doas.conf, or .ssh/id_ private key sneaks in — deletes the tarball
+  and fires a critical notify-send.
+- Three triggers: Ctrl+D via keyd (new d = command(...) binding in
+  kiosk/keyd-xibo.conf); direct CLI via the new /usr/bin/xibo-debug-
+  dump symlink; zenity menu row (wired up in #67). A fourth trigger
+  — labeled-USB auto-collect via udev — is supported via
+  xibo-debug-dump --to-usb but the udev rule itself is not yet
+  installed (follow-up).
+- notify-send + zenity --info confirmation dialog show the tarball
+  path and size when the collection succeeds, so non-technical
+  operators know where to find the file.
+
 * Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.22-1
 - iPXE / kernel preseed infrastructure + best-available-disk autodetect
   (#68). Kickstart %post now parses every xibo.* kernel param, fetches

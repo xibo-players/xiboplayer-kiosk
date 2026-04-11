@@ -1,5 +1,52 @@
 # Changelog
 
+## 0.4.23 (2026-04-11)
+
+**Support bundle collector** ([#70](https://github.com/xibo-players/xiboplayer-kiosk/issues/70)).
+
+New `/usr/bin/xibo-debug-dump` command writes a zstd-compressed tarball of kiosk diagnostic state to `$HOME/Downloads/xibo-debug-<hostname>-<timestamp>.tar.zst`. MSP technicians can collect it locally via Ctrl+D, from an SSH session by typing `xibo-debug-dump`, or from the zenity reconfigure menu (#67 will add the menu row).
+
+### What's in the bundle
+
+| File | Content |
+|---|---|
+| `00-system.txt` | hostname, `/etc/os-release`, `uname -a`, `uptime`, `date` |
+| `01-proc-cmdline.txt` | `/proc/cmdline` with `xibo.cms_key=`, `xibo.wifi_psk=`, and basic-auth URL credentials redacted |
+| `02-packages.txt` | `rpm -qa` filtered to xibo/arexibo + top 50 of the full list |
+| `03-preseed.env.txt` | `/etc/xiboplayer-preseed.env` with secrets redacted |
+| `04-<path>.txt` | Player config files with `cmsKey`/`key` redacted |
+| `05-systemd-user.txt` | `systemctl --user status` for all xiboplayer services |
+| `06-systemd-system.txt` | `systemctl status` for gdm, avahi, keyd, sshd, NetworkManager |
+| `07-journal-user.txt` | `journalctl --user -b`, redacted |
+| `08-journal-kernel.txt` | `journalctl -b -k` (kernel log) |
+| `09-journal-services.txt` | Per-service journalctl for the kiosk's critical services |
+| `10-hardware.txt` | `lscpu`, `free`, `df`, `lsblk`, `lspci -nnk`, `lsusb` |
+| `11-display.txt` | `loginctl show-user xibo`, `glxinfo -B`, `/sys/class/drm/` |
+| `12-network.txt` | `nmcli con/dev/wifi`, `ip addr`, `ip route`, `resolvectl` |
+| `13-time-locale.txt` | `timedatectl`, `localectl` |
+| `14-kiosk-state.txt` | Firstboot sentinels, alternatives, `no-idle.conf`, `dconf/profile/gdm` |
+
+### Security — what's NOT in the bundle
+
+The script deliberately does **not** collect these, and a post-tar assertion refuses to ship the bundle if any sneak in (deletes tarball + fires a critical `notify-send`):
+
+- `/etc/NetworkManager/system-connections/**` — contains Wi-Fi PSK in cleartext
+- `/etc/shadow`, `/etc/gshadow`
+- Browser `Cookies*` directories — player session tokens
+- `/etc/doas.conf`
+- `~/.ssh/id_*` — private keys
+
+### Redaction
+
+An inline `_redact()` helper pipes content through 5 `sed` patterns covering `xibo.cms_key=`, `xibo.wifi_psk=`, `xibo.config_url=user:pass@host`, JSON `"cmsKey"`, and JSON `"key"`. Applied per-file as files are staged — conservative, prefers over-redaction to leaking.
+
+### Triggers
+
+1. **Ctrl+D via keyd** — new `d = command(...)` binding in `kiosk/keyd-xibo.conf`
+2. **CLI** — `/usr/bin/xibo-debug-dump` symlink created by RPM spec and DEB build script
+3. **Zenity menu row** — wired up by #67
+4. **Labeled USB auto-collect** — `xibo-debug-dump --to-usb` looks for a mounted filesystem labeled `XIBO-DEBUG`; the matching udev rule for auto-trigger on plug-in is deferred to a follow-up
+
 ## 0.4.22 (2026-04-11)
 
 **iPXE / kernel preseed infrastructure + best-available-disk autodetect** ([#68](https://github.com/xibo-players/xiboplayer-kiosk/issues/68)).
