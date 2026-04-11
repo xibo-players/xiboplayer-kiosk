@@ -1,5 +1,61 @@
 # Changelog
 
+## 0.4.22 (2026-04-11)
+
+**iPXE / kernel preseed infrastructure + best-available-disk autodetect** ([#68](https://github.com/xibo-players/xiboplayer-kiosk/issues/68)).
+
+Foundation layer for unattended and partially-attended kiosk deployment. Establishes `/etc/xiboplayer-preseed.env` as the single source of truth for preseeded values, consumed by the zenity first-boot menu (#67), the pre-anaconda whiptail TUI (#72), and the USB auto-detect scanner (#73).
+
+### 4-layer precedence (most specific wins)
+
+```
+Layer 0  — baked-in defaults (profile=chromium if nothing given)
+Layer 1  — xibo.config_url=https://…/setup.json (curl+jq in %post)
+Layer 2  — USB /setup.json (reserved for #73)
+Layer 3  — per-field xibo.*= kernel params (this PR, overrides above)
+Layer 4  — interactive zenity menu (reserved for #67)
+```
+
+### Supported `xibo.*` kernel params
+
+`profile`, `config_url`, `cms_url`, `cms_key`, `display_name`, `timezone`, `locale`, `wifi_ssid`, `wifi_psk`, `ssh_pubkey`.
+
+### New files
+
+- **`kiosk/xibo-set-wifi.sh`** — NetworkManager keyfile writer. Writes `/etc/NetworkManager/system-connections/<SSID>.nmconnection` at `0600 root:root` instead of calling `nmcli dev wifi connect … password …`, closing the brief `/proc/<pid>/cmdline` PSK leak. Shipped by the RPM (`%install` + `%files` entries) and DEB (`install` line in `build-deb.sh`). Permitted via doas for the xibo user in both `mkosi-extra/etc/doas.conf` and the kickstart doas heredoc.
+  - Input validation rejects control characters (newline/tab/null) and NM INI section headers in both SSID and PSK — prevents fake `[wifi-security]` section injection via crafted PSK values.
+  - SSID filename sanitisation via `tr -c '[:alnum:]._-' '_'` — path traversal attempts become harmless underscore runs.
+  - Authoritative source of `_validate_nm_string`: the same function will be copied verbatim into `kickstart/xibo-wifi-tui.sh` when #72 lands. bats test at `tests/unit/set-wifi.bats` (#74) will enforce byte-identical keyfile output between the two copies.
+
+### Kickstart `%post` additions
+
+- Parses every `xibo.*=` token on `/proc/cmdline`, skipping `xibo.config_url` (that's the Layer 1 fetch instruction, not a value to store).
+- If `xibo.config_url=` present: `curl --silent --fail --max-time 30` + `jq` with an **inline allowlist regex** (`^[A-Za-z0-9._/@:+=\- ]+$`) that rejects shell metacharacters (`$`, backtick, `;`, `&`, `|`, `>`, `<`, `\`, newline) **before** values are written to `preseed.env`. Keeps the file safe even though it's never `source`d.
+- `_preseed_get()` helper extracts values via `grep | cut` — the preseed file is **never** sourced with `.`, closing the shell-parser attack surface.
+- Applies system-level values immediately: `timedatectl set-timezone`, `localectl set-locale LANG=…`, `xibo-set-wifi.sh <SSID> <PSK>` (root, no doas needed in %post), and the `xibo.ssh_pubkey=` pubkey → `/home/xibo/.ssh/authorized_keys` + `systemctl enable sshd.service` dance.
+- `xibo.ssh_pubkey=` is **URL-encoded** on the kernel cmdline (`%20` for space) to survive quoting. Example: `xibo.ssh_pubkey=ssh-ed25519%20AAAAC3…%20operator@msp`. Decoded back to spaces before writing `authorized_keys`.
+
+### `%pre` — best-available-disk autodetect rewrite
+
+Replaces the previous "first non-removable ≥8 GB" walk with a ranked "largest in best-preferred bus class" heuristic:
+
+1. Preference order: **NVMe > virtio > SATA**. Stops at the first class with any match — doesn't mix candidates across classes.
+2. Within the winning class, picks the **largest** qualifying disk.
+3. Removable devices (USB sticks, CD-ROMs, SD cards via `usb-storage`) skipped via `/sys/block/*/removable == 1`.
+4. Disks < 8 GB skipped (too small for a kiosk image).
+5. **Logs every candidate** considered (name + size + rotational + class) to `/tmp/disk-autodetect.log` so the anaconda install log shows the full selection trail. Previous version only logged the winner.
+6. Fallback to `DISK=sda` if nothing qualifies — anaconda still gets a valid `/tmp/disk-config` to `%include`.
+
+### Security notes
+
+- `xibo.config_url=` values should use **path-based tokens** (e.g. `https://ops.example.com/k/a8f2c9d1b4e7.json`) rather than inline `user:pass@host` credentials. The full URL is captured in `/proc/cmdline` AND in the anaconda install logs (`/root/anaconda-ks.log`, `/var/log/anaconda/*`) — path-based secrets are rotatable without touching the installed machine; Basic Auth credentials in the URL are not.
+- The jq allowlist regex is a defence-in-depth layer: even if a future maintainer accidentally introduces `source /etc/xiboplayer-preseed.env` elsewhere, the values are already free of shell metacharacters thanks to this filter.
+
+### Packages added to kickstart `%packages`
+
+- `jq` — required by the `xibo.config_url=` fetch pipeline and by #73's USB `setup.json` scanner. Lightweight (~1 MB), no weak deps.
+- `openssh-server` — installed unconditionally but `sshd.service` is only enabled when `xibo.ssh_pubkey=` is present. Without the pubkey preseed, the kiosk has no inbound SSH surface. Lightweight (~1 MB).
+
 ## 0.4.21 (2026-04-11)
 
 **4-layer power management fix + correct GNOME donation popup suppression** ([#69](https://github.com/xibo-players/xiboplayer-kiosk/issues/69)).

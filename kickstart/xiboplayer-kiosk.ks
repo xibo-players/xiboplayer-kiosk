@@ -90,6 +90,10 @@ avahi
 nss-mdns
 wireguard-tools
 NetworkManager-wifi
+openssh-server
+
+# Preseed tooling — jq parses xibo.config_url JSON + USB setup.json (#73)
+jq
 
 # Remove unnecessary packages
 -gnome-tour
@@ -158,8 +162,81 @@ alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-chromi
 alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 20
 alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/arexibo 10
 
-# Set default player from xibo.profile kernel parameter
-PROFILE=$(sed -n 's/.*xibo\.profile=\([^ ]*\).*/\1/p' /proc/cmdline)
+# ========================================================================
+# Preseed parsing (#68) — extract xibo.* kernel cmdline params and the
+# xibo.config_url= JSON fetch into /etc/xiboplayer-preseed.env.
+# ========================================================================
+# Four-layer precedence (most specific wins):
+#   Layer 0  — baked-in defaults (profile=chromium if nothing given)
+#   Layer 1  — xibo.config_url=https://…/setup.json (curl+jq in %post)
+#   Layer 2  — USB /setup.json (#73 adds xibo-usb-preseed.sh)
+#   Layer 3  — per-field xibo.*= kernel params (this block, overrides above)
+#   Layer 4  — interactive zenity menu (#67, reads preseed.env, prompts gaps)
+#
+# Layer 1 and 3 are implemented here. Layer 2 reuses the same env file via
+# xibo-usb-preseed.sh. Layer 4 reads the env file via a _preseed_get()
+# helper in kiosk/xibo-zenity-lib.sh (#67).
+#
+# Security: the jq allowlist regex rejects shell metacharacters BEFORE
+# writing to preseed.env. The preseed file is NEVER sourced with `.` —
+# values are extracted via grep+cut to avoid the shell parser entirely
+# (defense-in-depth against a future maintainer weakening the regex).
+
+install -d /etc
+
+# --- Layer 1: xibo.config_url= JSON fetch -------------------------------
+CONFIG_URL=$(sed -n 's/.*xibo\.config_url=\([^ ]*\).*/\1/p' /proc/cmdline)
+if [ -n "$CONFIG_URL" ]; then
+    echo "preseed: fetching $CONFIG_URL"
+    # curl is in the anaconda environment; jq was added to %packages.
+    # --fail → non-zero on HTTP error. --max-time 30 → bounded wait.
+    # --silent → no progress meter in install log. Allowlist regex:
+    # alphanumerics, dot, underscore, slash, hyphen, colon, at, plus,
+    # equals, space. Rejects $, backtick, ;, &, |, >, <, \, newline.
+    if curl --silent --fail --max-time 30 "$CONFIG_URL" \
+        | jq -r '
+            to_entries[]
+            | select(.value | type == "string")
+            | select(.value | test("^[A-Za-z0-9._/@:+=\\- ]+$"))
+            | "xibo.\(.key)=\(.value)"
+        ' > /etc/xiboplayer-preseed.env 2>/dev/null; then
+        echo "preseed: fetched $(wc -l < /etc/xiboplayer-preseed.env) key(s) from config_url"
+    else
+        echo "preseed: WARNING — config_url fetch failed or returned invalid JSON, continuing" >&2
+        : > /etc/xiboplayer-preseed.env
+    fi
+else
+    : > /etc/xiboplayer-preseed.env
+fi
+
+# --- Layer 3: per-field xibo.*= kernel params (override Layer 1) --------
+# Walk every token on /proc/cmdline, extract anything matching xibo.KEY=VAL,
+# overwrite the corresponding line in preseed.env. The xibo.config_url key
+# itself is skipped — it's an instruction for Layer 1, not a value to store.
+for tok in $(tr ' ' '\n' < /proc/cmdline | grep -E '^xibo\.[a-z_]+='); do
+    key="${tok%%=*}"
+    val="${tok#*=}"
+    if [ "$key" = "xibo.config_url" ]; then
+        continue
+    fi
+    # Remove any previous entry for this key (from Layer 1), then append.
+    sed -i "/^${key//./\\.}=/d" /etc/xiboplayer-preseed.env 2>/dev/null || true
+    echo "${key}=${val}" >> /etc/xiboplayer-preseed.env
+done
+
+echo "preseed: /etc/xiboplayer-preseed.env now has $(wc -l < /etc/xiboplayer-preseed.env) line(s)"
+
+# --- _preseed_get helper (inline — no sourcing the env file) ------------
+# Extracts a single key's value by exact name. Fails closed (empty string)
+# if the file is missing or the key is absent. Used below + by Item A's
+# xibo-zenity-lib.sh at runtime.
+_preseed_get() {
+    grep "^$1=" /etc/xiboplayer-preseed.env 2>/dev/null | head -1 | cut -d= -f2-
+}
+
+# --- Profile selection (was the whole previous block, still authoritative) --
+# Keeps the old behaviour: default chromium if unset or unrecognised.
+PROFILE=$(_preseed_get "xibo.profile")
 PROFILE="${PROFILE:-chromium}"
 
 case "$PROFILE" in
@@ -181,6 +258,56 @@ cat > /home/xibo/.config/xiboplayer/setup-result.json << SETUPEOF
 SETUPEOF
 chown -R xibo:xibo /home/xibo/.config/xiboplayer
 echo "Default player: $PLAYER ($SERVICE)"
+
+# --- Apply system-level preseed values immediately (we're already root) --
+# Timezone and locale are straightforward system-level calls. Wi-Fi uses
+# the xibo-set-wifi.sh helper installed by the xiboplayer-kiosk RPM at
+# /usr/share/xiboplayer-kiosk/xibo-set-wifi.sh (new in #68). The SSH
+# pubkey (if set) writes the xibo user's authorized_keys and enables
+# sshd.service so MSPs can remote-diagnose via the debug dump (#70).
+
+XIBO_TIMEZONE=$(_preseed_get "xibo.timezone")
+if [ -n "$XIBO_TIMEZONE" ]; then
+    timedatectl set-timezone "$XIBO_TIMEZONE" 2>/dev/null \
+        && echo "preseed: timezone set to $XIBO_TIMEZONE" \
+        || echo "preseed: WARNING — timedatectl set-timezone $XIBO_TIMEZONE failed" >&2
+fi
+
+XIBO_LOCALE=$(_preseed_get "xibo.locale")
+if [ -n "$XIBO_LOCALE" ]; then
+    localectl set-locale "LANG=$XIBO_LOCALE" 2>/dev/null \
+        && echo "preseed: locale set to $XIBO_LOCALE" \
+        || echo "preseed: WARNING — localectl set-locale $XIBO_LOCALE failed" >&2
+fi
+
+XIBO_WIFI_SSID=$(_preseed_get "xibo.wifi_ssid")
+XIBO_WIFI_PSK=$(_preseed_get "xibo.wifi_psk")
+if [ -n "$XIBO_WIFI_SSID" ]; then
+    # Already root in kickstart %post — call the helper directly, no doas.
+    /usr/share/xiboplayer-kiosk/xibo-set-wifi.sh "$XIBO_WIFI_SSID" "$XIBO_WIFI_PSK" \
+        && echo "preseed: wifi connected to $XIBO_WIFI_SSID" \
+        || echo "preseed: WARNING — wifi helper failed for $XIBO_WIFI_SSID" >&2
+fi
+
+# SSH pubkey — allows MSP remote support. The value is URL-encoded (spaces
+# as %20) to survive kernel cmdline quoting. Example:
+#   xibo.ssh_pubkey=ssh-ed25519%20AAAAC3...%20operator@msp
+# We decode the spaces back before writing the key.
+XIBO_SSH_PUBKEY=$(_preseed_get "xibo.ssh_pubkey")
+if [ -n "$XIBO_SSH_PUBKEY" ]; then
+    install -d -m 0700 -o xibo -g xibo /home/xibo/.ssh
+    # Replace %20 with space (the most common case) and trim trailing newline.
+    # Any other percent-encoding the operator used will be preserved as-is
+    # in the authorized_keys line, which is harmless if it matches what the
+    # client sends (it won't match if the operator made a mistake, and the
+    # only symptom is "key not accepted" — fail closed, operator fixes).
+    decoded=$(printf '%s' "$XIBO_SSH_PUBKEY" | sed 's/%20/ /g')
+    echo "$decoded" > /home/xibo/.ssh/authorized_keys
+    chmod 0600 /home/xibo/.ssh/authorized_keys
+    chown xibo:xibo /home/xibo/.ssh/authorized_keys
+    systemctl enable sshd.service 2>/dev/null || true
+    echo "preseed: ssh pubkey installed, sshd enabled"
+fi
 %end
 
 # Configure xibo user and directories
@@ -224,7 +351,11 @@ SystemAccount=false
 EOF
 %end
 
-# Configure opendoas
+# Configure opendoas.
+# MUST match mkosi-extra/etc/doas.conf byte-for-byte. The two copies serve
+# parallel install paths (kickstart-installed targets don't get mkosi-extra/)
+# and drift between them causes bugs like #67's WiFi flow failing with
+# 'permission denied' on kickstart-installed machines (Phase 6-bis finding).
 %post --erroronfail
 cat > /etc/doas.conf << 'EOF'
 permit nopass xibo cmd reboot
@@ -234,6 +365,7 @@ permit nopass xibo cmd localectl
 permit nopass xibo cmd timedatectl
 permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-activate-kiosk.sh
 permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-deactivate-kiosk.sh
+permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-set-wifi.sh
 EOF
 chmod 600 /etc/doas.conf
 %end
@@ -328,29 +460,76 @@ chown -R xibo:xibo /home/xibo
 dnf clean all
 %end
 
-# Auto-detect install disk — find the first non-USB, non-removable disk.
-# Writes disk partitioning commands to /tmp/disk-config for %include.
+# Auto-detect install disk — "best available" heuristic.
+#
+# Preference order (most→least preferred bus class): NVMe > virtio > SATA.
+# Within the first class that yields ANY qualifying disk, pick the LARGEST.
+# Stop at the first class with a match — don't mix NVMe and SATA candidates.
+#
+# Rationale: kiosk hardware typically has a single internal disk that
+# belongs to the fastest available bus class. When a machine has e.g. one
+# NVMe + one SATA spinner, the NVMe should always win. When a machine has
+# two identical NVMes (rare), the larger one wins. When a machine has only
+# SATA, that's what we install on.
+#
+# Skipped: removable devices (USB sticks, SD-card-in-USB-reader,
+# CD-ROMs), disks smaller than 8 GB (too small for a kiosk image).
+#
+# Logs EVERY candidate considered to /tmp/disk-autodetect.log so the
+# anaconda install log shows the full selection trail.
 %pre --erroronfail
 DISK=""
-for dev in /sys/block/nvme* /sys/block/vd* /sys/block/sd*; do
-  [ -e "$dev" ] || continue
-  name=$(basename "$dev")
-  # Skip removable devices (USB sticks, CD-ROMs)
-  [ "$(cat "$dev/removable" 2>/dev/null)" = "1" ] && continue
-  # Skip devices smaller than 8GB (likely USB sticks)
-  size_bytes=$(( $(cat "$dev/size") * 512 ))
-  [ "$size_bytes" -lt 8000000000 ] && continue
-  DISK="$name"
-  break
+DISK_SIZE=0
+LOG=/tmp/disk-autodetect.log
+: > "$LOG"
+echo "xibo disk autodetect: $(date)" >> "$LOG"
+
+# Outer loop: bus preference order (stop at first class with any match)
+for class in nvme vd sd; do
+    for dev in /sys/block/${class}*; do
+        [ -e "$dev" ] || continue
+        name=$(basename "$dev")
+
+        # Skip removable (USB sticks, CD-ROMs, SD cards via usb-storage)
+        if [ "$(cat "$dev/removable" 2>/dev/null)" = "1" ]; then
+            echo "  skip $name: removable=1" >> "$LOG"
+            continue
+        fi
+
+        # Skip small disks (< 8 GB) — almost certainly not the install target
+        size_bytes=$(( $(cat "$dev/size" 2>/dev/null || echo 0) * 512 ))
+        if [ "$size_bytes" -lt 8000000000 ]; then
+            echo "  skip $name: too small (${size_bytes} bytes)" >> "$LOG"
+            continue
+        fi
+
+        rotational=$(cat "$dev/queue/rotational" 2>/dev/null || echo "?")
+        echo "  candidate: $name (${size_bytes} bytes, rotational=$rotational, class=$class)" >> "$LOG"
+
+        # Within this class, track the LARGEST qualifying disk
+        if [ "$size_bytes" -gt "$DISK_SIZE" ]; then
+            DISK="$name"
+            DISK_SIZE="$size_bytes"
+        fi
+    done
+    # If this class yielded a match, skip lower-priority classes
+    if [ -n "$DISK" ]; then
+        echo "  class $class yielded winner $DISK, stopping search" >> "$LOG"
+        break
+    fi
 done
 
 if [ -z "$DISK" ]; then
-  echo "ERROR: No suitable install disk found" >&2
-  # Fallback to sda
-  DISK="sda"
+    echo "ERROR: No suitable install disk found" >&2
+    echo "ERROR: No suitable install disk found" >> "$LOG"
+    # Hard fallback — sda may not exist, but the kickstart must still produce
+    # /tmp/disk-config or anaconda fails the %include at the top of the file.
+    DISK="sda"
+    DISK_SIZE=0
 fi
 
-echo "Selected install disk: $DISK" >&2
+echo "Selected install disk: /dev/$DISK ($DISK_SIZE bytes)" >&2
+echo "WINNER: $DISK ($DISK_SIZE bytes)" >> "$LOG"
 cat > /tmp/disk-config << EOF
 zerombr
 clearpart --all --initlabel --disklabel=gpt --drives=$DISK

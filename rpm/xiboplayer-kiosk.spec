@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.21
+Version:        0.4.22
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -63,6 +63,10 @@ install -Dm755 kiosk/xiboplayer-setup.py %{buildroot}%{_datadir}/xiboplayer-kios
 install -Dm644 kiosk/xiboplayer-setup.desktop %{buildroot}%{_datadir}/xiboplayer-kiosk/xiboplayer-setup.desktop
 install -Dm755 kiosk/xibo-activate-kiosk.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-activate-kiosk.sh
 install -Dm755 kiosk/xibo-deactivate-kiosk.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-deactivate-kiosk.sh
+# Issue #68 — NM keyfile writer (called by doas from the xibo user or directly
+# by root from kickstart %post). Never passes the PSK on the nmcli CLI,
+# closing the /proc/<pid>/cmdline leak window.
+install -Dm755 kiosk/xibo-set-wifi.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-wifi.sh
 
 # System config files — the kiosk RPM IS the kiosk definition, so the
 # system-level config that makes a kiosk stay on forever + suppresses the
@@ -97,6 +101,7 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_datadir}/xiboplayer-kiosk/xiboplayer-setup.desktop
 %{_datadir}/xiboplayer-kiosk/xibo-activate-kiosk.sh
 %{_datadir}/xiboplayer-kiosk/xibo-deactivate-kiosk.sh
+%{_datadir}/xiboplayer-kiosk/xibo-set-wifi.sh
 %{_sysconfdir}/keyd/xibo.conf
 %{_sysconfdir}/yum.repos.d/copr-keyd.repo
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
@@ -119,6 +124,34 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.22-1
+- iPXE / kernel preseed infrastructure + best-available-disk autodetect
+  (#68). Kickstart %post now parses every xibo.* kernel param, fetches
+  xibo.config_url= JSON via curl+jq with an inline allowlist regex that
+  rejects shell metacharacters, writes everything to
+  /etc/xiboplayer-preseed.env, and applies system-level values
+  (timedatectl, localectl, wifi via xibo-set-wifi.sh, ssh pubkey with
+  sshd enablement).
+- Supported xibo.* params: profile, config_url, cms_url, cms_key,
+  display_name, timezone, locale, wifi_ssid, wifi_psk, ssh_pubkey.
+- 4-layer precedence: baked defaults -> xibo.config_url= JSON ->
+  USB /setup.json (reserved for #73) -> per-field xibo.*= kernel params
+  -> zenity menu prompts (reserved for #67). Per-field params override
+  the URL JSON.
+- New kiosk/xibo-set-wifi.sh — NetworkManager keyfile writer that avoids
+  the /proc/<pid>/cmdline PSK leak of 'nmcli dev wifi connect … password
+  …'. Input validation rejects control characters and NM INI section
+  headers in the SSID/PSK. Permitted via doas for the xibo user in both
+  mkosi-extra/etc/doas.conf and the kickstart heredoc.
+- Best-available-disk %pre autodetect — replaces the previous 'first
+  non-removable >8GB' walk with a 'largest in best-preferred bus class'
+  heuristic. Preference order NVMe > virtio > SATA; stops at first class
+  with any match; within the winning class, picks the largest qualifying
+  disk; logs every candidate to /tmp/disk-autodetect.log for debug.
+- Added 'jq' and 'openssh-server' to kickstart %packages. jq is needed
+  by the config_url fetch pipeline and by #73's USB setup.json scanner.
+  sshd is enabled only when xibo.ssh_pubkey= is set.
+
 * Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.21-1
 - 4-layer power management fix + correct GNOME donation popup suppression
   (#69). Fixes screen blanking observed on 0.4.19 (Singularity 6 #370) and
