@@ -371,13 +371,36 @@ AutomaticLogin=xibo
 EOF
 %end
 
-# Configure AccountsService — default GNOME session for first boot
-# The setup wizard will switch to gnome-kiosk-script-wayland after configuration
+# Configure AccountsService — default session for the xibo user.
+#
+# Sets the xibo user's GDM session DIRECTLY to gnome-kiosk-script-wayland
+# (the gnome-kiosk-script-session package provides
+# /usr/share/wayland-sessions/gnome-kiosk-script-wayland.desktop). On
+# first boot, GDM auto-login lands directly inside
+# kiosk/gnome-kiosk-script.xibo.sh — no intermediate vanilla-GNOME
+# session, no session switch mid-flight.
+#
+# History: before #71 (commit 12b003c, 0.4.25) this was `Session=gnome`
+# because the libadwaita Python wizard (xiboplayer-setup.py) was
+# expected to autostart in vanilla GNOME on first boot, fill in the CMS
+# config, then switch AccountsService to gnome-kiosk-script-wayland via
+# doas and log out. #71 deleted the Python wizard (0x0 rejected the
+# libadwaita approach in S6 #313-378) and was supposed to also flip
+# this Session= line, but that edit was forgotten — which stranded
+# every 0.4.25+ install in vanilla GNOME forever. Fixed in #91.
+#
+# The zenity first-boot menu (#67) now runs INSIDE the kiosk session
+# via kiosk/gnome-kiosk-script.xibo.sh, gated by the
+# ~/.local/share/xibo/first-boot-done sentinel. No separate
+# "wizard session → kiosk session" switch is needed.
+#
+# Mirrored at mkosi-extra/var/lib/AccountsService/users/xibo for the
+# mkosi + atomic/bootc build paths.
 %post --erroronfail
 mkdir -p /var/lib/AccountsService/users
 cat > /var/lib/AccountsService/users/xibo << 'EOF'
 [User]
-Session=gnome
+Session=gnome-kiosk-script-wayland
 SystemAccount=false
 EOF
 %end

@@ -60,3 +60,25 @@ KS="$REPO_ROOT/kickstart/xiboplayer-kiosk.ks"
     ! grep -v '^#' "$KS" | grep -q 'xiboplayer-setup\.desktop'
     ! grep -v '^#' "$KS" | grep -q 'xiboplayer-setup\.py'
 }
+
+@test "AccountsService: xibo user defaults to the kiosk session, not vanilla GNOME" {
+    # Regression guard for #91 — 0.4.25 through 0.4.29 shipped with
+    # Session=gnome in both the kickstart and mkosi-extra AccountsService
+    # config files, which stranded every install in vanilla GNOME instead
+    # of gnome-kiosk-script-wayland. Reason: #71 deleted the Python wizard
+    # that was supposed to flip Session= at first boot but forgot to also
+    # flip this default.
+    #
+    # Both files MUST set Session=gnome-kiosk-script-wayland and MUST NOT
+    # have a bare `Session=gnome` line anywhere.
+
+    # Kickstart %post heredoc
+    grep -q '^Session=gnome-kiosk-script-wayland' "$KS"
+    ! grep -qE '^Session=gnome$' "$KS"
+
+    # mkosi-extra overlay (mkosi + atomic/bootc build paths)
+    local MKOSI_FILE="$REPO_ROOT/mkosi-extra/var/lib/AccountsService/users/xibo"
+    [ -f "$MKOSI_FILE" ]
+    grep -q '^Session=gnome-kiosk-script-wayland$' "$MKOSI_FILE"
+    ! grep -qE '^Session=gnome$' "$MKOSI_FILE"
+}
