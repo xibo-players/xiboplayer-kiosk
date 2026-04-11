@@ -1,5 +1,66 @@
 # Changelog
 
+## 0.4.27 (2026-04-11)
+
+**USB auto-detect `/setup.json`** ([#73](https://github.com/xibo-players/xiboplayer-kiosk/issues/73)).
+
+Enables 0x0's two-USB MSP deploy pattern (horizon2026 #396): USB1 is the install ISO, USB2 holds per-customer config. New `kiosk/xibo-usb-preseed.sh` scans USB-transport block devices for `/setup.json` at the root of the first filesystem, validates via jq allowlist, merges into `/etc/xiboplayer-preseed.env`.
+
+### Precedence
+
+Sits between Layer 1 (`xibo.config_url=` JSON fetch) and Layer 2 (per-field `xibo.*=` kernel params). Per-field kernel params always win — operator-on-console beats USB beats URL fetch.
+
+### Trust model
+
+- **`--trust` flag**: called from kickstart `%post` with `--trust`. Install-time, operator physically present, no confirmation dialog.
+- **No `--trust`**: callable from runtime reconfigure paths. Shows a `zenity --question` dialog with a preview of the first 1000 bytes of `setup.json` before applying. Prevents the evil-maid attack where a visitor plugs a USB + triggers Ctrl+R full-setup to silently rewrite the CMS URL.
+- **No zenity + no `--trust`**: fail closed (exit 0 without applying).
+
+### Install target exclusion
+
+Uses `lsblk TRAN=usb` to limit the scan to USB-transport devices, then parses the `--drives=DISK` line from `/tmp/disk-config` (written by the existing `%pre` disk-autodetect) to exclude the install target basename. If `/tmp/disk-config` doesn't exist (e.g. running from a live system without kickstart), no exclusion is applied — safe because the lsblk filter already skips non-USB devices.
+
+### Security
+
+**jq allowlist regex**: `^[A-Za-z0-9._/@:+=\\- ]+$`. Matches alphanumerics, dot, underscore, slash, hyphen, colon, at, plus, equals, space. Rejects `$`, backtick, `;`, `&`, `|`, `>`, `<`, `\`, newlines — the shell metacharacter set. Applied INSIDE the jq expression so bad values are filtered before they ever reach the env file.
+
+**Known limitation**: operators whose WiFi password contains `!`, `#`, or any rejected character must preseed via the `xibo.wifi_psk=` kernel param instead. Documented in the README's `setup.json` schema section.
+
+### Graceful fall-through
+
+Every failure mode exits 0 silently:
+- Missing `lsblk`, `jq`, `mount`, `umount` — skip
+- No USB devices — skip
+- No `/setup.json` on any USB — skip
+- Invalid JSON — warn, continue
+- User declines confirmation — skip
+
+**The script can never abort an install.**
+
+### `setup.json` schema (documented in README)
+
+```json
+{
+  "cms_url":      "https://cms.example.com",
+  "cms_key":      "ABCDEF...",
+  "display_name": "Reception-3",
+  "timezone":     "Europe/Madrid",
+  "locale":       "en_US.UTF-8",
+  "wifi_ssid":    "MyCorpWiFi",
+  "wifi_psk":     "password123",
+  "profile":      "chromium"
+}
+```
+
+All fields optional. Keys map 1:1 to the `xibo.*=` kernel param namespace (drop the `xibo.` prefix). Values must pass the allowlist regex.
+
+### Modified files
+
+- **`kiosk/xibo-usb-preseed.sh`** — new ~165-line script
+- **`kickstart/xiboplayer-kiosk.ks`** — new `%post` block after the `xibo.config_url=` fetch that invokes `xibo-usb-preseed.sh --trust`
+- **`rpm/xiboplayer-kiosk.spec`** — bump to 0.4.27, new `install -Dm755` + `%files` entry, new `%changelog` block
+- **`deb/build-deb.sh`** — mirror
+
 ## 0.4.26 (2026-04-11)
 
 **Pre-anaconda whiptail Wi-Fi TUI for netinstall / iPXE WiFi-only machines** ([#72](https://github.com/xibo-players/xiboplayer-kiosk/issues/72)).

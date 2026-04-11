@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.26
+Version:        0.4.27
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -75,6 +75,9 @@ install -Dm755 kiosk/xibo-zenity-lib.sh %{buildroot}%{_datadir}/xiboplayer-kiosk
 install -Dm755 kiosk/xibo-first-boot.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-first-boot.sh
 install -Dm755 kiosk/xibo-set-timezone.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-timezone.sh
 install -Dm755 kiosk/xibo-set-locale.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-locale.sh
+# Issue #73 — USB /setup.json auto-detect (kickstart %post --trust, and
+# zenity-confirmation from runtime reconfigure paths).
+install -Dm755 kiosk/xibo-usb-preseed.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-usb-preseed.sh
 
 # System config files — the kiosk RPM IS the kiosk definition, so the
 # system-level config that makes a kiosk stay on forever + suppresses the
@@ -114,6 +117,7 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_datadir}/xiboplayer-kiosk/xibo-first-boot.sh
 %{_datadir}/xiboplayer-kiosk/xibo-set-timezone.sh
 %{_datadir}/xiboplayer-kiosk/xibo-set-locale.sh
+%{_datadir}/xiboplayer-kiosk/xibo-usb-preseed.sh
 %{_sysconfdir}/keyd/xibo.conf
 %{_sysconfdir}/yum.repos.d/copr-keyd.repo
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
@@ -136,6 +140,37 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.27-1
+- USB auto-detect /setup.json (#73). New kiosk/xibo-usb-preseed.sh
+  script that scans USB-transport block devices for /setup.json at
+  the root of the first filesystem, validates the JSON via a jq
+  allowlist regex, and merges the validated key=value pairs into
+  /etc/xiboplayer-preseed.env. Enables 0x0's two-USB MSP deploy
+  pattern: USB1 is the install ISO, USB2 holds per-customer config.
+- Called from kickstart %post with --trust flag (install-time
+  operator-present context, no confirmation needed). Callable from
+  runtime reconfigure paths WITHOUT --trust, in which case a zenity
+  confirmation dialog is shown before applying. Prevents the evil-
+  maid attack where a visitor plugs a USB + triggers Ctrl+R full-
+  setup to silently rewrite the CMS URL.
+- Install target exclusion: lsblk TRAN=usb filter + parse the
+  --drives= line from /tmp/disk-config (written by the existing
+  %pre disk-autodetect) to exclude the install target from the
+  scan.
+- Security: jq allowlist regex matches only alphanumerics + dot,
+  underscore, slash, hyphen, colon, at, plus, equals, space. Rejects
+  $, backtick, ;, &, |, >, <, \, newlines — the shell metacharacter
+  set. Operators with passwords containing ! or # must use the
+  xibo.wifi_psk= kernel param instead. Documented as a known
+  limitation in the setup.json schema.
+- Precedence: this lives between Layer 1 (xibo.config_url= JSON fetch)
+  and Layer 2 (per-field xibo.*= kernel params) in the preseed
+  architecture. Per-field kernel params always win.
+- Graceful fall-through: missing tools (lsblk/jq/mount), no USB
+  devices, no setup.json, invalid JSON, user declines confirmation
+  — all exit 0 silently without aborting the install.
+- Closes #73
+
 * Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.26-1
 - Pre-anaconda whiptail Wi-Fi TUI (#72). New %pre --erroronfail block at
   the top of kickstart/xiboplayer-kiosk.ks that runs BEFORE anaconda's
