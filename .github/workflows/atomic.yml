@@ -244,10 +244,22 @@ jobs:
       - name: Determine version
         id: version
         run: |
+          # IMPORTANT: emit BOTH `tag` (used as the R2 path prefix) AND
+          # `version` (used as the ISO-filename infix). For a tag push,
+          # strip the leading "v" so the filename uses plain semver
+          # (matches the build-iso-{x86_64,aarch64} jobs above which
+          # already produce xiboplayer-kiosk-atomic_${VERSION}_{arch}.iso
+          # with VERSION being the stripped value). The release-notes
+          # step at the bottom of this file consumes `version` for the
+          # download URLs — if it's empty, URLs get a double underscore
+          # and 404 (issue flagged after v0.4.29 release).
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=atomic-$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
+            DATE=$(date +%Y%m%d)
+            echo "tag=atomic-${DATE}" >> "$GITHUB_OUTPUT"
+            echo "version=${DATE}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Download all artifacts
@@ -317,7 +329,7 @@ jobs:
 
           - **Fedora bootc 43** (immutable, container-native updates)
           - **Full codecs**: ffmpeg, gstreamer, VA-API
-          - **Players**: xiboplayer-electron, xiboplayer-chromium, arexibo
+          - **Players**: xiboplayer-electron, xiboplayer-chromium (arexibo available via netinstall — pass \`xibo.profile=arexibo\` on the kernel cmdline)
           - **Multimedia**: VLC, mpv, GNOME Showtime
           - **Kiosk session**: GDM autologin → gnome-kiosk
 
