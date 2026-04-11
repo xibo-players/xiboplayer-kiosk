@@ -29,8 +29,13 @@ power-button-action='nothing'
 [org/gnome/settings-daemon/plugins/housekeeping]
 donation-reminder-enabled=false
 
+# GDM greeter + dark mode suppression (#93) — see 90_xiboplayer-kiosk.gschema.override
+# header comment. color-scheme is the modern key, gtk-theme is the
+# legacy GTK 3 fallback.
 [org/gnome/desktop/interface]
 show-donation-popup=false
+color-scheme='prefer-dark'
+gtk-theme='Adwaita-dark'
 
 # Workspace / Activities Overview suppression (#99) — see header
 # comment in the matching 90_xiboplayer-kiosk.gschema.override.

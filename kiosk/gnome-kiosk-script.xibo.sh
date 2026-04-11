@@ -45,6 +45,11 @@ gsettings set org.gnome.desktop.interface show-donation-popup false 2>/dev/null 
 # otherwise flash on first login of a gnome-kiosk session.
 gsettings set org.gnome.desktop.wm.preferences theme 'Adwaita' 2>/dev/null || true
 
+# GNOME dark mode (#93). color-scheme is the modern libadwaita/GTK4
+# key; gtk-theme is the legacy GTK3 fallback. Set both.
+gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark' 2>/dev/null || true
+
 # Set audio volume (90%)
 wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.9 2>/dev/null || true
 

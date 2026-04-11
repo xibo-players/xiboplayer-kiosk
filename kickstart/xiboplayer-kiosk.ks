@@ -484,6 +484,8 @@ su - xibo -c "dbus-run-session bash -c '
   gsettings set org.gnome.settings-daemon.plugins.housekeeping donation-reminder-enabled false
   gsettings set org.gnome.desktop.interface show-donation-popup false
   gsettings set org.gnome.desktop.wm.preferences theme \"Adwaita\"
+  gsettings set org.gnome.desktop.interface color-scheme \"prefer-dark\"
+  gsettings set org.gnome.desktop.interface gtk-theme \"Adwaita-dark\"
 '" || true
 %end
 

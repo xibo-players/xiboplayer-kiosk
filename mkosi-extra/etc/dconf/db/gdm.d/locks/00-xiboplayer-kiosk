@@ -16,4 +16,6 @@
 /org/gnome/settings-daemon/plugins/power/power-button-action
 /org/gnome/settings-daemon/plugins/housekeeping/donation-reminder-enabled
 /org/gnome/desktop/interface/show-donation-popup
+/org/gnome/desktop/interface/color-scheme
+/org/gnome/desktop/interface/gtk-theme
 /org/gnome/desktop/wm/preferences/theme

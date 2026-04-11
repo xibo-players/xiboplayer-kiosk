@@ -39,8 +39,16 @@ power-button-action='nothing'
 [org.gnome.settings-daemon.plugins.housekeeping]
 donation-reminder-enabled=false
 
+# GNOME dark mode (#93) — kiosk menus render with a dark palette by
+# default. Matches typical signage content (dark videos, high-contrast
+# UI) and avoids the bright-white flash that vanilla GTK dialogs like
+# zenity show on first-boot. color-scheme is the modern (GNOME 42+)
+# key for libadwaita / GTK 4 apps; gtk-theme is the legacy GTK 3
+# fallback. Set both for belt-and-braces.
 [org.gnome.desktop.interface]
 show-donation-popup=false
+color-scheme='prefer-dark'
+gtk-theme='Adwaita-dark'
 
 # Workspace / Activities Overview suppression (#99).
 #
