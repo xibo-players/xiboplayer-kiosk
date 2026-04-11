@@ -1,6 +1,6 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.19
-Release:        2%{?dist}
+Version:        0.4.20
+Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
 License:        AGPLv3+
@@ -84,6 +84,13 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
 
 %changelog
+* Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.20-1
+- Version bump. Planned feature scope tracked as GitHub issues #67-#74
+  (zenity first-boot menu, iPXE preseed + best-available-disk, power-mgmt
+  + donation fix, debug tarball, drop arexibo, pre-anaconda whiptail TUI,
+  USB auto-detect, bats + shellcheck CI). No functional changes in this
+  release — rebuilds images with current main-branch state.
+
 * Mon Apr 07 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.19-1
 - Redesign first-boot: normal GNOME session with setup wizard, then kiosk lockdown
 - Setup wizard uses native GNOME panels for WiFi, timezone, language, display
