@@ -57,7 +57,10 @@ KS="$REPO_ROOT/kickstart/xiboplayer-kiosk.ks"
     grep -qE '/etc/machine-id|dbus-uuidgen' "$KS"
 }
 
-@test "kickstart deletes the old Python wizard autostart (no reference)" {
-    # #71 removed the cp xiboplayer-setup.desktop block entirely
-    ! grep -q 'xiboplayer-setup\.desktop' "$KS"
+@test "kickstart has no active (non-comment) reference to the Python wizard" {
+    # #71 removed the cp xiboplayer-setup.desktop block entirely. Comments
+    # documenting the historical removal are OK; active code referencing
+    # the deleted file would break the install.
+    ! grep -v '^#' "$KS" | grep -q 'xiboplayer-setup\.desktop'
+    ! grep -v '^#' "$KS" | grep -q 'xiboplayer-setup\.py'
 }

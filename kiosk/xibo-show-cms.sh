@@ -62,9 +62,10 @@ case "$ACTION" in
                 # Ensure URL ends with /
                 [[ "$URL" != */ ]] && URL="${URL}/"
 
-                # Generate display ID
-                MACHINE_ID=$(cat /etc/machine-id 2>/dev/null || echo "")
-                DISPLAY_ID="xibo-$(echo -n "${MACHINE_ID}$(date +%s)${KEY}" | sha256sum | cut -c1-12)"
+                # Generate display ID via uuidgen (NOT machine-id derived,
+                # per #74 hwkeys directive — decouples identity from
+                # /etc/machine-id which is regenerated on image clone).
+                DISPLAY_ID="xibo-$(uuidgen | tr -d - | cut -c1-12)"
 
                 mkdir -p "${XIBO_DATA_DIR}"
                 cat > "${XIBO_DATA_DIR}/cms.json" << CMSEOF

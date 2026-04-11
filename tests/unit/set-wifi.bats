@@ -34,8 +34,11 @@ REPO_ROOT="$(cd "${BATS_TEST_DIRNAME}/../.." && pwd)"
 
 @test "xibo-set-wifi.sh never passes psk on nmcli cli argument" {
     # The leak window we're closing — psk must NEVER appear adjacent
-    # to an nmcli command line
-    ! grep -E 'nmcli.*password[= ]' "$REPO_ROOT/kiosk/xibo-set-wifi.sh"
+    # to an nmcli command line. Excludes comment lines (the script's
+    # header block explains WHY this is forbidden).
+    ! grep -v '^#' "$REPO_ROOT/kiosk/xibo-set-wifi.sh" \
+        | grep -v '^\s*#' \
+        | grep -E 'nmcli.*password[= ]'
 }
 
 @test "xibo-set-wifi.sh sanitises SSID for filename" {
@@ -52,5 +55,7 @@ REPO_ROOT="$(cd "${BATS_TEST_DIRNAME}/../.." && pwd)"
 }
 
 @test "kickstart never passes the PSK on an nmcli cli argument" {
-    ! grep -E 'nmcli.*password[= ]' "$REPO_ROOT/kickstart/xiboplayer-kiosk.ks"
+    ! grep -v '^#' "$REPO_ROOT/kickstart/xiboplayer-kiosk.ks" \
+        | grep -v '^\s*#' \
+        | grep -E 'nmcli.*password[= ]'
 }

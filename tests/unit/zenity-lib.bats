@@ -17,7 +17,10 @@ LIB="$REPO_ROOT/kiosk/xibo-zenity-lib.sh"
     # Security: never source the preseed env file. grep+cut only.
     ! grep -E '^\s*source\s+.*preseed' "$LIB"
     ! grep -E '^\s*\.\s+.*preseed' "$LIB"
-    grep -q 'grep.*preseed' "$LIB"
+    # The function uses $XIBO_PRESEED_FILE variable — grep for the
+    # variable name rather than the literal path.
+    grep -qE 'grep.*XIBO_PRESEED_FILE|grep.*preseed' "$LIB"
+    grep -qE 'cut -d=' "$LIB"
 }
 
 @test "xibo-zenity-lib.sh defines zlib_notify wrapper" {

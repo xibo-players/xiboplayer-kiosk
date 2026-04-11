@@ -24,6 +24,15 @@ The tests use mostly **static grep assertions** rather than dynamic script execu
 
 The ONE dynamic exercise is the jq allowlist regex in `usb-preseed.bats` — we run real `jq` against real test JSON with shell metacharacters and verify the output is empty (value rejected). This catches any regression that weakens the regex.
 
+### Bug caught by the new CI (bonus)
+
+The first run of the new `shellcheck.yml` workflow caught a real SC2261 error in `kiosk/xibo-debug-dump.sh` (#70) — duplicate stderr redirects on line 163 (`journalctl -b -k ... 2>/dev/null > file.txt 2>/dev/null`). Fixed in this PR. This is exactly the kind of bug the CI is designed to catch: it's a non-obvious quoting issue that would have silently swallowed one of the redirects.
+
+Also fixed in this PR (surfaced by the new test_):
+
+- **`kiosk/xibo-show-cms.sh`** — the Arexibo reconfigure branch still used the old `MACHINE_ID + sha256` display-ID derivation. Replaced with `uuidgen | tr -d - | cut -c1-12` to match `zlib_write_arexibo_cms_json` in the new lib. Brings the two code paths into alignment (plan's hwkeys directive: "display IDs NEVER derived from /etc/machine-id").
+- **`kickstart/xiboplayer-kiosk.ks`** — added `/etc/machine-id` regen (`: > /etc/machine-id`) in `%post`. Image clone hygiene — without this, cloned images share an identical machine-id which breaks systemd journal / D-Bus / any software that uses machine-id as a stable host identifier. Now safe because `xibo-show-cms.sh` uses `uuidgen` for display IDs.
+
 ### Deferred / future work
 
 - Full-script dynamic tests with mocked `nmcli`/`timedatectl`/`zenity` — needs more work on the sandboxed test env, and is less important than the static contracts for now.

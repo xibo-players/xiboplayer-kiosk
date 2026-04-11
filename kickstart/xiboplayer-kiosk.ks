@@ -439,12 +439,24 @@ EOF
 systemctl mask gnome-initial-setup.service gnome-initial-setup-first-login.service
 %end
 
-# NOTE: the old libadwaita/GTK4 first-boot wizard (xiboplayer-setup.py
-# + xiboplayer-setup.desktop autostart) has been replaced by the zenity
-# first-boot menu (#67, kiosk/xibo-first-boot.sh). The menu runs inside
-# the kiosk session itself — gated by ~/.local/share/xibo/first-boot-done —
-# so no desktop-file autostart is needed, and the session never switches
-# out of gnome-kiosk to a normal GNOME session.
+# NOTE: the old libadwaita/GTK4 first-boot wizard (Python .py + .desktop
+# autostart) was replaced by the zenity first-boot menu (#67,
+# kiosk/xibo-first-boot.sh). The menu runs inside the kiosk session
+# itself — gated by ~/.local/share/xibo/first-boot-done — so no
+# desktop-file autostart is needed, and the session never switches out
+# of gnome-kiosk to a normal GNOME session.
+
+# Image clone hygiene — regenerate /etc/machine-id on first boot.
+# Without this, cloned images (copying one built image to multiple
+# machines) share an identical machine-id, which breaks systemd
+# journal rotation, D-Bus addressing, and any software that uses the
+# machine-id as a stable host identifier. systemd-firstboot regenerates
+# on first boot when the file is empty — so we clear it in %post here.
+# Safe because #74 moved hardware identifiers (Arexibo display_id) off
+# machine-id and onto uuidgen.
+%post --erroronfail
+: > /etc/machine-id
+%end
 
 # Disable GNOME donation popup.
 # 0x0 Singularity 4 #374: the correct key is donation-reminder-enabled on the

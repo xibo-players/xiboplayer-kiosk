@@ -160,7 +160,7 @@ done
 journalctl --user -b --no-pager 2>/dev/null | _redact > "$STAGE/07-journal-user.txt" 2>/dev/null || :
 
 # 9. journalctl — kernel
-journalctl -b -k --no-pager 2>/dev/null > "$STAGE/08-journal-kernel.txt" 2>/dev/null || :
+journalctl -b -k --no-pager > "$STAGE/08-journal-kernel.txt" 2>/dev/null || :
 
 # 10. journalctl — boot services (gdm, avahi, keyd, NetworkManager)
 journalctl -b -u gdm -u avahi-daemon -u keyd -u NetworkManager --no-pager 2>/dev/null | _redact > "$STAGE/09-journal-services.txt" 2>/dev/null || :
