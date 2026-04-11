@@ -62,8 +62,10 @@ gdm
 gnome-kiosk
 gnome-kiosk-script-session
 
-# gnome-initial-setup: language/keyboard/network/timezone/password on first boot
-gnome-initial-setup
+# gnome-initial-setup deliberately NOT installed (#101). The Welcome
+# to Fedora wizard is useless on a kiosk and confusing when operators
+# see "desktop preview" screens. The zenity first-boot menu (#67)
+# provides the kiosk-specific setup flow instead.
 
 # Media playback
 vlc
@@ -451,15 +453,11 @@ chmod 755 /home/xibo/.local/bin/shutdown
 chown xibo:xibo /home/xibo/.local/bin/reboot /home/xibo/.local/bin/shutdown
 %end
 
-# Skip gnome-initial-setup completely — our wizard handles system config
-%post --erroronfail
-mkdir -p /usr/share/gnome-initial-setup
-cat > /usr/share/gnome-initial-setup/vendor.conf << 'EOF'
-[pages]
-skip=language;keyboard;network;timezone;privacy;software;account;summary;welcome;password
-EOF
-systemctl mask gnome-initial-setup.service gnome-initial-setup-first-login.service
-%end
+# NOTE: gnome-initial-setup is no longer installed as of #101 — the
+# package is removed from %packages at the top of this file. The old
+# vendor.conf / systemctl mask block that used to live here (skip
+# every page + mask both services) is gone because it's unreachable
+# when the package isn't on disk.
 
 # NOTE: the old libadwaita/GTK4 first-boot wizard (Python .py + .desktop
 # autostart) was replaced by the zenity first-boot menu (#67,

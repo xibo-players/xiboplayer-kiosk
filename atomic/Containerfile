@@ -97,11 +97,16 @@ COPY mkosi-extra/etc/doas.conf /etc/doas.conf
 COPY mkosi-extra/etc/locale.conf /etc/locale.conf
 COPY mkosi-extra/etc/systemd/system/xiboplayer-kiosk-firstboot.service /etc/systemd/system/xiboplayer-kiosk-firstboot.service
 
-# Skip gnome-initial-setup completely — our wizard handles system config
-COPY mkosi-extra/usr/share/gnome-initial-setup/vendor.conf /usr/share/gnome-initial-setup/vendor.conf
-RUN ln -sf /dev/null /etc/systemd/system/systemd-firstboot.service && \
-    ln -sf /dev/null /etc/systemd/system/gnome-initial-setup.service && \
-    ln -sf /dev/null /etc/systemd/system/gnome-initial-setup-first-login.service
+# gnome-initial-setup is no longer installed (#101) — the package is
+# excluded from mkosi.conf's RemovePackages= list at the top and not
+# explicitly installed by the dnf step. The legacy vendor.conf COPY
+# and systemctl-mask-via-symlink block that used to live here are
+# gone because the package isn't on disk to mask.
+#
+# We still mask systemd-firstboot.service (the OS-level systemd
+# firstboot that runs for /etc/machine-id and friends) since that
+# package IS installed as part of base systemd.
+RUN ln -sf /dev/null /etc/systemd/system/systemd-firstboot.service
 
 COPY mkosi-extra/usr/lib/systemd/system-preset/80-xiboplayer-kiosk.preset /usr/lib/systemd/system-preset/80-xiboplayer-kiosk.preset
 COPY mkosi-extra/usr/lib/sysusers.d/xiboplayer-kiosk.conf /usr/lib/sysusers.d/xiboplayer-kiosk.conf
