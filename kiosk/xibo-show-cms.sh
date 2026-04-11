@@ -33,7 +33,7 @@ ACTION=$(zenity --list --title="xiboplayer" \
     "reconfigure" "Reset player config and restart" \
     "full-setup" "Return to first-boot wizard (WiFi, timezone, etc.)" \
     "cancel" "Do nothing" \
-    --width=350 --height=280 2>/dev/null)
+    --width=500 --height=420 2>/dev/null)
 
 case "$ACTION" in
     reconfigure)
