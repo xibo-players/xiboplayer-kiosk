@@ -1,0 +1,33 @@
+# xiboplayer-kiosk — GDM greeter dconf defaults (Layer 4).
+#
+# Applied to the gdm user's session (the GDM greeter itself). The lock file
+# at /etc/dconf/db/gdm.d/locks/00-xiboplayer-kiosk prevents any user-level
+# override from changing these values while the greeter is running.
+#
+# This layer exists to prevent screen blanking and donation-popup appearance
+# on the GDM greeter screen specifically, where the gschema override alone
+# (Layer 2) would be overridden if gdm's per-user dconf store had any value
+# for these keys.
+#
+# Activated by `dconf update`, which reads this file + the matching lock
+# file and writes the compiled binary to /etc/dconf/db/gdm. Re-run
+# `dconf update` whenever this file is modified.
+
+[org/gnome/desktop/session]
+idle-delay=uint32 0
+
+[org/gnome/desktop/screensaver]
+lock-enabled=false
+idle-activation-enabled=false
+
+[org/gnome/settings-daemon/plugins/power]
+idle-dim=false
+sleep-inactive-ac-type='nothing'
+sleep-inactive-battery-type='nothing'
+power-button-action='nothing'
+
+[org/gnome/settings-daemon/plugins/housekeeping]
+donation-reminder-enabled=false
+
+[org/gnome/desktop/interface]
+show-donation-popup=false

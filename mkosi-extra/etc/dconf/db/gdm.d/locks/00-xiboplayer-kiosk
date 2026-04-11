@@ -1,0 +1,18 @@
+# xiboplayer-kiosk — GDM greeter dconf locks.
+#
+# Each line is a key path (not a filesystem path — note the leading slash
+# and the slash-separated components are dconf key paths, not directories).
+# Locked keys cannot be overridden by any user-level dconf value while the
+# GDM greeter session is running.
+#
+# Paired with /etc/dconf/db/gdm.d/00-xiboplayer-kiosk which sets the values.
+
+/org/gnome/desktop/session/idle-delay
+/org/gnome/desktop/screensaver/lock-enabled
+/org/gnome/desktop/screensaver/idle-activation-enabled
+/org/gnome/settings-daemon/plugins/power/idle-dim
+/org/gnome/settings-daemon/plugins/power/sleep-inactive-ac-type
+/org/gnome/settings-daemon/plugins/power/sleep-inactive-battery-type
+/org/gnome/settings-daemon/plugins/power/power-button-action
+/org/gnome/settings-daemon/plugins/housekeeping/donation-reminder-enabled
+/org/gnome/desktop/interface/show-donation-popup

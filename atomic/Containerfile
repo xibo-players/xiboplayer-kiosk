@@ -79,10 +79,18 @@ RUN dnf install -y \
     && dnf clean all
 
 # Kiosk configuration overlay
+#
+# Note: as of 0.4.21 (#69), the system-level power management config files —
+# /etc/systemd/logind.conf.d/no-idle.conf (Layer 1),
+# /usr/share/glib-2.0/schemas/90_xiboplayer-kiosk.gschema.override (Layer 2),
+# /etc/dconf/profile/gdm + /etc/dconf/db/gdm.d/00-xiboplayer-kiosk +
+# /etc/dconf/db/gdm.d/locks/00-xiboplayer-kiosk (Layer 4) — are all shipped
+# by the xiboplayer-kiosk RPM installed in the dnf step above. The RPM's
+# %post scriptlet runs glib-compile-schemas + dconf update to activate them.
+# No manual COPY or RUN needed for those files here.
 COPY mkosi-extra/etc/gdm/custom.conf /etc/gdm/custom.conf
 COPY mkosi-extra/etc/doas.conf /etc/doas.conf
 COPY mkosi-extra/etc/locale.conf /etc/locale.conf
-COPY mkosi-extra/etc/systemd/logind.conf.d/no-idle.conf /etc/systemd/logind.conf.d/no-idle.conf
 COPY mkosi-extra/etc/systemd/system/xiboplayer-kiosk-firstboot.service /etc/systemd/system/xiboplayer-kiosk-firstboot.service
 
 # Skip gnome-initial-setup completely — our wizard handles system config
