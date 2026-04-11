@@ -1,0 +1,81 @@
+name: Test Kiosk Image
+
+# Fast iteration workflow for kickstart / mkosi-extra / RPM spec hotfixes.
+# See #89 for the design and acceptance criteria.
+#
+# Differs from image.yml (production) in three ways:
+#
+#   1. Only builds ONE variant — x86_64 netinstall. No qcow2, no raw,
+#      no aarch64, no self-contained offline ISO. Build time ~5 min
+#      instead of ~25 min.
+#
+#   2. skip-preflight: true — does NOT wait for a fresh RPM with the
+#      current version to appear in dl.xiboplayer.org/rpm. Test
+#      branches use the latest published RPM. The RPM is unchanged
+#      for most kickstart / mkosi-extra fixes, so this gate would
+#      otherwise hang forever.
+#
+#   3. upload-as-artifact: true — the resulting ISO is uploaded as a
+#      GH Actions artifact with 14-day retention, not to R2, not
+#      attached to a release. Download with `gh run download <id>`
+#      or via the run page UI.
+#
+# Customizations applied for test builds (not production):
+#
+#   - Grub menu entries are renamed from "Install Fedora 43" →
+#     "Install xiboplayer kiosk" (and similarly for every other
+#     entry) via a single iso-grub-replacements substitution.
+#   - `quiet` / `rhgb` / `splash` are removed from the installer
+#     kernel cmdline so the kernel log is visible on the console.
+#   - Verbose debug flags are appended: inst.debug systemd.log_level=debug
+#     rd.shell rd.debug console=tty0 console=ttyS0,115200. The serial
+#     console lets you use `qemu -serial mon:stdio` for copy-pasteable
+#     logs without squinting at the VGA text buffer.
+#
+# Trigger: workflow_dispatch OR push to fix/** or test/**. Any commit
+# on a hotfix branch auto-builds a test ISO so you can grab it and
+# boot it within ~5 minutes of pushing.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'fix/**'
+      - 'test/**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: xibo-players/.github/.github/workflows/build-iso.yml@14aa734
+    with:
+      package-name: xiboplayer-kiosk
+      kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
+
+      # ── Only build the netinstall x86_64 ISO ────────────────────
+      build-disk-images: false
+      build-self-contained-iso: false
+      build-netinstall: true
+      architectures: 'x86_64'
+
+      # ── Skip the production gates ──────────────────────────────
+      skip-preflight: true
+      upload-as-artifact: true
+
+      # ── Customize the ISO grub menu ────────────────────────────
+      # Single substitution — renames every menuentry that contains
+      # the string "Fedora 43" (Install / Test this media & install /
+      # Install in basic graphics mode) by replacing just that token,
+      # which preserves the verbs and context intact.
+      iso-grub-replacements: |
+        Fedora 43|xiboplayer kiosk
+
+      # ── Verbose debug kernel cmdline (test builds only) ────────
+      iso-cmdline-remove: 'quiet rhgb splash'
+      iso-cmdline-append: 'systemd.log_level=debug inst.debug rd.shell rd.debug console=tty0 console=ttyS0,115200'
+    secrets: inherit
