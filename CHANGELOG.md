@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.4.24 (2026-04-11)
+
+**Zenity first-boot menu for XPC/XPE on x86_64** ([#67](https://github.com/xibo-players/xiboplayer-kiosk/issues/67)).
+
+0x0's direct ask in horizon2026-2 #1 ("Could you maybe try to patch zenity main menu for XPC/XPE on ISO x86_64 so we can finish concept"). A zenity main menu that runs inside the kiosk session, BEFORE the player starts, with Wi-Fi / Timezone / CMS / Debug / Done rows and a live status column.
+
+### New files
+
+- **`kiosk/xibo-zenity-lib.sh`** — shared helper library. Contains `_preseed_get` (reads `/etc/xiboplayer-preseed.env` via `grep | cut`, never `source`), `zlib_notify` (notify-send wrapper), `zlib_status_wifi` / `zlib_status_tz` / `zlib_status_cms` (live status strings for the menu column), `zlib_cms_form` (zenity `--forms` for URL/key/name with preseed defaults), `zlib_write_chromium_config` / `zlib_write_electron_config` / `zlib_write_arexibo_cms_json` (player-specific config writers), `zlib_write_player_config` (dispatcher based on the active alternative).
+- **`kiosk/xibo-first-boot.sh`** — the menu itself. Main loop re-displays the menu after each row action, so operators can configure multiple things in one sitting. Two-minute inactivity timeout (exit code 5) falls through to "start player" automatically to prevent walkaway lockout.
+- **`kiosk/xibo-set-timezone.sh`** — validated doas helper. Checks the argument against `timedatectl list-timezones` before invoking the real command. Narrower than the blanket `timedatectl` permit — closes the "set clock backwards to bypass TLS cert validity" attack surface (Phase 6-quinquies security hardening).
+- **`kiosk/xibo-set-locale.sh`** — parallel helper for locale, validated against `localectl list-locales`.
+
+### Row handlers
+
+| Row | Behaviour |
+|---|---|
+| Wi-Fi | `nmcli dev wifi rescan` + `list` + `zenity --list` picker + `zenity --password` (secured only) + `doas xibo-set-wifi.sh`. Connectivity check via `detectportal.firefox.com` catches captive portals and warns the operator before they think they're connected. |
+| Timezone | **Two-stage filter** — `zenity --entry` for a substring, then `zenity --list` filtered by `grep -i`. Avoids the 593-row IANA scroll; operators know "Madrid" but not "Europe/Madrid". |
+| CMS | `zenity --forms` with URL/key/display-name, pre-filled from preseed.env. Post-save `zenity --info` explains "display is pending in CMS admin panel" — prevents the "why is the screen blank" confusion on every first deployment. |
+| Debug | Calls `xibo-debug-dump.sh` (#70). |
+| Done | Writes the sentinel and returns. |
+
+### Session-holder integration
+
+`kiosk/gnome-kiosk-script.xibo.sh` gains a first-boot gate: after the gsettings block (Layer 3 power management) and **before** the `systemctl --user start "$PLAYER_SERVICE"` line, if `~/.local/share/xibo/first-boot-done` is absent AND `/usr/share/xiboplayer-kiosk/xibo-first-boot.sh` is executable, run the menu and then `touch` the sentinel. Errors are swallowed with `|| true` so the kiosk never stalls on first boot — if the menu crashes or the operator closes the window, the player still starts.
+
+### Sentinel location
+
+`~/.local/share/xibo/first-boot-done` — user-scoped, wipes on a fresh ISO install (blank `/home/xibo`), matches the existing `XIBO_DATA_DIR` convention. Can be deleted manually (or by a future Ctrl+R "full-setup") to re-trigger the wizard.
+
+### doas permits
+
+`mkosi-extra/etc/doas.conf` AND the kickstart `%post` doas heredoc both gain the two new helper permits (`xibo-set-timezone.sh`, `xibo-set-locale.sh`) alongside the `xibo-set-wifi.sh` permit carried over from #68. The blanket `timedatectl` and `localectl` permits remain for now — removing them is a separate hardening pass (would break existing consumers).
+
+### What's NOT in this PR (deferred)
+
+- **Deleting `xiboplayer-setup.py` + `.desktop`** — the old Python/GTK wizard. Still in the tree but no longer autostarted once the xibo-first-boot.sh flow is proven. Cleanup moves to #71's "drop arexibo" commit or a dedicated chore commit.
+- **Dropping `python3-gobject` + `libadwaita` + `gnome-control-center` from `mkosi.conf` and `atomic/Containerfile`** — they're no longer needed now that the new zenity flow exists, but the deletion is coupled to the Python wizard removal.
+- **Refactoring `xibo-show-cms.sh`** (Ctrl+R reconfigure) **to source `xibo-zenity-lib.sh`** — the existing script still works standalone; the refactor is a follow-up.
+- **Retargeting `mkosi-extra/usr/local/bin/xiboplayer-kiosk-firstboot.sh`** — still copies `xiboplayer-setup.desktop` as an autostart, which is now a dead pointer. Fix is part of the Python wizard removal.
+
+All four items ship in a follow-up PR or as part of #71 when arexibo removal triggers the broader cleanup.
+
 ## 0.4.23 (2026-04-11)
 
 **Support bundle collector** ([#70](https://github.com/xibo-players/xiboplayer-kiosk/issues/70)).

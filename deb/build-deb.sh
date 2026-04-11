@@ -36,6 +36,11 @@ install -m755 kiosk/xibo-activate-kiosk.sh "${DEB_DIR}/usr/share/xiboplayer-kios
 install -m755 kiosk/xibo-deactivate-kiosk.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-set-wifi.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-debug-dump.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+# Issue #67 — zenity first-boot menu scripts
+install -m755 kiosk/xibo-zenity-lib.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m755 kiosk/xibo-first-boot.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m755 kiosk/xibo-set-timezone.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m755 kiosk/xibo-set-locale.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 
 # /usr/bin/xibo-debug-dump symlink (mirrors the RPM spec) — lets techs run
 # `xibo-debug-dump` from any shell without typing the full share path.

@@ -43,6 +43,25 @@ gsettings set org.gnome.desktop.interface show-donation-popup false 2>/dev/null 
 # Set audio volume (90%)
 wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.9 2>/dev/null || true
 
+# First-boot zenity menu (#67) — runs INSIDE the kiosk session, BEFORE the
+# player starts, guarded by a user-level sentinel. Wraps WiFi / timezone /
+# CMS / debug rows and exits when the operator picks "Done" or the 2-minute
+# inactivity timeout fires (whichever comes first). Never blocks on error —
+# if the script is missing or fails, fall through to the player so the
+# kiosk never stalls forever on first boot.
+#
+# Sentinel: ~/.local/share/xibo/first-boot-done
+#   - Created once the first-boot menu returns successfully.
+#   - Wipes on a fresh ISO install (blank /home/xibo), so reinstalls correctly
+#     re-trigger the wizard.
+#   - Can be deleted manually (or by Ctrl+R "full-setup") to re-run the menu.
+mkdir -p "$XIBO_DATA_DIR" 2>/dev/null || true
+FIRST_BOOT_SENTINEL="$XIBO_DATA_DIR/first-boot-done"
+if [ ! -f "$FIRST_BOOT_SENTINEL" ] && [ -x "$XIBO_KIOSK_DIR/xibo-first-boot.sh" ]; then
+    "$XIBO_KIOSK_DIR/xibo-first-boot.sh" 2>&1 | logger -t xibo-first-boot || true
+    touch "$FIRST_BOOT_SENTINEL" 2>/dev/null || true
+fi
+
 # Helper: get IP address
 get_ip() {
     hostname -I 2>/dev/null | awk '{print $1}' || echo "unknown"
