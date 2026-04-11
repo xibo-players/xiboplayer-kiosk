@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    uses: xibo-players/.github/.github/workflows/build-iso.yml@14aa734  # main @ 2026-04-11 (adds iso-volid / iso-cmdline-* / iso-grub-replacements / skip-preflight / upload-as-artifact inputs — companion to #89)
+    uses: xibo-players/.github/.github/workflows/build-iso.yml@14aa7341746be1d28be70f8aee6ea33f2e190925  # main @ 2026-04-11 (adds iso-volid / iso-cmdline-* / iso-grub-replacements / skip-preflight / upload-as-artifact inputs — companion to #89)
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
