@@ -2,7 +2,19 @@
 # xiboplayer kiosk - iPXE Network Boot
 #
 # Boot any machine from the network and install xiboplayer-kiosk.
-# All three players are installed. The menu selects the default.
+# The two default players (Chromium + Electron) are baked into every
+# install. Arexibo is a netinstall opt-in: edit the kernel line and
+# replace `xibo.profile=chromium` with `xibo.profile=arexibo` — the
+# kickstart %post pulls the arexibo package on demand.
+#
+# Supported xibo.* kernel params (preseed the first-boot zenity menu):
+#   xibo.profile=chromium|electron|arexibo   # active player
+#   xibo.config_url=https://.../setup.json   # Layer-1 JSON preseed fetch
+#   xibo.cms_url=   xibo.cms_key=   xibo.display_name=
+#   xibo.timezone=  xibo.locale=
+#   xibo.wifi_ssid= xibo.wifi_psk=
+#   xibo.ssh_pubkey=   # URL-encoded ed25519/rsa pubkey
+# See README.md "MSP workflow" for the full list + security notes.
 # Use Ctrl+R after boot to switch player anytime.
 
 set menu-timeout 30000
@@ -23,9 +35,8 @@ echo
 
 :menu
 menu xiboplayer kiosk - select default player (Ctrl+R to switch anytime)
-item chromium             Chromium (recommended)
-item electron             Electron
-item arexibo              Arexibo
+item chromium             Install xiboplayer-kiosk - Chromium (ERASES DISK)
+item electron             Install xiboplayer-kiosk - Electron  (ERASES DISK)
 choose --timeout ${menu-timeout} --default chromium selected || goto menu
 goto ${selected}
 
@@ -41,11 +52,9 @@ kernel ${kernel-url} inst.stage2=${fedora-mirror} inst.ks=${ks-base}/xiboplayer-
 initrd ${initrd-url}
 boot || goto failed
 
-:arexibo
-echo Installing xiboplayer kiosk (default: Arexibo)...
-kernel ${kernel-url} inst.stage2=${fedora-mirror} inst.ks=${ks-base}/xiboplayer-kiosk.ks xibo.profile=arexibo rd.neednet=1 ip=dhcp
-initrd ${initrd-url}
-boot || goto failed
+# Arexibo netinstall opt-in: bake a custom boot.ipxe with a :arexibo label
+# containing `xibo.profile=arexibo`, or pass the param interactively via
+# `kernel ... xibo.profile=arexibo` at the iPXE shell.
 
 :failed
 echo

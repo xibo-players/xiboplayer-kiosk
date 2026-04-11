@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.4.25 (2026-04-11)
+
+**Drop arexibo from the default image + remove Python wizard + drop GTK deps** ([#71](https://github.com/xibo-players/xiboplayer-kiosk/issues/71)).
+
+Consolidated spring cleaning of three overlapping removals that all fell out of the Singularity 6 plan's Item E + deferred items from #67:
+
+1. **Arexibo → netinstall opt-in**. The arexibo package is no longer baked into the default ISO (mkosi.conf, atomic/Containerfile, kickstart `%packages`). It's pulled on demand by the kickstart `%post` when `xibo.profile=arexibo` was passed on the kernel cmdline. The runtime kiosk scripts still handle `arexibo.service` (`gnome-kiosk-script.xibo.sh`, `xibo-show-cms.sh`, `xibo-zenity-lib.sh`) so netinstall users who chose `xibo.profile=arexibo` get a working kiosk — what's gone is the default-image presence + the grub/isolinux/iPXE menu entries.
+
+2. **Python wizard deleted**. `kiosk/xiboplayer-setup.py` (347 lines) and `kiosk/xiboplayer-setup.desktop` are gone, along with their `install -Dm755` / `%files` entries in the RPM spec and the `install` lines in `deb/build-deb.sh`. The kickstart `%post --erroronfail` autostart block at lines 419-424 is also deleted — it copied `xiboplayer-setup.desktop` into `/home/xibo/.config/autostart/` and would have failed on every install after the source file was removed. Superseded by the zenity first-boot menu (#67, landed in 0.4.24).
+
+3. **GTK deps dropped**. `python3-gobject`, `libadwaita`, and `gnome-control-center` removed from `Requires:` (spec), `Packages=` (mkosi.conf), `dnf install` (atomic/Containerfile), and `%packages` (kickstart). Per user directive 2026-04-11 "avoid at all cost to use gnome-settings": removing `gnome-control-center` from the image means any future maintainer who tries to shell out to `gnome-control-center wifi` hits a build-time ENOENT and is forced to use the validated `nmcli`/`timedatectl` helper scripts we already ship. Combined with the arexibo removal, default ISO shrinks by ~400 MB.
+
+### Modified files
+
+- **`mkosi.conf`** — removed `arexibo`, `python3-gobject`, `libadwaita` from `Packages=`.
+- **`atomic/Containerfile`** — removed `python3-gobject libadwaita gnome-control-center` from the gnome RUN block and `arexibo` from the xiboplayer RUN block. Updated comment block documenting the "no gnome-settings" directive so future maintainers see the rationale at the point of change.
+- **`kickstart/xiboplayer-kiosk.ks`** — (1) removed `python3-gobject` + `libadwaita` from `%packages`; (2) removed `arexibo` from the default `dnf install` line; (3) removed the `alternatives --install arexibo` line from the default registration; (4) rewrote the `arexibo)` profile-switch case to `dnf install -y arexibo` on-demand with alternatives registration inside the case + fall-back-to-chromium on install failure (better UX than leaving the kiosk broken); (5) deleted the `%post --erroronfail` autostart block that copied `xiboplayer-setup.desktop` (would have aborted every install after the source file was deleted).
+- **`kickstart/grub.cfg`** — dropped the Arexibo `menuentry`, renamed both remaining `menuentry` labels to include the explicit "ERASES ALL DATA ON DISK" warning per Phase 6-sexies safety review.
+- **`kickstart/isolinux.cfg`** — same (dropped `label arexibo`, renamed both remaining labels). BYTE-IDENTICAL warning text to grub.cfg.
+- **`ipxe/boot.ipxe`** — dropped the `item arexibo` line and the `:arexibo` kernel-line block. Rewrote the file header comment to document every `xibo.*` kernel param the kickstart `%post` consumes (profile/config_url/cms_*/timezone/locale/wifi_*/ssh_pubkey) — MSPs baking custom USBs now have a single-file reference.
+- **`rpm/xiboplayer-kiosk.spec`** — (1) removed `Requires: python3-gobject` / `Requires: libadwaita` / `Requires: gnome-control-center` / `Suggests: arexibo`; (2) removed the `install -Dm755 kiosk/xiboplayer-setup.py` + `install -Dm644 kiosk/xiboplayer-setup.desktop` lines; (3) removed the matching `%files` entries; (4) rewrote `%description` to describe the zenity menu + document arexibo as a netinstall opt-in; (5) bumped Version to 0.4.25.
+- **`deb/build-deb.sh`** — removed `install` lines for the Python wizard + desktop file; removed `arexibo` from `Depends:` (the `| xiboplayer-chromium | arexibo` alternative becomes just `| xiboplayer-chromium`).
+- **`kiosk/xibo-show-cms.sh`** — refactored the Ctrl+R `full-setup)` branch (lines 94-109) to stop referencing the deleted `xiboplayer-setup.desktop`. New behaviour: stop all players, clear `~/.local/share/xibo/first-boot-done`, invoke `xibo-first-boot.sh` in-session, restart the active player service read from `setup-result.json`. Never leaves the kiosk session — no more `doas xibo-deactivate-kiosk.sh` + `pkill gnome-kiosk-script` dance.
+
+### Deleted files
+
+- **`kiosk/xiboplayer-setup.py`** — 347-line libadwaita/GTK4 first-boot wizard. Rejected by 0x0 in Singularity 6 #313-378, superseded by `kiosk/xibo-first-boot.sh` (#67).
+- **`kiosk/xiboplayer-setup.desktop`** — the autostart desktop file for the above.
+
+### Security
+
+The `permit nopass xibo cmd localectl` and `permit nopass xibo cmd timedatectl` permits were already replaced with narrower script-specific permits in 0.4.24. This release completes the cleanup by removing the unused `xiboplayer-setup.py` script that could potentially have been tricked into writing arbitrary values via the full-setup reconfigure path.
+
+### Notes
+
+Arexibo is NOT deprecated — it's an opt-in profile for users who want the Rust native player. Mass-deploy path: MSP bakes an iPXE boot.ipxe (or edits the GRUB/isolinux kernel line at boot) with `xibo.profile=arexibo`, the kickstart `%post` pulls `arexibo` from the package repo on install, and alternatives are set accordingly. The failure mode is explicit: if the on-demand `dnf install -y arexibo` fails (no network, package missing from the configured repo), the kickstart logs a warning and falls back to chromium. The install still produces a working kiosk — never a booted-but-broken machine.
+
 ## 0.4.24 (2026-04-11)
 
 **Zenity first-boot menu for XPC/XPE on x86_64** ([#67](https://github.com/xibo-players/xiboplayer-kiosk/issues/67)).

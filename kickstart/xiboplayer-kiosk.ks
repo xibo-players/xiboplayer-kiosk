@@ -81,10 +81,6 @@ dunst
 unclutter
 opendoas
 
-# First-boot wizard (libadwaita GTK4 app)
-python3-gobject
-libadwaita
-
 # Networking
 avahi
 nss-mdns
@@ -152,15 +148,15 @@ dnf install -y --nogpgcheck xiboplayer-release || \
   dnf install -y --nogpgcheck \
   https://dl.xiboplayer.org/rpm/fedora/43/noarch/xiboplayer-release-43-7.fc43.noarch.rpm
 
-# Install ALL players — the boot menu selects the default via xibo.profile=
-# Profiles: chromium (default), electron, arexibo
-# Set via ISO boot menu or iPXE: kernel vmlinuz inst.ks=... xibo.profile=electron
-dnf install -y xiboplayer-kiosk xiboplayer-chromium xiboplayer-electron arexibo
+# Install the default players — the boot menu selects the default via xibo.profile=
+# Profiles: chromium (default), electron. Arexibo is netinstall opt-in only —
+# the arexibo package is pulled conditionally below when xibo.profile=arexibo
+# was passed on the kernel line (the profile switch %post handles the install).
+dnf install -y xiboplayer-kiosk xiboplayer-chromium xiboplayer-electron
 
-# Register all players with alternatives
+# Register default players with alternatives
 alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-chromium 30
 alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/xiboplayer-electron 20
-alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/arexibo 10
 
 # ========================================================================
 # Preseed parsing (#68) — extract xibo.* kernel cmdline params and the
@@ -244,8 +240,20 @@ case "$PROFILE" in
     alternatives --set xiboplayer /usr/bin/xiboplayer-electron
     PLAYER="Electron"; SERVICE="xiboplayer-electron.service" ;;
   arexibo)
-    alternatives --set xiboplayer /usr/bin/arexibo
-    PLAYER="Arexibo"; SERVICE="arexibo.service" ;;
+    # Netinstall opt-in only — arexibo is NOT in default %packages (#71).
+    # Pull it on-demand from the network + register with alternatives.
+    # Best-effort: if the network is down, fall back to chromium so the
+    # install still produces a working kiosk.
+    if dnf install -y arexibo 2>/dev/null; then
+        alternatives --install /usr/bin/xiboplayer xiboplayer /usr/bin/arexibo 10
+        alternatives --set xiboplayer /usr/bin/arexibo
+        PLAYER="Arexibo"; SERVICE="arexibo.service"
+    else
+        echo "preseed: WARNING — arexibo install failed, falling back to chromium" >&2
+        alternatives --set xiboplayer /usr/bin/xiboplayer-chromium
+        PLAYER="Chromium"; SERVICE="xiboplayer-chromium.service"
+    fi
+    ;;
   *)
     alternatives --set xiboplayer /usr/bin/xiboplayer-chromium
     PLAYER="Chromium"; SERVICE="xiboplayer-chromium.service" ;;
@@ -408,12 +416,12 @@ EOF
 systemctl mask gnome-initial-setup.service gnome-initial-setup-first-login.service
 %end
 
-# Install setup wizard autostart for first boot (normal GNOME session)
-%post --erroronfail
-mkdir -p /home/xibo/.config/autostart
-cp /usr/share/xiboplayer-kiosk/xiboplayer-setup.desktop /home/xibo/.config/autostart/
-chown -R xibo:xibo /home/xibo/.config/autostart
-%end
+# NOTE: the old libadwaita/GTK4 first-boot wizard (xiboplayer-setup.py
+# + xiboplayer-setup.desktop autostart) has been replaced by the zenity
+# first-boot menu (#67, kiosk/xibo-first-boot.sh). The menu runs inside
+# the kiosk session itself — gated by ~/.local/share/xibo/first-boot-done —
+# so no desktop-file autostart is needed, and the session never switches
+# out of gnome-kiosk to a normal GNOME session.
 
 # Disable GNOME donation popup.
 # 0x0 Singularity 4 #374: the correct key is donation-reminder-enabled on the

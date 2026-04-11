@@ -92,19 +92,29 @@ CMSEOF
         ;;
 
     full-setup)
-        # Stop all player services
+        # Issue #71 refactor — the old "switch to GNOME session for the Python
+        # wizard" path is gone with xiboplayer-setup.{py,desktop}. Instead:
+        # stop players, clear the first-boot sentinel, and re-invoke the
+        # zenity first-boot menu in-session. Never leaves the kiosk session.
         for svc in arexibo.service xiboplayer-electron.service xiboplayer-chromium.service; do
             systemctl --user stop "$svc" 2>/dev/null || true
         done
 
-        # Re-add wizard autostart
-        mkdir -p "$HOME/.config/autostart"
-        cp "${XIBO_KIOSK_DIR}/xiboplayer-setup.desktop" "$HOME/.config/autostart/"
+        # Clear the sentinel so the menu re-runs (even outside first boot)
+        rm -f "$HOME/.local/share/xibo/first-boot-done"
 
-        # Switch back to GNOME session for full reconfiguration
-        doas "${XIBO_KIOSK_DIR}/xibo-deactivate-kiosk.sh"
+        # Run the zenity first-boot menu in-session
+        if [ -x "${XIBO_KIOSK_DIR}/xibo-first-boot.sh" ]; then
+            "${XIBO_KIOSK_DIR}/xibo-first-boot.sh" || true
+            touch "$HOME/.local/share/xibo/first-boot-done" 2>/dev/null || true
+        fi
 
-        # Kill kiosk session — GDM will re-login into GNOME with wizard
-        pkill -u "$(whoami)" -f gnome-kiosk-script 2>/dev/null || true
+        # Restart the active player service (picked up from setup-result.json)
+        SERVICE="xiboplayer-chromium.service"
+        if [ -f "$HOME/.config/xiboplayer/setup-result.json" ]; then
+            SVC=$(python3 -c "import json; print(json.load(open('$HOME/.config/xiboplayer/setup-result.json'))['service'])" 2>/dev/null)
+            [ -n "$SVC" ] && SERVICE="$SVC"
+        fi
+        systemctl --user start "$SERVICE" 2>/dev/null || true
         ;;
 esac

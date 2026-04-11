@@ -30,8 +30,6 @@ install -m644 kiosk/dunstrc "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-keyd-run.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-show-ip.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-show-cms.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
-install -m755 kiosk/xiboplayer-setup.py "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
-install -m644 kiosk/xiboplayer-setup.desktop "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-activate-kiosk.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-deactivate-kiosk.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-set-wifi.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
@@ -132,7 +130,7 @@ Description: Kiosk session scripts for Xibo digital signage players
  displays under GNOME Kiosk. Includes a first-boot registration wizard,
  session holder with health monitoring, dunst notification config, and
  a systemd user unit for the player process.
-Depends: gnome-kiosk, dunst, unclutter, zenity, dconf-cli, libglib2.0-bin, xiboplayer-electron | xiboplayer-chromium | arexibo
+Depends: gnome-kiosk, dunst, unclutter, zenity, dconf-cli, libglib2.0-bin, xiboplayer-electron | xiboplayer-chromium
 Recommends: keyd, ffmpeg, vlc, mpv,
  gstreamer1.0-plugins-base, gstreamer1.0-plugins-good,
  gstreamer1.0-plugins-ugly, gstreamer1.0-plugins-bad,
