@@ -295,6 +295,19 @@ if [ -n "$XIBO_WIFI_SSID" ]; then
     /usr/share/xiboplayer-kiosk/xibo-set-wifi.sh "$XIBO_WIFI_SSID" "$XIBO_WIFI_PSK" \
         && echo "preseed: wifi connected to $XIBO_WIFI_SSID" \
         || echo "preseed: WARNING — wifi helper failed for $XIBO_WIFI_SSID" >&2
+elif [ -f /tmp/xibo-wifi-preseed ]; then
+    # #72 — the pre-anaconda whiptail TUI stashed WiFi credentials in
+    # /tmp when /mnt/sysimage was not yet mounted. Apply them now that
+    # we're in %post (target is / here — chroot semantics).
+    . /tmp/xibo-wifi-preseed
+    if [ -n "$SSID" ]; then
+        echo "preseed: applying stashed WiFi credentials for $SSID"
+        /usr/share/xiboplayer-kiosk/xibo-set-wifi.sh "$SSID" "$PSK" "$KEYMGMT" \
+            && echo "preseed: wifi connected to $SSID (from whiptail TUI)" \
+            || echo "preseed: WARNING — wifi helper failed for $SSID" >&2
+    fi
+    # Always wipe the stash — contains the PSK in plaintext.
+    shred -u /tmp/xibo-wifi-preseed 2>/dev/null || rm -f /tmp/xibo-wifi-preseed
 fi
 
 # SSH pubkey — allows MSP remote support. The value is URL-encoded (spaces
@@ -466,6 +479,258 @@ chown -R xibo:xibo /home/xibo
 
 # Clean dnf cache
 dnf clean all
+%end
+
+# ========================================================================
+# Pre-anaconda WiFi picker (#72) — whiptail TUI for WiFi-only machines
+# ========================================================================
+# Runs BEFORE anaconda's network phase so the user never sees the complex
+# built-in GTK WiFi dialog. Closes the gap for netinstall / iPXE users
+# booting off a machine with NO wired ethernet.
+#
+# Skip conditions (any one of these triggers fall-through):
+#   1. Network is already up (wired link found)
+#   2. xibo.wifi_ssid= was preseeded via kernel cmdline (#68)
+#   3. No wireless hardware detected
+#
+# Flow:
+#   - Wait for NetworkManager to settle (10s retry loop)
+#   - nmcli dev wifi rescan + 2s sleep for results
+#   - whiptail --menu picker built from `nmcli dev wifi list`
+#   - whiptail --passwordbox if secured
+#   - write NM keyfile to installer env AND /mnt/sysimage if mounted
+#   - fall back to /tmp/xibo-wifi-preseed stash if target not yet mounted
+#   - nmcli connection up so the installer has network for the rest
+#
+# Security: the _validate_nm_string function is copied VERBATIM from
+# kiosk/xibo-set-wifi.sh (authoritative source). Both paths must produce
+# byte-identical keyfiles for the same input — this will be enforced by
+# a bats test in #74. Any change to one MUST be mirrored in the other.
+#
+# Error handling: all failures are non-fatal (|| true). If whiptail /
+# nmcli aren't available in the %pre environment, or the user cancels,
+# we fall through to anaconda's own network phase (which is the status
+# quo). The worst case is "user sees anaconda's WiFi dialog" — never
+# "install aborted with no network".
+#
+# --- NOTE ---
+# Despite --erroronfail on the %pre, the block body wraps every step in
+# `|| true` so only a hard failure of the `cat /tmp/…` exit-hook aborts.
+# See the trailing `exit 0` below.
+%pre --erroronfail
+set +e
+LOG=/tmp/xibo-wifi-tui.log
+: > "$LOG"
+echo "xibo wifi-tui: $(date)" >> "$LOG"
+
+# Bail if whiptail or nmcli aren't available (older installer envs)
+if ! command -v whiptail >/dev/null 2>&1 || ! command -v nmcli >/dev/null 2>&1; then
+    echo "  whiptail or nmcli missing — skipping" >> "$LOG"
+    exit 0
+fi
+
+# Skip if wired is already up
+if nmcli -t -f TYPE,STATE dev status 2>/dev/null | grep -qE '^ethernet:connected'; then
+    echo "  wired connected — skipping" >> "$LOG"
+    exit 0
+fi
+
+# Skip if preseeded via kernel cmdline (#68 / Layer 2)
+if grep -qE 'xibo\.wifi_ssid=' /proc/cmdline; then
+    echo "  xibo.wifi_ssid= preseeded — skipping" >> "$LOG"
+    exit 0
+fi
+
+# Skip if no wireless hardware
+if ! nmcli -t -f DEVICE,TYPE dev status 2>/dev/null | grep -q ':wifi$'; then
+    echo "  no wireless hardware — skipping" >> "$LOG"
+    exit 0
+fi
+
+# --- Wait for NetworkManager readiness (up to 10s) --------------------
+nmcli radio wifi on 2>/dev/null || true
+for i in 1 2 3 4 5 6 7 8 9 10; do
+    state=$(nmcli -t -f STATE general status 2>/dev/null)
+    case "$state" in
+        connected|disconnected) break ;;
+    esac
+    sleep 1
+done
+echo "  nmcli state after wait: $state" >> "$LOG"
+
+whiptail --title "xiboplayer kiosk — Wi-Fi" --infobox "Scanning for Wi-Fi networks..." 8 50
+nmcli dev wifi rescan 2>/dev/null || true
+sleep 2
+
+# Build the whiptail menu options from nmcli output. Format:
+#   "SSID" "signal% security"
+# Dedupe by SSID (keep strongest), sort by signal desc, skip empties.
+MENU_OPTS=$(nmcli -t -f SSID,SIGNAL,SECURITY dev wifi list 2>/dev/null \
+    | awk -F: 'NF>=3 && $1!="" { if (!seen[$1] || $2 > seen[$1]) { seen[$1]=$2; sec[$1]=$3 } }
+               END { for (s in seen) printf "%s|%s|%s\n", s, seen[s], sec[s] }' \
+    | sort -t'|' -k2,2nr)
+
+if [ -z "$MENU_OPTS" ]; then
+    whiptail --title "xiboplayer kiosk — Wi-Fi" \
+        --msgbox "No Wi-Fi networks found.\n\nContinuing with anaconda's built-in network phase." 10 60
+    exit 0
+fi
+
+# Convert to whiptail --menu tag/item pairs
+WHIPTAIL_ARGS=""
+while IFS='|' read -r ssid signal security; do
+    [ -z "$ssid" ] && continue
+    # Sanity-cap signal to reasonable bounds for display
+    [ "$signal" -gt 100 ] 2>/dev/null && signal=100
+    label="${signal}%% ${security:-open}"
+    WHIPTAIL_ARGS="$WHIPTAIL_ARGS \"$ssid\" \"$label\""
+done <<< "$MENU_OPTS"
+
+# Also offer hidden network + skip rows as synthetic options
+WHIPTAIL_ARGS="$WHIPTAIL_ARGS \"(hidden)\" \"Enter SSID manually\""
+WHIPTAIL_ARGS="$WHIPTAIL_ARGS \"(skip)\"   \"Use wired / configure later\""
+
+# Use eval to expand the quoted pairs into whiptail's argv
+SSID=$(eval "whiptail --title 'xiboplayer kiosk — Wi-Fi' \
+    --menu 'Select a Wi-Fi network:' 20 70 12 $WHIPTAIL_ARGS" \
+    3>&1 1>&2 2>&3) || exit 0
+
+if [ "$SSID" = "(skip)" ] || [ -z "$SSID" ]; then
+    echo "  user skipped" >> "$LOG"
+    exit 0
+fi
+
+if [ "$SSID" = "(hidden)" ]; then
+    SSID=$(whiptail --title "xiboplayer kiosk — Hidden SSID" \
+        --inputbox "Enter the hidden network SSID:" 10 60 \
+        3>&1 1>&2 2>&3) || exit 0
+    [ -z "$SSID" ] && exit 0
+    SECURITY="WPA2"  # assume secured for hidden networks
+else
+    # Extract security for the chosen SSID from the menu data
+    SECURITY=$(printf '%s\n' "$MENU_OPTS" | awk -F'|' -v ssid="$SSID" '$1==ssid {print $3; exit}')
+fi
+
+# Ask for password if secured
+PSK=""
+if [ -n "$SECURITY" ] && [ "$SECURITY" != "--" ] && [ "$SECURITY" != "open" ]; then
+    PSK=$(whiptail --title "xiboplayer kiosk — Wi-Fi password" \
+        --passwordbox "Enter password for \"$SSID\":" 10 60 \
+        3>&1 1>&2 2>&3) || exit 0
+fi
+
+# --- Input validation (verbatim from kiosk/xibo-set-wifi.sh) -----------
+# ⚠ SYNC: kiosk/xibo-set-wifi.sh is the authoritative source. If you
+# change _validate_nm_string there, mirror the change here.
+_validate_nm_string() {
+    local label="$1" value="$2"
+    if printf '%s' "$value" | grep -qE $'[\x00-\x1f]'; then
+        echo "$label contains control characters — rejected" >&2
+        return 2
+    fi
+    if printf '%s' "$value" | grep -qE '^\[|\[(connection|wifi|wifi-security|ipv4|ipv6)\]'; then
+        echo "$label contains an NM INI section header — rejected" >&2
+        return 2
+    fi
+    return 0
+}
+
+if ! _validate_nm_string "SSID" "$SSID"; then
+    whiptail --title "xiboplayer kiosk — Invalid SSID" \
+        --msgbox "The SSID contains characters that are not allowed. Skipping Wi-Fi." 10 60
+    exit 0
+fi
+if [ -n "$PSK" ] && ! _validate_nm_string "PSK" "$PSK"; then
+    whiptail --title "xiboplayer kiosk — Invalid password" \
+        --msgbox "The password contains characters that are not allowed. Skipping Wi-Fi." 10 60
+    exit 0
+fi
+
+# --- Write NM keyfile (also from kiosk/xibo-set-wifi.sh, simplified) ---
+SAFE_NAME=$(printf '%s' "$SSID" | tr -c '[:alnum:]._-' '_')
+UUID=$(cat /proc/sys/kernel/random/uuid)
+KEYMGMT="wpa-psk"
+[ -z "$PSK" ] && KEYMGMT="none"
+
+write_keyfile_at() {
+    local dir="$1"
+    mkdir -p "$dir"
+    umask 077
+    if [ "$KEYMGMT" = "none" ]; then
+        cat > "$dir/${SAFE_NAME}.nmconnection" << INIEOF
+[connection]
+id=$SSID
+uuid=$UUID
+type=wifi
+autoconnect=true
+
+[wifi]
+mode=infrastructure
+ssid=$SSID
+
+[ipv4]
+method=auto
+
+[ipv6]
+method=ignore
+INIEOF
+    else
+        cat > "$dir/${SAFE_NAME}.nmconnection" << INIEOF
+[connection]
+id=$SSID
+uuid=$UUID
+type=wifi
+autoconnect=true
+
+[wifi]
+mode=infrastructure
+ssid=$SSID
+
+[wifi-security]
+key-mgmt=$KEYMGMT
+psk=$PSK
+
+[ipv4]
+method=auto
+
+[ipv6]
+method=ignore
+INIEOF
+    fi
+    chmod 600 "$dir/${SAFE_NAME}.nmconnection"
+    chown root:root "$dir/${SAFE_NAME}.nmconnection" 2>/dev/null || true
+}
+
+# Layer 1: installer environment NM (active right now in %pre)
+write_keyfile_at "/etc/NetworkManager/system-connections"
+
+# Layer 2: if /mnt/sysimage is already mounted by anaconda, write there too
+#          so the keyfile survives into the installed system
+if [ -d "/mnt/sysimage/etc/NetworkManager" ]; then
+    write_keyfile_at "/mnt/sysimage/etc/NetworkManager/system-connections"
+    echo "  wrote keyfile to /mnt/sysimage (target already mounted)" >> "$LOG"
+else
+    # Stash for %post to re-apply once /mnt/sysimage is available.
+    # SSID/PSK in /tmp is acceptable — the file is mode 0600 and %post
+    # will wipe it after processing.
+    umask 077
+    cat > /tmp/xibo-wifi-preseed << STASHEOF
+SSID=$SSID
+PSK=$PSK
+KEYMGMT=$KEYMGMT
+STASHEOF
+    chmod 600 /tmp/xibo-wifi-preseed
+    echo "  stashed to /tmp/xibo-wifi-preseed (target not yet mounted)" >> "$LOG"
+fi
+
+# Activate in the installer env so anaconda has network for %packages
+nmcli connection reload 2>/dev/null || true
+nmcli connection up "$SSID" 2>/dev/null || true
+
+whiptail --title "xiboplayer kiosk — Wi-Fi" --infobox "Connected to $SSID. Proceeding with install..." 8 60
+sleep 2
+
+exit 0
 %end
 
 # Auto-detect install disk — "best available" heuristic.

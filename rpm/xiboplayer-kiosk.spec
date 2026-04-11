@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.25
+Version:        0.4.26
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -136,6 +136,35 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.26-1
+- Pre-anaconda whiptail Wi-Fi TUI (#72). New %pre --erroronfail block at
+  the top of kickstart/xiboplayer-kiosk.ks that runs BEFORE anaconda's
+  network phase. The whiptail picker only appears when (a) no wired link
+  is up AND (b) xibo.wifi_ssid= wasn't preseeded AND (c) wireless
+  hardware exists — otherwise it falls through silently. Closes the
+  "netinstall on a WiFi-only machine shows anaconda's complex GTK
+  dialog" gap that 0x0 flagged in horizon2026-2.
+- Security: the _validate_nm_string input validator is copied verbatim
+  from kiosk/xibo-set-wifi.sh (authoritative source). Both paths must
+  produce byte-identical NM keyfiles for the same input — this will be
+  enforced by a bats test in #74. Rejects control characters and NM
+  INI section headers inside SSID/PSK.
+- NM keyfile is written to /etc/NetworkManager/system-connections/
+  in the installer env AND (if /mnt/sysimage is already mounted) into
+  the target system. If /mnt/sysimage isn't mounted yet, credentials
+  are stashed to /tmp/xibo-wifi-preseed (mode 0600) and re-applied in
+  %post after the target filesystem is in place. The stash is shredded
+  after use.
+- Offline-first: no network dependency for the TUI itself — everything
+  runs from the installer env's built-in whiptail + nmcli. iPXE and
+  netinstall boots both work.
+- Hidden-SSID support via a synthetic "(hidden)" menu row that opens
+  an inputbox for the SSID. WPA2 is assumed.
+- Error handling: every step wraps in || true / return 0, so the TUI
+  can never abort the install. Worst case: user falls through to
+  anaconda's own WiFi dialog.
+- Closes #72
+
 * Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.25-1
 - Drop arexibo from the default image (#71). Arexibo is now a netinstall
   opt-in only: the kickstart %post pulls the arexibo package on demand

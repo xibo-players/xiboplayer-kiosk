@@ -1,5 +1,54 @@
 # Changelog
 
+## 0.4.26 (2026-04-11)
+
+**Pre-anaconda whiptail Wi-Fi TUI for netinstall / iPXE WiFi-only machines** ([#72](https://github.com/xibo-players/xiboplayer-kiosk/issues/72)).
+
+Closes the "user boots netinstall ISO on a WiFi-only machine and hits anaconda's complex GTK dialog" gap that 0x0 flagged in horizon2026-2. A new `%pre --erroronfail` block at the top of `kickstart/xiboplayer-kiosk.ks` runs BEFORE anaconda's network phase with a simple whiptail picker.
+
+### Entry conditions (all three must be true for the TUI to open)
+
+1. No wired ethernet link up (`nmcli -t -f TYPE,STATE dev status | grep ethernet:connected` is empty)
+2. `xibo.wifi_ssid=` was NOT preseeded via kernel cmdline
+3. Wireless hardware is present
+
+If any of these is false, the block exits 0 silently — the TUI never gets in the way of a wired install or a preseeded install.
+
+### Flow
+
+1. Wait up to 10s for NetworkManager to settle (handles races where NM is still `connecting`/`asleep` in the initrd).
+2. `nmcli dev wifi rescan` + 2s sleep for results.
+3. Build whiptail menu from `nmcli -t -f SSID,SIGNAL,SECURITY dev wifi list` (dedupe by SSID, sort by signal, filter empties).
+4. Add synthetic "(hidden)" row (inputbox for manual SSID entry) and "(skip)" row (falls through to anaconda).
+5. Show whiptail menu, wait for user pick (no timeout — this is an interactive install).
+6. If the chosen network is secured, show whiptail passwordbox.
+7. Validate SSID and PSK via verbatim-copy of `_validate_nm_string` from `kiosk/xibo-set-wifi.sh` (rejects control characters + NM INI section headers — same rules as the runtime helper).
+8. Write NM keyfile to `/etc/NetworkManager/system-connections/` in the installer env AND — if `/mnt/sysimage` is already mounted — into the target system. Otherwise stash the credentials in `/tmp/xibo-wifi-preseed` (mode 0600) for `%post` to apply after the target filesystem is mounted.
+9. `nmcli connection up "$SSID"` in the installer env so anaconda has network for `%packages`.
+10. Show success infobox, sleep 2s, return to anaconda.
+
+### %post stash re-application
+
+A new elif branch in the existing `%post` wifi block detects `/tmp/xibo-wifi-preseed`, sources it, calls `xibo-set-wifi.sh "$SSID" "$PSK" "$KEYMGMT"` against the installed system, then `shred -u`s the stash. Precedence: kernel-cmdline `xibo.wifi_ssid=` ALWAYS wins (Layer 2 / per-field params beat TUI input per the plan's preseed precedence).
+
+### Security
+
+- **`_validate_nm_string` copied verbatim** from `kiosk/xibo-set-wifi.sh`. A bats test in #74 will diff the two copies to catch drift. The kickstart comment block flags the sync requirement explicitly.
+- **PSK never touches `/proc/<pid>/cmdline`** — the NM keyfile is written directly; `nmcli connection up "$SSID"` matches by NM connection id, not by PSK.
+- **Stash file** (`/tmp/xibo-wifi-preseed`) is mode `0600` and `shred -u`'d after `%post` consumes it. The PSK is in plaintext for the window between `%pre` and `%post`, which is acceptable because the installer env has no untrusted users during that window.
+- **Error handling**: every step wraps in `|| true` / `return 0`. If `whiptail` or `nmcli` are missing in the `%pre` environment (older installer), the block exits 0 and anaconda's own network phase handles WiFi. If the user cancels the menu, same fall-through. If validation rejects the SSID/PSK, a msgbox explains and the block exits 0. **The TUI can never abort an install.**
+
+### Modified files
+
+- **`kickstart/xiboplayer-kiosk.ks`** — (1) new `%pre --erroronfail` block (~200 lines) before the existing disk-autodetect `%pre`, containing the whiptail TUI inline (single source of truth — no separate file + sync risk); (2) new elif branch in the `%post` wifi block that re-applies `/tmp/xibo-wifi-preseed` if the TUI stashed credentials; (3) `shred -u` the stash after use.
+- **`rpm/xiboplayer-kiosk.spec`** — bump to 0.4.26, new `%changelog` entry.
+
+### Design notes
+
+- **Why inline, not a separate `kickstart/xibo-wifi-tui.sh`?** The plan originally called for a separate file, but a separate file creates a sync problem: the kickstart has no file-include mechanism that works offline in `%pre`, so either the file is `curl`'d at install time (fails for offline installs — the exact case we're fixing) OR the content is duplicated via heredoc (two sources of truth). Inlining keeps the TUI in one place and the sync requirement explicit in the comment header.
+- **Why no timeout on the menu?** The plan allowed 120s inactivity → fall-through. I removed this because the `%pre` block is only shown when a human is physically booting an install ISO — no walk-away scenarios like the first-boot menu (which has the 120s timeout). A human at the console either picks a network or hits Cancel; there's no benefit to auto-skipping.
+- **Why WPA2 default for hidden networks?** WPA3 on a hidden network is extremely rare and the `nmcli connection up` call reports a clear error if the key-mgmt is wrong, so the user can re-run the menu (via Ctrl+R on the installer console) and retry. Open hidden networks are almost non-existent.
+
 ## 0.4.25 (2026-04-11)
 
 **Drop arexibo from the default image + remove Python wizard + drop GTK deps** ([#71](https://github.com/xibo-players/xiboplayer-kiosk/issues/71)).
