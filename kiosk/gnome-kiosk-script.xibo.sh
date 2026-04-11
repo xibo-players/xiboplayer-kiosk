@@ -40,6 +40,11 @@ gsettings set org.gnome.settings-daemon.plugins.power power-button-action 'nothi
 gsettings set org.gnome.settings-daemon.plugins.housekeeping donation-reminder-enabled false 2>/dev/null || true
 gsettings set org.gnome.desktop.interface show-donation-popup false 2>/dev/null || true
 
+# Workspace / Activities Overview suppression (#99). Setting the wm
+# theme to 'Adwaita' disables the workspace preview that would
+# otherwise flash on first login of a gnome-kiosk session.
+gsettings set org.gnome.desktop.wm.preferences theme 'Adwaita' 2>/dev/null || true
+
 # Set audio volume (90%)
 wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.9 2>/dev/null || true
 

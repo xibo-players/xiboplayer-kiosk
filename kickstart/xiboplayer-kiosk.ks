@@ -469,15 +469,21 @@ systemctl mask gnome-initial-setup.service gnome-initial-setup-first-login.servi
 # desktop-file autostart is needed, and the session never switches out
 # of gnome-kiosk to a normal GNOME session.
 
-# Disable GNOME donation popup.
+# Disable GNOME donation popup + workspace overview.
 # 0x0 Singularity 4 #374: the correct key is donation-reminder-enabled on the
 # housekeeping plugin. The old show-donation-popup key (on desktop.interface)
 # was confirmed ineffective in Singularity 6 #370 on 0.4.19. Set BOTH keys
 # for belt-and-braces across GNOME versions — unknown keys are harmless.
+#
+# wm.preferences/theme='Adwaita' (#99) suppresses the workspace preview /
+# Activities Overview that would flash on first login of a gnome-kiosk
+# session. Mirrored in the gschema override (Layer 2), GDM dconf db +
+# locks (Layer 4), and gnome-kiosk-script.xibo.sh runtime (Layer 3).
 %post --erroronfail
 su - xibo -c "dbus-run-session bash -c '
   gsettings set org.gnome.settings-daemon.plugins.housekeeping donation-reminder-enabled false
   gsettings set org.gnome.desktop.interface show-donation-popup false
+  gsettings set org.gnome.desktop.wm.preferences theme \"Adwaita\"
 '" || true
 %end
 

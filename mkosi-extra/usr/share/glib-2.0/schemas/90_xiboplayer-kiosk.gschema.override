@@ -41,3 +41,12 @@ donation-reminder-enabled=false
 
 [org.gnome.desktop.interface]
 show-donation-popup=false
+
+# Workspace / Activities Overview suppression (#99).
+#
+# Setting the wm theme to 'Adwaita' disables the workspace preview /
+# Activities Overview that would otherwise flash on first login of a
+# gnome-kiosk session. The kiosk never needs the overview — we want
+# the player to be the only thing visible.
+[org.gnome.desktop.wm.preferences]
+theme='Adwaita'

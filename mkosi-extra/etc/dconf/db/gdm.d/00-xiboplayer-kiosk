@@ -31,3 +31,8 @@ donation-reminder-enabled=false
 
 [org/gnome/desktop/interface]
 show-donation-popup=false
+
+# Workspace / Activities Overview suppression (#99) — see header
+# comment in the matching 90_xiboplayer-kiosk.gschema.override.
+[org/gnome/desktop/wm/preferences]
+theme='Adwaita'
