@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.20
+Version:        0.4.21
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -18,6 +18,8 @@ Requires:       opendoas
 Requires:       keyd
 Requires:       mesa-va-drivers
 Requires:       libva
+Requires:       dconf
+Requires:       glib2
 Requires:       alternatives
 Requires:       python3-gobject
 Requires:       libadwaita
@@ -62,6 +64,22 @@ install -Dm644 kiosk/xiboplayer-setup.desktop %{buildroot}%{_datadir}/xiboplayer
 install -Dm755 kiosk/xibo-activate-kiosk.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-activate-kiosk.sh
 install -Dm755 kiosk/xibo-deactivate-kiosk.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-deactivate-kiosk.sh
 
+# System config files — the kiosk RPM IS the kiosk definition, so the
+# system-level config that makes a kiosk stay on forever + suppresses the
+# GNOME donation popup ships with the package, not via image overlay. The
+# source paths under mkosi-extra/ are reused here (mkosi-extra is also
+# copied by ExtraTrees in mkosi builds and by atomic/Containerfile COPY;
+# both overwrite with identical content which is harmless).
+#
+# Layer 1: logind idle/lid/power key suppression (system-level, never blanks)
+install -Dm644 mkosi-extra/etc/systemd/logind.conf.d/no-idle.conf %{buildroot}%{_sysconfdir}/systemd/logind.conf.d/no-idle.conf
+# Layer 2: system-wide GSchema override (default values for every session)
+install -Dm644 mkosi-extra/usr/share/glib-2.0/schemas/90_xiboplayer-kiosk.gschema.override %{buildroot}%{_datadir}/glib-2.0/schemas/90_xiboplayer-kiosk.gschema.override
+# Layer 4: GDM greeter dconf profile + db + locks (gdm user session, LOCKED)
+install -Dm644 mkosi-extra/etc/dconf/profile/gdm %{buildroot}%{_sysconfdir}/dconf/profile/gdm
+install -Dm644 mkosi-extra/etc/dconf/db/gdm.d/00-xiboplayer-kiosk %{buildroot}%{_sysconfdir}/dconf/db/gdm.d/00-xiboplayer-kiosk
+install -Dm644 mkosi-extra/etc/dconf/db/gdm.d/locks/00-xiboplayer-kiosk %{buildroot}%{_sysconfdir}/dconf/db/gdm.d/locks/00-xiboplayer-kiosk
+
 # Create skel directory for gnome-kiosk-script dispatcher
 install -d %{buildroot}%{_sysconfdir}/skel/.local/bin
 install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
@@ -82,8 +100,68 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_sysconfdir}/keyd/xibo.conf
 %{_sysconfdir}/yum.repos.d/copr-keyd.repo
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
+%config(noreplace) %{_sysconfdir}/systemd/logind.conf.d/no-idle.conf
+%{_datadir}/glib-2.0/schemas/90_xiboplayer-kiosk.gschema.override
+%config %{_sysconfdir}/dconf/profile/gdm
+%config %{_sysconfdir}/dconf/db/gdm.d/00-xiboplayer-kiosk
+%config %{_sysconfdir}/dconf/db/gdm.d/locks/00-xiboplayer-kiosk
+
+%post
+# Compile GSchema overrides + refresh dconf database so the Layer 2 and
+# Layer 4 files installed above take effect. glib-compile-schemas is
+# normally run by glib2's file trigger on any RPM that ships a file under
+# /usr/share/glib-2.0/schemas/, so this is belt-and-braces. dconf update
+# has NO file trigger and MUST be run explicitly — without it, the file
+# at /etc/dconf/db/gdm.d/00-xiboplayer-kiosk is not compiled into the
+# /etc/dconf/db/gdm database that the GDM greeter actually reads, and
+# Layer 4 is silently inert.
+/usr/bin/glib-compile-schemas %{_datadir}/glib-2.0/schemas/ &>/dev/null || :
+/usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.21-1
+- 4-layer power management fix + correct GNOME donation popup suppression
+  (#69). Fixes screen blanking observed on 0.4.19 (Singularity 6 #370) and
+  the donation popup still appearing despite the old show-donation-popup
+  gsetting (the correct key per 0x0 Singularity 4 #374 is
+  donation-reminder-enabled on the housekeeping plugin).
+- Philosophy shift: the kiosk RPM IS the kiosk definition, not just a
+  lockdown helper. All 5 system config files (Layer 1 logind, Layer 2
+  gschema override, Layer 4 gdm dconf profile + db + locks) now ship with
+  the RPM/DEB. Install paths are consistent across mkosi builds,
+  atomic/bootc, kickstart-from-ISO, and plain 'dnf install xiboplayer-
+  kiosk' on any Fedora system — all four now produce identical on-disk
+  state for the power/donation keys.
+- Layer 1: /etc/systemd/logind.conf.d/no-idle.conf extended with
+  HandlePowerKey, HandleSuspendKey, HandleHibernateKey. Shipped by the
+  RPM/DEB (was previously only in mkosi-extra + kickstart heredoc — that
+  heredoc is now removed since the RPM covers it).
+- Layer 2: new /usr/share/glib-2.0/schemas/90_xiboplayer-kiosk.gschema.override
+  with power/screensaver/idle keys + BOTH donation keys
+  (donation-reminder-enabled AND show-donation-popup, belt-and-braces).
+  Shipped by RPM/DEB. glib2's file trigger compiles it automatically on
+  install; RPM %post scriptlet also invokes glib-compile-schemas as a
+  guard.
+- Layer 3: runtime session gsettings in gnome-kiosk-script.xibo.sh
+  updated to set donation-reminder-enabled alongside the legacy
+  show-donation-popup, plus power-button-action='nothing' and
+  idle-activation-enabled=false which were missing.
+- Layer 4: new GDM greeter dconf lock. Three new files shipped by the
+  RPM/DEB: /etc/dconf/profile/gdm (critical — Fedora's gdm RPM does NOT
+  ship it; without it dconf update compiles a database GDM never reads,
+  and Layer 4 is silently inert), /etc/dconf/db/gdm.d/00-xiboplayer-kiosk,
+  and /etc/dconf/db/gdm.d/locks/00-xiboplayer-kiosk. RPM %post scriptlet
+  runs 'dconf update' to compile the database (no file trigger for dconf,
+  so this is mandatory — not just a guard).
+- Added Requires: dconf, glib2 so the RPM %post scriptlet commands are
+  always available.
+- Removed the now-redundant inline heredocs from kickstart %post (the RPM
+  install covers all 5 files when 'dnf install xiboplayer-kiosk' runs in
+  anaconda's transaction), removed the redundant COPY lines from
+  atomic/Containerfile (same rationale — the dnf install of the kiosk
+  RPM in the Containerfile installs the files), and removed mkosi.postinst
+  (the RPM %post scriptlet runs during mkosi's dnf install phase).
+
 * Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.20-1
 - Version bump. Planned feature scope tracked as GitHub issues #67-#74
   (zenity first-boot menu, iPXE preseed + best-available-disk, power-mgmt

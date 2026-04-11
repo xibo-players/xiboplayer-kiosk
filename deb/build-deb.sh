@@ -14,9 +14,13 @@ echo "Building ${PACKAGE} ${VERSION} (${ARCH})..."
 rm -rf "${DEB_DIR}"
 mkdir -p "${DEB_DIR}/DEBIAN"
 mkdir -p "${DEB_DIR}/usr/share/xiboplayer-kiosk"
+mkdir -p "${DEB_DIR}/usr/share/glib-2.0/schemas"
 mkdir -p "${DEB_DIR}/usr/lib/systemd/user"
 mkdir -p "${DEB_DIR}/etc/keyd"
 mkdir -p "${DEB_DIR}/etc/skel/.local/bin"
+mkdir -p "${DEB_DIR}/etc/systemd/logind.conf.d"
+mkdir -p "${DEB_DIR}/etc/dconf/profile"
+mkdir -p "${DEB_DIR}/etc/dconf/db/gdm.d/locks"
 
 # Install kiosk scripts
 install -m755 kiosk/gnome-kiosk-script.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
@@ -30,6 +34,21 @@ install -m755 kiosk/xiboplayer-setup.py "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m644 kiosk/xiboplayer-setup.desktop "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-activate-kiosk.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-deactivate-kiosk.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+
+# System config files — the kiosk DEB IS the kiosk definition, so the
+# system-level config that makes a kiosk stay on forever + suppresses the
+# GNOME donation popup ships with the package (mirrors the RPM spec).
+# Sources live under mkosi-extra/ (also reused by mkosi builds + atomic
+# Containerfile COPYs with identical content — harmless).
+#
+# Layer 1: logind idle/lid/power key suppression
+install -m644 mkosi-extra/etc/systemd/logind.conf.d/no-idle.conf "${DEB_DIR}/etc/systemd/logind.conf.d/no-idle.conf"
+# Layer 2: system-wide GSchema override
+install -m644 mkosi-extra/usr/share/glib-2.0/schemas/90_xiboplayer-kiosk.gschema.override "${DEB_DIR}/usr/share/glib-2.0/schemas/90_xiboplayer-kiosk.gschema.override"
+# Layer 4: GDM greeter dconf profile + db + locks
+install -m644 mkosi-extra/etc/dconf/profile/gdm "${DEB_DIR}/etc/dconf/profile/gdm"
+install -m644 mkosi-extra/etc/dconf/db/gdm.d/00-xiboplayer-kiosk "${DEB_DIR}/etc/dconf/db/gdm.d/00-xiboplayer-kiosk"
+install -m644 mkosi-extra/etc/dconf/db/gdm.d/locks/00-xiboplayer-kiosk "${DEB_DIR}/etc/dconf/db/gdm.d/locks/00-xiboplayer-kiosk"
 
 # Install dispatcher to skel (copied to new users' ~/.local/bin/)
 install -m755 kiosk/gnome-kiosk-script.sh "${DEB_DIR}/etc/skel/.local/bin/gnome-kiosk-script"
@@ -77,6 +96,15 @@ apt-get install -y --no-install-recommends \
   avahi-daemon libnss-mdns \
   2>/dev/null || true
 
+# Compile GSchema overrides + refresh dconf database so the Layer 2 and
+# Layer 4 files installed above take effect. glib-compile-schemas is
+# idempotent, and dconf update MUST run explicitly because dconf has no
+# file trigger — without it the /etc/dconf/db/gdm.d/00-xiboplayer-kiosk
+# file is not compiled into the /etc/dconf/db/gdm database that the GDM
+# greeter reads, and Layer 4 is silently inert.
+glib-compile-schemas /usr/share/glib-2.0/schemas/ 2>/dev/null || true
+dconf update 2>/dev/null || true
+
 exit 0
 POSTINST
 chmod 755 "${DEB_DIR}/DEBIAN/postinst"
@@ -92,7 +120,7 @@ Description: Kiosk session scripts for Xibo digital signage players
  displays under GNOME Kiosk. Includes a first-boot registration wizard,
  session holder with health monitoring, dunst notification config, and
  a systemd user unit for the player process.
-Depends: gnome-kiosk, dunst, unclutter, zenity, xiboplayer-electron | xiboplayer-chromium | arexibo
+Depends: gnome-kiosk, dunst, unclutter, zenity, dconf-cli, libglib2.0-bin, xiboplayer-electron | xiboplayer-chromium | arexibo
 Recommends: keyd, ffmpeg, vlc, mpv,
  gstreamer1.0-plugins-base, gstreamer1.0-plugins-good,
  gstreamer1.0-plugins-ugly, gstreamer1.0-plugins-bad,

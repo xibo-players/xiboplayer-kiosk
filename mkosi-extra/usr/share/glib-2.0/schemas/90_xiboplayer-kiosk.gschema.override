@@ -1,0 +1,43 @@
+# xiboplayer-kiosk — system-wide GSettings overrides.
+#
+# Applied to EVERY session on the system (GDM greeter, gdm user, xibo user,
+# any future additional users). This file is the system defaults layer; user
+# values stored in ~/.config/dconf/user still override it. For an additional
+# lock that cannot be overridden by any user, see
+# /etc/dconf/db/gdm.d/locks/00-xiboplayer-kiosk (GDM only).
+#
+# IMPORTANT: this override file is only effective after `glib-compile-schemas
+# /usr/share/glib-2.0/schemas/` has been run. mkosi's ExtraTrees copytree
+# lands this file after glib2's RPM post-install trigger has already fired,
+# so we invoke glib-compile-schemas explicitly in mkosi.postinst,
+# atomic/Containerfile, and kickstart %post.
+
+[org.gnome.desktop.session]
+idle-delay=uint32 0
+
+[org.gnome.desktop.screensaver]
+lock-enabled=false
+idle-activation-enabled=false
+
+[org.gnome.settings-daemon.plugins.power]
+idle-dim=false
+sleep-inactive-ac-type='nothing'
+sleep-inactive-battery-type='nothing'
+power-button-action='nothing'
+
+# GNOME donation popup / reminder suppression.
+#
+# 0x0's Singularity 4 #374 recommendation: donation-reminder-enabled on the
+# housekeeping plugin is the key that actually works. The older
+# show-donation-popup on desktop.interface (which this repo used until
+# v0.4.20) was confirmed ineffective in Singularity 6 #370 on 0.4.19 —
+# donations kept appearing.
+#
+# Set BOTH keys for belt-and-braces coverage across GNOME versions. Unknown
+# keys produce a harmless warning at glib-compile-schemas time but do not
+# fail the build.
+[org.gnome.settings-daemon.plugins.housekeeping]
+donation-reminder-enabled=false
+
+[org.gnome.desktop.interface]
+show-donation-popup=false

@@ -19,13 +19,26 @@ sleep 2
 # Import display environment into systemd user manager
 systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_RUNTIME_DIR
 
-# Disable screen blanking and power management
+# Disable screen blanking and power management.
+# This is Layer 3 (runtime session gsettings) of the 4-layer power mgmt fix
+# — belt-and-braces guard against any stray user-level dconf override that
+# could sneak in between image build and session start. Layers 1/2/4 are:
+#   Layer 1: /etc/systemd/logind.conf.d/no-idle.conf
+#   Layer 2: /usr/share/glib-2.0/schemas/90_xiboplayer-kiosk.gschema.override
+#   Layer 4: /etc/dconf/db/gdm.d/00-xiboplayer-kiosk (+ locks + profile/gdm)
 gsettings set org.gnome.desktop.session idle-delay 0
 gsettings set org.gnome.desktop.screensaver lock-enabled false
+gsettings set org.gnome.desktop.screensaver idle-activation-enabled false
 gsettings set org.gnome.settings-daemon.plugins.power idle-dim false
 gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
 gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'nothing'
-gsettings set org.gnome.desktop.interface show-donation-popup false
+gsettings set org.gnome.settings-daemon.plugins.power power-button-action 'nothing'
+# GNOME donation popup fix. The correct key per 0x0's Singularity 4 #374 is
+# donation-reminder-enabled on the housekeeping plugin. The old
+# show-donation-popup key was confirmed ineffective in S6 #370 on 0.4.19.
+# Set BOTH for coverage across GNOME versions — unknown keys are harmless.
+gsettings set org.gnome.settings-daemon.plugins.housekeeping donation-reminder-enabled false 2>/dev/null || true
+gsettings set org.gnome.desktop.interface show-donation-popup false 2>/dev/null || true
 
 # Set audio volume (90%)
 wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.9 2>/dev/null || true

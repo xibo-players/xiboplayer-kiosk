@@ -283,25 +283,31 @@ cp /usr/share/xiboplayer-kiosk/xiboplayer-setup.desktop /home/xibo/.config/autos
 chown -R xibo:xibo /home/xibo/.config/autostart
 %end
 
-# Disable GNOME donation popup
+# Disable GNOME donation popup.
+# 0x0 Singularity 4 #374: the correct key is donation-reminder-enabled on the
+# housekeeping plugin. The old show-donation-popup key (on desktop.interface)
+# was confirmed ineffective in Singularity 6 #370 on 0.4.19. Set BOTH keys
+# for belt-and-braces across GNOME versions — unknown keys are harmless.
 %post --erroronfail
-su - xibo -c "dbus-run-session gsettings set org.gnome.desktop.interface show-donation-popup false" || true
+su - xibo -c "dbus-run-session bash -c '
+  gsettings set org.gnome.settings-daemon.plugins.housekeeping donation-reminder-enabled false
+  gsettings set org.gnome.desktop.interface show-donation-popup false
+'" || true
 %end
 
 # Enable services
 %post --erroronfail
 systemctl enable gdm avahi-daemon keyd
 systemctl set-default graphical.target
-
-# Prevent idle suspend and lid close (kiosk must stay on)
-mkdir -p /etc/systemd/logind.conf.d
-cat > /etc/systemd/logind.conf.d/no-idle.conf << 'LOGINDEOF'
-[Login]
-IdleAction=ignore
-HandleLidSwitch=ignore
-HandleLidSwitchExternalPower=ignore
-HandleLidSwitchDocked=ignore
-LOGINDEOF
+# Note: the system-level power management config files — Layer 1 logind
+# (/etc/systemd/logind.conf.d/no-idle.conf), Layer 2 gschema override
+# (/usr/share/glib-2.0/schemas/90_xiboplayer-kiosk.gschema.override), and
+# Layer 4 GDM dconf profile + db + locks (/etc/dconf/profile/gdm,
+# /etc/dconf/db/gdm.d/00-xiboplayer-kiosk, /etc/dconf/db/gdm.d/locks/
+# 00-xiboplayer-kiosk) — are all shipped by the xiboplayer-kiosk RPM
+# installed earlier in %post. The RPM's %post scriptlet runs
+# glib-compile-schemas + dconf update to activate them. No manual heredoc
+# or compilation needed here since 0.4.21 — see commit / issue #69.
 %end
 
 # Hide grub menu — kiosk boots straight to OS
