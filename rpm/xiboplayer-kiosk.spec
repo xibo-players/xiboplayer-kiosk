@@ -95,6 +95,11 @@ install -Dm644 mkosi-extra/etc/dconf/profile/gdm %{buildroot}%{_sysconfdir}/dcon
 install -Dm644 mkosi-extra/etc/dconf/db/gdm.d/00-xiboplayer-kiosk %{buildroot}%{_sysconfdir}/dconf/db/gdm.d/00-xiboplayer-kiosk
 install -Dm644 mkosi-extra/etc/dconf/db/gdm.d/locks/00-xiboplayer-kiosk %{buildroot}%{_sysconfdir}/dconf/db/gdm.d/locks/00-xiboplayer-kiosk
 
+# Chromium managed policies (#98) — disables "Save this password?" popup,
+# autofill, translate bar, Google sign-in, and "make default browser" nag.
+# Read by xiboplayer-chromium on startup; no dconf compilation needed.
+install -Dm644 mkosi-extra/etc/chromium/policies/managed/xiboplayer-kiosk.json %{buildroot}%{_sysconfdir}/chromium/policies/managed/xiboplayer-kiosk.json
+
 # Create skel directory for gnome-kiosk-script dispatcher
 install -d %{buildroot}%{_sysconfdir}/skel/.local/bin
 install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
@@ -126,6 +131,7 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %config %{_sysconfdir}/dconf/profile/gdm
 %config %{_sysconfdir}/dconf/db/gdm.d/00-xiboplayer-kiosk
 %config %{_sysconfdir}/dconf/db/gdm.d/locks/00-xiboplayer-kiosk
+%config %{_sysconfdir}/chromium/policies/managed/xiboplayer-kiosk.json
 
 %post
 # Compile GSchema overrides + refresh dconf database so the Layer 2 and

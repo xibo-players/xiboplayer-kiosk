@@ -21,6 +21,7 @@ mkdir -p "${DEB_DIR}/etc/skel/.local/bin"
 mkdir -p "${DEB_DIR}/etc/systemd/logind.conf.d"
 mkdir -p "${DEB_DIR}/etc/dconf/profile"
 mkdir -p "${DEB_DIR}/etc/dconf/db/gdm.d/locks"
+mkdir -p "${DEB_DIR}/etc/chromium/policies/managed"
 
 # Install kiosk scripts
 install -m755 kiosk/gnome-kiosk-script.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
@@ -61,6 +62,8 @@ install -m644 mkosi-extra/usr/share/glib-2.0/schemas/90_xiboplayer-kiosk.gschema
 install -m644 mkosi-extra/etc/dconf/profile/gdm "${DEB_DIR}/etc/dconf/profile/gdm"
 install -m644 mkosi-extra/etc/dconf/db/gdm.d/00-xiboplayer-kiosk "${DEB_DIR}/etc/dconf/db/gdm.d/00-xiboplayer-kiosk"
 install -m644 mkosi-extra/etc/dconf/db/gdm.d/locks/00-xiboplayer-kiosk "${DEB_DIR}/etc/dconf/db/gdm.d/locks/00-xiboplayer-kiosk"
+# Chromium managed policies (#98) — disables Save Password, autofill, translate
+install -m644 mkosi-extra/etc/chromium/policies/managed/xiboplayer-kiosk.json "${DEB_DIR}/etc/chromium/policies/managed/xiboplayer-kiosk.json"
 
 # Install dispatcher to skel (copied to new users' ~/.local/bin/)
 install -m755 kiosk/gnome-kiosk-script.sh "${DEB_DIR}/etc/skel/.local/bin/gnome-kiosk-script"
