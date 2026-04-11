@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.4.28 (2026-04-11)
+
+**bats test suite + shellcheck CI** ([#74](https://github.com/xibo-players/xiboplayer-kiosk/issues/74)).
+
+New `tests/` directory and two GH Actions workflows. Locks in the security invariants earned across #67-#73 so a future maintainer can't silently undo them.
+
+### New files
+
+- **`tests/unit/set-wifi.bats`** — 11 tests: `_validate_nm_string` contract, keyfile 0600 perms, umask 077, `nmcli` by-id not by-filename, PSK never on CLI, SSID filename sanitisation, and the kickstart inline copy contains a mirrored validator.
+- **`tests/unit/zenity-lib.bats`** — 10 tests: function inventory (`_preseed_get`, `zlib_notify`, `zlib_status_*`, `zlib_cms_form`, `zlib_write_*_config`), **no sourcing** of preseed file, display IDs use `uuidgen` NOT `MACHINE_ID`-derived, lib sources cleanly, `xibo-first-boot.sh` sources the lib.
+- **`tests/unit/debug-dump.bats`** — 15 tests: writes to `$HOME/Downloads`, uses zstd, redacts `cms_key` / `wifi_psk` / `config_url`, **security assertions** that the post-tar check rejects NM keyfiles / `/etc/shadow` / browser Cookies / `/etc/doas.conf`, collects `journalctl --user` + kernel journal, symlinked as `/usr/bin/xibo-debug-dump` in RPM, keyd Ctrl+D binding exists.
+- **`tests/unit/usb-preseed.bats`** — 13 tests: `--trust` flag, lsblk TRAN=usb filter, install-target exclusion from `/tmp/disk-config`, mount read-only, and **live jq allowlist regex exercise** — run `jq` against test JSON with `$`, `;`, backtick to verify they're rejected, plus valid URL and hyphenated name accepted.
+- **`tests/unit/preseed-extractor.bats`** — 11 tests: `/proc/cmdline` parsing, preseed env file path, **grep+cut not source** for reads, `xibo.*` namespace, `xibo.config_url=` curl+jq fetch, best-available-disk heuristic present, WiFi TUI entry conditions, USB preseed `--trust` call, doas.conf uses script-specific permits (no blanket `timedatectl`/`localectl`), `/etc/machine-id` regen for clone hygiene, Python wizard autostart block removed.
+- **`tests/bats-helpers/load-lib.bash`** — sandboxed test env loader (HOME, STUB_DIR, XIBO_KIOSK_DIR). Reserved for future tests that need dynamic mocking.
+- **`.github/workflows/shellcheck.yml`** — runs `shellcheck -S error` on all `kiosk/*.sh` and `mkosi-extra/usr/local/bin/*.sh`. Extracts `%pre`/`%post` blocks from kickstart via awk and runs shellcheck on them `continue-on-error: true` (legacy issues to clean up incrementally).
+- **`.github/workflows/test.yml`** — installs `bats jq zstd` and runs `bats tests/unit/`.
+- **`.shellcheckrc`** — project-wide exclusions: `SC2034` (unused vars), `SC1091` (sourcing), `SC2155` (declare-and-assign).
+
+### Key invariants enforced
+
+The tests use mostly **static grep assertions** rather than dynamic script execution. This is deliberate: the security contracts we care about can be verified by looking at the code (does the script contain the guard?), and static assertions don't break when installer environments change.
+
+The ONE dynamic exercise is the jq allowlist regex in `usb-preseed.bats` — we run real `jq` against real test JSON with shell metacharacters and verify the output is empty (value rejected). This catches any regression that weakens the regex.
+
+### Bug caught by the new CI (bonus)
+
+The first run of the new `shellcheck.yml` workflow caught a real SC2261 error in `kiosk/xibo-debug-dump.sh` (#70) — duplicate stderr redirects on line 163 (`journalctl -b -k ... 2>/dev/null > file.txt 2>/dev/null`). Fixed in this PR. This is exactly the kind of bug the CI is designed to catch: it's a non-obvious quoting issue that would have silently swallowed one of the redirects.
+
+Also fixed in this PR (surfaced by the new test_):
+
+- **`kiosk/xibo-show-cms.sh`** — the Arexibo reconfigure branch still used the old `MACHINE_ID + sha256` display-ID derivation. Replaced with `uuidgen | tr -d - | cut -c1-12` to match `zlib_write_arexibo_cms_json` in the new lib. Brings the two code paths into alignment (plan's hwkeys directive: "display IDs NEVER derived from /etc/machine-id").
+- **`kickstart/xiboplayer-kiosk.ks`** — added `/etc/machine-id` regen (`: > /etc/machine-id`) in `%post`. Image clone hygiene — without this, cloned images share an identical machine-id which breaks systemd journal / D-Bus / any software that uses machine-id as a stable host identifier. Now safe because `xibo-show-cms.sh` uses `uuidgen` for display IDs.
+
+### Deferred / future work
+
+- Full-script dynamic tests with mocked `nmcli`/`timedatectl`/`zenity` — needs more work on the sandboxed test env, and is less important than the static contracts for now.
+- Byte-for-byte diff of the two `_validate_nm_string` copies (authoritative `xibo-set-wifi.sh` vs kickstart inline). The current behavioral grep assertion catches the same regressions with less fragility, but a diff test would be stricter.
+- VM-boot smoke test in CI — needs nested KVM, out of scope for this cycle.
+
+### Modified files
+
+- **`rpm/xiboplayer-kiosk.spec`** — bump to 0.4.28, new `%changelog` entry.
+
 ## 0.4.27 (2026-04-11)
 
 **USB auto-detect `/setup.json`** ([#73](https://github.com/xibo-players/xiboplayer-kiosk/issues/73)).

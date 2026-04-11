@@ -1,0 +1,6 @@
+# Project-wide shellcheck config.
+# Exclusions match the set in the plan's Item H:
+# - SC2034: unused variables (often used via eval / dynamic lookup)
+# - SC1091: not following sources (test helpers stub everything)
+# - SC2155: declare and assign separately (stylistic noise for short helpers)
+disable=SC2034,SC1091,SC2155
