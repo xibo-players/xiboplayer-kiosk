@@ -94,7 +94,6 @@ jq
 # Remove unnecessary packages
 -gnome-tour
 -gnome-software
--gnome-terminal
 -gnome-text-editor
 -gnome-calculator
 -gnome-characters
