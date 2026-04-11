@@ -205,6 +205,16 @@ else
     : > /etc/xiboplayer-preseed.env
 fi
 
+# --- Layer 2: USB /setup.json auto-detect (#73) -------------------------
+# Scan USB-transport block devices for /setup.json at the root of the
+# first filesystem, validate via jq allowlist regex, merge into the
+# preseed env file. Runs with --trust because kickstart %post is the
+# install-time operator-present context. First-boot reconfigure calls
+# the same script without --trust (zenity confirmation dialog).
+if [ -x /usr/share/xiboplayer-kiosk/xibo-usb-preseed.sh ]; then
+    /usr/share/xiboplayer-kiosk/xibo-usb-preseed.sh --trust 2>&1 || true
+fi
+
 # --- Layer 3: per-field xibo.*= kernel params (override Layer 1) --------
 # Walk every token on /proc/cmdline, extract anything matching xibo.KEY=VAL,
 # overwrite the corresponding line in preseed.env. The xibo.config_url key
