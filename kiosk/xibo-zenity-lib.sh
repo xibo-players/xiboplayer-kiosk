@@ -90,6 +90,19 @@ zlib_status_tz() {
     timedatectl show -p Timezone --value 2>/dev/null || echo "(unknown)"
 }
 
+# Return the current system locale (LANG=) in the form en_US.UTF-8
+# or "(unknown)" if it can't be read. Used by the Language row in
+# the first-boot menu.
+zlib_status_locale() {
+    local lang
+    lang=$(localectl status 2>/dev/null | awk -F= '/System Locale:.*LANG=/{gsub(/.*LANG=/,"",$0); gsub(/[[:space:]].*/,"",$0); print; exit}')
+    if [ -z "$lang" ] && [ -r /etc/locale.conf ]; then
+        lang=$(awk -F= '/^LANG=/ {gsub(/"/,"",$2); print $2; exit}' /etc/locale.conf)
+    fi
+    [ -z "$lang" ] && lang=$(printf '%s' "${LANG:-}" | cut -d: -f1)
+    echo "${lang:-(unknown)}"
+}
+
 zlib_status_cms() {
     # CMS URL is player-specific — read from the config file of whichever
     # player is the current alternative. For Arexibo, it's cms.json.

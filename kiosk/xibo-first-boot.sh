@@ -168,6 +168,66 @@ Content will start playing within 60 seconds after authorisation." \
         2>/dev/null || true
 }
 
+# --- Language handler -----------------------------------------------------
+#
+# Two-stage filter picker, same UX as handle_timezone:
+#
+#   1. zenity --entry asks for a substring to filter against
+#      `localectl list-locales` output (case-insensitive grep).
+#   2. zenity --list shows the filtered matches so the operator picks
+#      one. Works for any locale the system supports without us having
+#      to curate a list.
+#
+# The filter pipeline strips "non-primary" variants per user direction
+# "skip the ... selection for non-primary languages":
+#
+#   - Entries with @variant suffix (e.g. es_ES.UTF-8@euro) — same
+#     language with a different collation / currency variant. One
+#     per locale is enough.
+#   - Non-UTF-8 encodings (ISO-8859-1 / KOI8-R / etc.) — legacy, not
+#     worth showing.
+#   - The special C.UTF-8 and POSIX locales — not user-facing.
+handle_language() {
+    local filter
+    filter=$(zenity --entry \
+        --title="xiboplayer — Language" \
+        --text="Type a language or country to filter (e.g. English, en_, en_GB):" \
+        --width=480 \
+        2>/dev/null) || return 0
+    [ -z "$filter" ] && return 0
+
+    local matches
+    matches=$(localectl list-locales 2>/dev/null \
+        | grep -Ev '@|\.(iso|ISO|koi|KOI|gb|GB|euc|EUC|big|BIG)' \
+        | grep -v '^C\.' \
+        | grep -v '^POSIX$' \
+        | grep -i -- "$filter")
+
+    if [ -z "$matches" ]; then
+        zenity --info --title="xiboplayer — Language" --width=420 \
+            --text="No locale matches '$filter'.\n\nTry a shorter filter like 'es' or 'en'." \
+            2>/dev/null
+        return 0
+    fi
+
+    local locale
+    locale=$(echo "$matches" \
+        | zenity --list \
+            --title="xiboplayer — Language (matching '$filter')" \
+            --column="Locale" \
+            --width=420 --height=500 \
+            2>/dev/null) || return 0
+    [ -z "$locale" ] && return 0
+
+    zlib_notify "Setting language to $locale..."
+    if doas "$XIBO_KIOSK_DIR/xibo-set-locale.sh" "$locale" 2>&1; then
+        zlib_notify "Language: $locale"
+    else
+        zenity --error --title="xiboplayer — Language" --width=400 \
+            --text="Failed to set language to $locale." 2>/dev/null
+    fi
+}
+
 # --- Debug handler --------------------------------------------------------
 handle_debug() {
     if [ -x "$XIBO_KIOSK_DIR/xibo-debug-dump.sh" ]; then
@@ -186,20 +246,22 @@ handle_debug() {
 # sitting. Auto-skip on 2-minute timeout (exit code 5).
 main_loop() {
     while true; do
-        local wifi_status tz_status cms_status
+        local wifi_status tz_status cms_status lang_status
         wifi_status=$(zlib_status_wifi)
         tz_status=$(zlib_status_tz)
         cms_status=$(zlib_status_cms)
+        lang_status=$(zlib_status_locale)
 
         local action
         action=$(zenity --list \
             --title="xiboplayer — First boot setup" \
             --text="Configure the kiosk, then select Done to start the player." \
             --column="Action" --column="Setting" --column="Current status" \
-            --width=620 --height=360 \
+            --width=620 --height=400 \
             --hide-column=1 \
             --print-column=1 \
             --timeout=120 \
+            "language" "Language" "$lang_status" \
             "wifi"     "Wi-Fi"    "$wifi_status" \
             "timezone" "Timezone" "$tz_status" \
             "cms"      "CMS"      "$cms_status" \
@@ -217,6 +279,7 @@ main_loop() {
         fi
 
         case "$action" in
+            language) handle_language ;;
             wifi)     handle_wifi ;;
             timezone) handle_timezone ;;
             cms)      handle_cms ;;

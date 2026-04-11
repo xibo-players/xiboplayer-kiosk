@@ -42,6 +42,8 @@ install -m755 kiosk/xibo-set-timezone.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/
 install -m755 kiosk/xibo-set-locale.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 # Issue #73 — USB /setup.json auto-detect
 install -m755 kiosk/xibo-usb-preseed.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+# Branding — xiboplayer logo (zenity dialog icon, grub bg, plymouth)
+install -m644 kiosk/xiboplayer-kiosk-logo.png "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 
 # /usr/bin/xibo-debug-dump symlink (mirrors the RPM spec) — lets techs run
 # `xibo-debug-dump` from any shell without typing the full share path.
