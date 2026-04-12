@@ -108,8 +108,14 @@ get_player_error() {
 # Clear any lingering notifications from previous session/wizard
 dunstctl close-all 2>/dev/null || true
 
-# Determine which service to manage from setup-result.json
-PLAYER_SERVICE="arexibo.service"
+# Determine which service to manage from setup-result.json.
+# The default JSON is shipped by the xiboplayer-kiosk RPM at
+# /etc/skel/.config/xiboplayer/setup-result.json with chromium, and
+# copied into /home/xibo/.config/xiboplayer/setup-result.json by the
+# kickstart %post. So setup-result.json is ALWAYS present on a fresh
+# install. The fallback below (xiboplayer-chromium.service) is a
+# belt-and-braces guard in case the file is ever missing or malformed.
+PLAYER_SERVICE="xiboplayer-chromium.service"
 if [ -f "${XIBO_CONFIG_DIR}/setup-result.json" ]; then
     SVC=$(python3 -c "import json; print(json.load(open('${XIBO_CONFIG_DIR}/setup-result.json'))['service'])" 2>/dev/null)
     [ -n "$SVC" ] && PLAYER_SERVICE="$SVC"
