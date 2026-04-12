@@ -40,11 +40,21 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
+        env:
+          # On tag pushes (v0.4.35), also tag with the kiosk version so
+          # operators can pin: `bootc switch :v0.4.35`. On branch / schedule
+          # / dispatch builds, VERSION is empty and no version tag is added.
+          VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
         run: |
+          IMG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
           podman build \
-            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-x86_64 \
+            --tag "${IMG}:${{ env.FEDORA_VERSION }}-x86_64" \
+            ${VERSION:+--tag "${IMG}:${VERSION}-x86_64"} \
             -f atomic/Containerfile .
-          podman push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-x86_64
+          podman push "${IMG}:${{ env.FEDORA_VERSION }}-x86_64"
+          if [ -n "$VERSION" ]; then
+            podman push "${IMG}:${VERSION}-x86_64"
+          fi
 
   build-oci-aarch64:
     name: Build OCI Image (aarch64)
@@ -62,11 +72,18 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
+        env:
+          VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
         run: |
+          IMG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
           podman build \
-            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-aarch64 \
+            --tag "${IMG}:${{ env.FEDORA_VERSION }}-aarch64" \
+            ${VERSION:+--tag "${IMG}:${VERSION}-aarch64"} \
             -f atomic/Containerfile .
-          podman push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-aarch64
+          podman push "${IMG}:${{ env.FEDORA_VERSION }}-aarch64"
+          if [ -n "$VERSION" ]; then
+            podman push "${IMG}:${VERSION}-aarch64"
+          fi
 
   push-manifest:
     name: Push multi-arch manifest
@@ -83,17 +100,29 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create and push manifest
+        env:
+          VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
         run: |
-          podman manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }} \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-x86_64 \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-aarch64
-          podman manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-x86_64 \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}-aarch64
-          podman manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }} \
-            docker://${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.FEDORA_VERSION }}
-          podman manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-            docker://${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          IMG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          FV="${{ env.FEDORA_VERSION }}"
+
+          # Fedora-version manifest (always)
+          podman manifest create "${IMG}:${FV}" \
+            "${IMG}:${FV}-x86_64" "${IMG}:${FV}-aarch64"
+          podman manifest push "${IMG}:${FV}" "docker://${IMG}:${FV}"
+
+          # latest manifest (always)
+          podman manifest create "${IMG}:latest" \
+            "${IMG}:${FV}-x86_64" "${IMG}:${FV}-aarch64"
+          podman manifest push "${IMG}:latest" "docker://${IMG}:latest"
+
+          # Kiosk-version manifest (tag pushes only, e.g. v0.4.35)
+          if [ -n "$VERSION" ]; then
+            podman manifest create "${IMG}:${VERSION}" \
+              "${IMG}:${VERSION}-x86_64" "${IMG}:${VERSION}-aarch64"
+            podman manifest push "${IMG}:${VERSION}" "docker://${IMG}:${VERSION}"
+            echo "Pushed version manifest: ${IMG}:${VERSION}"
+          fi
 
   build-iso-x86_64:
     name: Build ISO (x86_64)
