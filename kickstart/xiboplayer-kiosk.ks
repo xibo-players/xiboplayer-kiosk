@@ -81,6 +81,12 @@ google-noto-emoji-color-fonts
 
 # Display manager and kiosk
 gdm
+# gnome-shell is a hard Requires of gdm (for the greeter). Listing it
+# explicitly guarantees it's in the resolver tree even under
+# dnf --setopt=install_weak_deps=False-style constraints and makes
+# the "gdm requires gnome-shell" cascade visible when debugging
+# Software Selection exclusion conflicts.
+gnome-shell
 gnome-kiosk
 gnome-kiosk-script-session
 
