@@ -56,7 +56,19 @@ user --name=xibo --groups=wheel --password=xibo --plaintext --gecos="Xibo Kiosk 
 bootloader --location=mbr --timeout=0 --append="quiet rhgb splash loglevel=3 rd.neednet=1 ip=dhcp keep-configuration=no allowed-connections=except:origin:nm-initrd-generator net.ifnames=0 biosdevname=0"
 
 # Package selection
-%packages
+%packages --ignoremissing
+# --ignoremissing: during stage-1 package resolution, anaconda has access
+# only to Fedora's default repos (BaseOS + Updates + Cisco openh264).
+# RPM Fusion isn't enabled until the %post block installs xiboplayer-release.
+# Packages like gstreamer1-plugin-libav (RPM Fusion free) therefore fail to
+# resolve in %packages, flagging Software Selection as incomplete and
+# forcing the operator to re-open the spoke to dismiss the warning.
+# --ignoremissing tells anaconda to silently skip unresolvable packages
+# instead. Our %post installs those codec packages properly once RPM
+# Fusion is available (see the `dnf install -y ffmpeg gstreamer1-*-libav`
+# block after xiboplayer-release). Without this, inst.noninteractive
+# cannot be used — the spoke stays warning-flagged forever.
+#
 # Anaconda requires exactly one `@^environment` selection to consider the
 # Software Selection spoke complete. Without it the hub screen shows the
 # spoke with a warning triangle and blocks Begin Installation — and under
