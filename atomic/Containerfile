@@ -32,13 +32,18 @@ RUN dnf install -y \
     dnf clean all
 
 # Display manager + kiosk compositor (minimal GNOME, no apps)
-# First-boot config (WiFi/timezone/CMS) runs via zenity — NO gnome-control-center,
-# NO libadwaita/python3-gobject. The zenity menu calls nmcli/timedatectl directly
-# through validated doas helpers. Per user directive 2026-04-11: "avoid at all
-# cost to use gnome-settings" — if this RUN ever reintroduces gnome-control-center,
-# the build breaks and forces the maintainer to use the direct helper path.
+# First-boot config (WiFi/timezone/CMS) runs via zenity + xibo-picker.py
+# — still NO gnome-control-center. Per user directive 2026-04-11: "avoid
+# at all cost to use gnome-settings" — if this RUN ever reintroduces
+# gnome-control-center, the build breaks and forces the maintainer to
+# use the direct nmcli/timedatectl helper path.
+#
+# python3-gobject (#119) is the runtime for xibo-picker.py, our GTK4 +
+# libadwaita live-filter dialog. gtk4 + libadwaita themselves are
+# already pulled transitively by zenity 4.2 on Fedora 43.
 RUN dnf install -y \
     gdm gnome-kiosk gnome-kiosk-script-session \
+    python3-gobject \
     && dnf clean all
 
 # Full codec stack (ffmpeg + gstreamer from RPM Fusion)

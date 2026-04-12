@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.35
+Version:        0.4.36
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -14,6 +14,12 @@ Requires:       gnome-kiosk-script-session
 Requires:       dunst
 Requires:       unclutter
 Requires:       zenity
+# Issue #119 — runtime for kiosk/xibo-picker.py, the GTK4+libadwaita
+# live-filter dialog used by the first-boot Language / Timezone /
+# Keyboard / Wi-Fi rows. gtk4 + libadwaita are already pulled
+# transitively by zenity 4.2 on Fedora 43, so python3-gobject is the
+# only explicit add.
+Requires:       python3-gobject
 Requires:       opendoas
 Requires:       keyd
 Requires:       mesa-va-drivers
@@ -77,6 +83,10 @@ install -Dm755 kiosk/xibo-set-timezone.sh %{buildroot}%{_datadir}/xiboplayer-kio
 install -Dm755 kiosk/xibo-set-locale.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-locale.sh
 install -Dm755 kiosk/xibo-set-player.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-player.sh
 install -Dm755 kiosk/xibo-set-keyboard.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-keyboard.sh
+# Issue #119 — GTK4 + libadwaita live-filter picker (Adw.AlertDialog).
+# Called by xibo-first-boot.sh for the Language / Timezone / Keyboard /
+# Wi-Fi rows, replacing the prior two-stage zenity entry+list flow.
+install -Dm755 kiosk/xibo-picker.py %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-picker.py
 install -Dm755 kiosk/xibo-keyd-open-terminal.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-keyd-open-terminal.sh
 # Issue #102 branding — xiboplayer logo (used as zenity dialog window
 # icon in the first-boot menu splash, among other places).
@@ -130,6 +140,7 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_datadir}/xiboplayer-kiosk/xibo-set-locale.sh
 %{_datadir}/xiboplayer-kiosk/xibo-set-player.sh
 %{_datadir}/xiboplayer-kiosk/xibo-set-keyboard.sh
+%{_datadir}/xiboplayer-kiosk/xibo-picker.py
 %{_datadir}/xiboplayer-kiosk/xibo-keyd-open-terminal.sh
 %{_datadir}/xiboplayer-kiosk/xibo-usb-preseed.sh
 %{_datadir}/xiboplayer-kiosk/xiboplayer-kiosk-logo.png
@@ -156,6 +167,9 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.36-1
+- Package xibo-picker.py (GTK4+libadwaita live-filter dialog) + python3-gobject runtime (#119).
+
 * Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.35-1
 - Branded xx-large header, Start button, ptyxis, GNOME Settings, no XDG rename.
 

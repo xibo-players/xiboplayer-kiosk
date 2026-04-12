@@ -90,6 +90,11 @@ gstreamer1-plugin-libav
 
 # Kiosk utilities
 zenity
+# python3-gobject — runtime for /usr/share/xiboplayer-kiosk/xibo-picker.py
+# (#119), the GTK4+libadwaita live-filter picker used by the first-boot
+# Language / Timezone / Keyboard / Wi-Fi rows. gtk4 + libadwaita are
+# already pulled transitively by zenity 4.2 on Fedora 43.
+python3-gobject
 dunst
 unclutter
 opendoas

@@ -44,6 +44,8 @@ install -m755 kiosk/xibo-set-locale.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-set-player.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 # Issue #94 — Keyboard row + auto-inference from language
 install -m755 kiosk/xibo-set-keyboard.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+# Issue #119 — GTK4+libadwaita live-filter picker (Adw.AlertDialog)
+install -m755 kiosk/xibo-picker.py "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 # keyd Ctrl+S terminal wrapper (picks ptyxis/kgx/gnome-terminal/xterm)
 install -m755 kiosk/xibo-keyd-open-terminal.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 # Issue #73 — USB /setup.json auto-detect
@@ -143,7 +145,7 @@ Description: Kiosk session scripts for Xibo digital signage players
  displays under GNOME Kiosk. Includes a first-boot registration wizard,
  session holder with health monitoring, dunst notification config, and
  a systemd user unit for the player process.
-Depends: gnome-kiosk, dunst, unclutter, zenity, dconf-cli, libglib2.0-bin, xiboplayer-electron | xiboplayer-chromium
+Depends: gnome-kiosk, dunst, unclutter, zenity, python3-gi, dconf-cli, libglib2.0-bin, xiboplayer-electron | xiboplayer-chromium
 Recommends: keyd, ffmpeg, vlc, mpv,
  gstreamer1.0-plugins-base, gstreamer1.0-plugins-good,
  gstreamer1.0-plugins-ugly, gstreamer1.0-plugins-bad,
