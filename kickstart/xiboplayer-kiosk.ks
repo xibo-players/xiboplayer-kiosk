@@ -157,14 +157,18 @@ glibc-all-langpacks
 -yelp
 -gnome-user-docs
 -abrt*
-# Suppress the "rename standard directories" prompt that GNOME shows
-# when the locale changes (e.g. ca_ES → asks "rename ~/Downloads to
-# ~/Baixades?"). xdg-user-dirs-gtk owns that dialog; removing the
-# package kills the prompt at the source. xdg-user-dirs (CLI-only)
-# stays, so ~/Downloads etc. still get created on first login. The
-# %post block also writes /etc/xdg/user-dirs.conf with enabled=False
-# as a belt-and-braces measure.
--xdg-user-dirs-gtk
+# NOTE — `-xdg-user-dirs-gtk` was previously here to suppress the
+# "rename standard directories" prompt GNOME shows on locale change
+# (e.g. ca_ES → "rename ~/Downloads to ~/Baixades?"). We had to drop
+# the exclusion because Fedora 43's anaconda hard-requires
+# xdg-user-dirs-gtk — with it excluded, Software Selection reports
+# "anaconda requires xdg-user-dirs-gtk but package xdg-user-dirs-gtk
+# is filtered out" and the install refuses to proceed zero-touch.
+#
+# The "rename directories" prompt is still suppressed by the %post
+# block that writes /etc/xdg/user-dirs.conf with enabled=False —
+# which is the canonical config-file approach anyway. The belt
+# became the braces.
 %end
 
 # RPMFusion repositories
@@ -557,13 +561,14 @@ su - xibo -c "dbus-run-session bash -c '
 '" || true
 %end
 
-# Suppress the xdg-user-dirs locale-rename dialog. Pair with the
-# `-xdg-user-dirs-gtk` package exclusion in %packages — the package
-# removal kills the GTK prompt at the source, and this config file
-# also disables xdg-user-dirs-update's auto-run so the CLI path
-# stays idle. Result: when the operator picks ca_ES from the Language
-# row, GNOME never asks "rename ~/Downloads to ~/Baixades?" and the
-# XDG paths stay in English for script / doc consistency.
+# Suppress the xdg-user-dirs locale-rename dialog via config file
+# only (we can no longer exclude the xdg-user-dirs-gtk package because
+# Fedora 43's anaconda hard-requires it — see the NOTE at the end of
+# %packages). `enabled=False` in /etc/xdg/user-dirs.conf tells both
+# xdg-user-dirs-update and the xdg-user-dirs-gtk GTK listener to not
+# touch ~/.config/user-dirs.dirs on login — GNOME never prompts
+# "rename ~/Downloads to ~/Baixades?" and XDG paths stay in English
+# for script / doc consistency.
 %post --erroronfail
 mkdir -p /etc/xdg
 cat > /etc/xdg/user-dirs.conf << 'EOF'
