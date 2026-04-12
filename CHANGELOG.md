@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.35 (2026-04-12)
+
+First-boot menu polish + packaging fixes: **xx-large branded header** (blue `xibo` + white `player` Pango at `xx-large` size in every dialog), **"Start" button** replaces "OK" and the "done" row (click Start without a selection to launch the player), **ptyxis** replaces `gnome-terminal` for the terminal option and the Ctrl+S keyd binding (Fedora 43 default), **GNOME Settings** added as an optional escape hatch in the Settings sub-menu (`gnome-control-center`), **XDG rename prompt suppressed** (removed `xdg-user-dirs-gtk` + `enabled=False` in `/etc/xdg/user-dirs.conf`, so ~/Downloads etc. stay in English after a locale change).
+
 ## 0.4.34 (2026-04-12)
 
 Install experience: **graphical anaconda by default** with progress bar + slide carousel. Text-mode fallback available via a dedicated grub/isolinux menuentry (`inst.text`) for headless / low-VRAM targets. Phase 1 of #104 — custom branded slides follow in 0.4.35.

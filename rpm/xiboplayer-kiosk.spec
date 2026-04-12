@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.34
+Version:        0.4.35
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -156,6 +156,9 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.35-1
+- Branded xx-large header, Start button, ptyxis, GNOME Settings, no XDG rename.
+
 * Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.34-1
 - Graphical anaconda installer by default, text-mode fallback menuentry.
 
