@@ -144,7 +144,20 @@ jq
 # locale are silently missing.
 glibc-all-langpacks
 
-# Remove unnecessary packages
+# Remove unnecessary GNOME desktop apps. The kiosk session autostarts
+# the player via gnome-kiosk-script-session — the operator never sees
+# GNOME Shell's overview, so apps like maps / calculator / weather /
+# totem / cheese are pure cruft. Trimmed list here excludes only
+# packages confirmed safe (no hard dep from gdm / gnome-shell on F43);
+# the permanently-needed `xdg-user-dirs-gtk` is NOT excluded — it's a
+# hard Requires of anaconda itself (removing it breaks install). The
+# rename-directories prompt is suppressed via /etc/xdg/user-dirs.conf
+# enabled=False in %post instead.
+#
+# Also kept OUT of the exclusion list: -yelp and -gnome-user-docs.
+# They can probably come out too but during the #127→#131 dep-tree
+# debugging they were implicated in cascade warnings, so leaving them
+# for a focused audit PR rather than risking another install regression.
 -gnome-tour
 -gnome-software
 -gnome-text-editor
@@ -160,16 +173,7 @@ glibc-all-langpacks
 -cheese
 -evince
 -loupe
--yelp
--gnome-user-docs
 -abrt*
-# NOTE — `-xdg-user-dirs-gtk` was previously here to suppress the
-# "rename standard directories" prompt GNOME shows on locale change
-# (e.g. ca_ES → "rename ~/Downloads to ~/Baixades?"). We had to drop
-# the exclusion because Fedora 43's anaconda hard-requires
-# xdg-user-dirs-gtk — with it excluded, Software Selection reports
-# "anaconda requires xdg-user-dirs-gtk but package xdg-user-dirs-gtk
-# is filtered out" and the install refuses to proceed zero-touch.
 #
 # The "rename directories" prompt is still suppressed by the %post
 # block that writes /etc/xdg/user-dirs.conf with enabled=False —
