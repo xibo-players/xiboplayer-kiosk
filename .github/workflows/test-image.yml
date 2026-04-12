@@ -52,7 +52,7 @@ concurrency:
 
 jobs:
   build:
-    uses: xibo-players/.github/.github/workflows/build-iso.yml@c7c64667e591faf00d461b185fadc017dc69a4f8  # main @ 2026-04-12 (GPG-sign SHA256SUMS + fix self-checksum — .github#24)
+    uses: xibo-players/.github/.github/workflows/build-iso.yml@a1530ca2fbb0aa3c82baf1fa6a5c5bb1e7fcccab  # main @ 2026-04-12 (grub overlay + implantisomd5 — .github#25)
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
@@ -67,13 +67,10 @@ jobs:
       skip-preflight: true
       upload-as-artifact: true
 
-      # ── Customize the ISO grub menu ────────────────────────────
-      # Single substitution — renames every menuentry that contains
-      # the string "Fedora 43" (Install / Test this media & install /
-      # Install in basic graphics mode) by replacing just that token,
-      # which preserves the verbs and context intact.
-      iso-grub-replacements: |
-        Fedora 43|xiboplayer kiosk
+      # ── Custom grub menu ─────────────────────────────────────
+      # Full grub.cfg replacement — same file as production (image.yml)
+      iso-grub-file: 'kickstart/grub.cfg'
+      iso-volid: 'XIBOPLAYER'
 
       # ── Verbose debug kernel cmdline (test builds only) ────────
       iso-cmdline-remove: 'quiet rhgb splash'
