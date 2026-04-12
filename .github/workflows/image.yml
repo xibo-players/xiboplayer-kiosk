@@ -22,6 +22,28 @@ jobs:
       build-self-contained-iso: true
       build-netinstall: true
       architectures: 'x86_64,aarch64'
+
+      # Rebrand Fedora's default grub.cfg entries → xiboplayer-kiosk.
+      # mkksiso -R does exact string replacement; longest strings FIRST
+      # to avoid partial matches ("Install Fedora 43 in basic graphics
+      # mode" must match before "Install Fedora 43").
+      #
+      # Fedora's grub.cfg has:
+      #   "Install Fedora 43"
+      #   "Test this media & install Fedora 43"
+      #   submenu "Troubleshooting":
+      #     "Install Fedora 43 in basic graphics mode"
+      #     "Rescue a Fedora 43 system"
+      #
+      # We rename them to xiboplayer-branded entries. The "basic graphics
+      # mode" entry becomes the text-mode fallback (#104). The rescue
+      # entry keeps its purpose with our branding.
+      iso-grub-replacements: |
+        Install Fedora 43 in basic graphics mode|Install xiboplayer-kiosk — text mode (fallback)
+        Rescue a Fedora 43 system|Rescue xiboplayer-kiosk system
+        Test this media & install Fedora 43|Verify media & install xiboplayer-kiosk
+        Install Fedora 43|Install xiboplayer-kiosk
+        Troubleshooting|Advanced options
     secrets: inherit
 
   # ──────────────────────────────────────────────────────────────────
