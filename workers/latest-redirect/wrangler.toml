@@ -1,0 +1,37 @@
+# Cloudflare Worker: latest-redirect
+#
+# Redirects /xiboplayer-kiosk/latest/* to the versioned path on R2,
+# reading the current version from the LATEST file. Zero storage
+# duplication — just a 302 redirect.
+#
+# Deploy:
+#   cd workers/latest-redirect
+#   npx wrangler deploy
+#
+# Requires:
+#   - CLOUDFLARE_API_TOKEN env var (or `wrangler login`)
+#   - The R2 bucket name below must match the bucket that
+#     images.xiboplayer.org serves from
+
+name = "xiboplayer-kiosk-latest-redirect"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Route: only intercept /xiboplayer-kiosk/latest/* on the images domain.
+# All other requests (versioned paths, test paths, RPM repo, etc.)
+# fall through to R2's default serving behaviour.
+routes = [
+  { pattern = "images.xiboplayer.org/xiboplayer-kiosk/latest/*", zone_name = "xiboplayer.org" }
+]
+
+# R2 bucket binding — the Worker reads the LATEST file from this bucket
+# to determine the current version. The bucket is the same one that
+# build-iso.yml uploads images to and that images.xiboplayer.org serves.
+#
+# IMPORTANT: replace "xiboplayer-images" below with the actual R2
+# bucket name from your Cloudflare dashboard (R2 → Buckets → name).
+# The bucket name is a secret in GH Actions as R2_BUCKET but Workers
+# need it in wrangler.toml as a plain binding.
+[[r2_buckets]]
+binding = "IMAGES_BUCKET"
+bucket_name = "xiboplayer-images"  # ← UPDATE if your bucket has a different name
