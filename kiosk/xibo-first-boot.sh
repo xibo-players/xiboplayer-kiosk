@@ -47,16 +47,17 @@ handle_wifi() {
         return 0
     fi
 
-    # Build the SSID list — format each line as three zenity columns.
-    # nmcli -t output is colon-separated: SSID:SIGNAL:SECURITY:IN-USE.
-    # Sort by signal descending, dedupe by SSID.
+    # Build the SSID list as TSV for xibo-picker.py (#119). Three columns:
+    # SSID, signal%, security. Sorted by signal desc, deduped by SSID.
+    # The in-use '*' marker is prepended to the SSID so the row sticks
+    # out visually ("* home-wifi" at top of list on reconnection).
     local list
     list=$(nmcli -t -f IN-USE,SSID,SIGNAL,SECURITY dev wifi list 2>/dev/null \
         | awk -F: '
             $2!="" && !seen[$2]++ {
                 sec = ($4=="" || $4=="--") ? "open" : $4
-                inuse = ($1=="*") ? "*" : " "
-                printf "%s\n%s\n%d%%\n%s\n", inuse, $2, $3, sec
+                name = ($1=="*") ? ("* " $2) : $2
+                printf "%s\t%s%%\t%s\n", name, $3, sec
             }' \
         | head -80)
 
@@ -66,18 +67,24 @@ handle_wifi() {
         return 0
     fi
 
-    # Show the picker.
+    # Live-filter picker (#119) — GTK4+libadwaita dialog. min-chars=0
+    # because the WiFi list is short and usually has <20 SSIDs, so we
+    # show everything by default and let the operator refine if needed.
     local ssid
-    ssid=$(echo -e "$list" | zenity --list \
+    ssid=$(echo "$list" | "$XIBO_KIOSK_DIR/xibo-picker.py" --tsv \
         --title="xiboplayer — Wi-Fi" \
+        --brand-header="Wi-Fi" \
         --text="Select a network" \
-        --column="Active" --column="SSID" --column="Signal" --column="Security" \
-        --width=500 --height=400 \
-        --hide-column=1 \
-        --print-column=2 \
+        --column="SSID" --column="Signal" --column="Security" \
+        --print-column=1 \
+        --min-chars=0 \
+        --width=560 --height=480 \
+        --window-icon="$XIBO_LOGO" \
         2>/dev/null) || return 0
 
     [ -z "$ssid" ] && return 0
+    # Strip the in-use '* ' prefix if present before passing to nmcli.
+    ssid="${ssid#\* }"
 
     # Check security — open networks skip the password dialog.
     local sec
@@ -112,24 +119,22 @@ handle_wifi() {
 }
 
 # --- Timezone handler -----------------------------------------------------
+#
+# Live-filter picker (#119) — GTK4+libadwaita dialog via xibo-picker.py.
+# min-chars=2 because the IANA zone list has 593 rows and we want the
+# initial empty state to stay quiet until the operator starts typing.
+# Matches appear instantly as they type (e.g. "mad" → 1 row: Europe/Madrid).
 handle_timezone() {
-    # Two-stage filter: prompt for a filter substring first, then show
-    # the matching IANA zones. Avoids scrolling 593 rows.
-    local filter
-    filter=$(zenity --entry \
-        --title="xiboplayer — Timezone" \
-        --text="Type a city or region to filter (e.g. Madrid, Europe, UTC):" \
-        --width=420 \
-        2>/dev/null) || return 0
-    [ -z "$filter" ] && return 0
-
     local tz
     tz=$(timedatectl list-timezones 2>/dev/null \
-        | grep -i -- "$filter" \
-        | zenity --list \
-            --title="xiboplayer — Timezone (matching $filter)" \
+        | "$XIBO_KIOSK_DIR/xibo-picker.py" \
+            --title="xiboplayer — Timezone" \
+            --brand-header="Timezone" \
+            --text="Type a city or region (e.g. Madrid, Europe, UTC):" \
             --column="IANA timezone" \
-            --width=420 --height=500 \
+            --min-chars=2 \
+            --width=520 --height=520 \
+            --window-icon="$XIBO_LOGO" \
             2>/dev/null) || return 0
     [ -z "$tz" ] && return 0
 
@@ -192,34 +197,23 @@ handle_cms() {
 #     worth showing.
 #   - The special C.UTF-8 and POSIX locales — not user-facing.
 handle_language() {
-    local filter
-    filter=$(zenity --entry \
-        --title="xiboplayer — Language" \
-        --text="Type a locale code to filter (e.g. en, en_GB, ca, es, fr, de):" \
-        --width=480 \
-        2>/dev/null) || return 0
-    [ -z "$filter" ] && return 0
-
-    local matches
-    matches=$(localectl list-locales 2>/dev/null \
+    # Live-filter picker (#119) — GTK4+libadwaita dialog via xibo-picker.py.
+    # min-chars=2 because the locale list is ~800 entries and we want a
+    # clean initial state. Filter at 2 chars gives usable results
+    # immediately (e.g. "en" → every English locale, "ca" → Catalan).
+    local locale
+    locale=$(localectl list-locales 2>/dev/null \
         | grep -Ev '@|\.(iso|ISO|koi|KOI|gb|GB|euc|EUC|big|BIG)' \
         | grep -v '^C\.' \
         | grep -v '^POSIX$' \
-        | grep -i -- "$filter")
-
-    if [ -z "$matches" ]; then
-        zenity --info --title="xiboplayer — Language" --width=420 \
-            --text="No locale matches '$filter'.\n\nTry a shorter filter like 'es' or 'en'." \
-            2>/dev/null
-        return 0
-    fi
-
-    local locale
-    locale=$(echo "$matches" \
-        | zenity --list \
-            --title="xiboplayer — Language (matching '$filter')" \
+        | "$XIBO_KIOSK_DIR/xibo-picker.py" \
+            --title="xiboplayer — Language" \
+            --brand-header="Language" \
+            --text="Type a locale code (e.g. en, en_GB, ca, es, fr, de):" \
             --column="Locale" \
-            --width=420 --height=500 \
+            --min-chars=2 \
+            --width=520 --height=520 \
+            --window-icon="$XIBO_LOGO" \
             2>/dev/null) || return 0
     [ -z "$locale" ] && return 0
 
@@ -297,34 +291,19 @@ handle_player() {
 # is for operators who need something different (e.g. a Portuguese kiosk
 # in a Spanish office that wants to keep Spanish layout).
 handle_keyboard() {
-    local filter
-    filter=$(zenity --entry \
-        --title="xiboplayer — Keyboard layout" \
-        --window-icon="$XIBO_LOGO" \
-        --text="Type a layout code or country to filter (e.g. us, es, fr, gb):" \
-        --width=480 \
-        2>/dev/null) || return 0
-    [ -z "$filter" ] && return 0
-
-    local matches
-    matches=$(localectl list-x11-keymap-layouts 2>/dev/null \
-        | grep -i -- "$filter")
-
-    if [ -z "$matches" ]; then
-        zenity --info --title="xiboplayer — Keyboard layout" --width=420 \
-            --window-icon="$XIBO_LOGO" \
-            --text="No layout matches '$filter'.\n\nTry a shorter filter like 'es', 'fr', 'de'." \
-            2>/dev/null
-        return 0
-    fi
-
+    # Live-filter picker (#119) — GTK4+libadwaita dialog via xibo-picker.py.
+    # min-chars=2 keeps the initial state quiet; filter matches as the
+    # operator types (e.g. "us" → 1 row: us layout).
     local layout
-    layout=$(echo "$matches" \
-        | zenity --list \
-            --title="xiboplayer — Keyboard layout (matching '$filter')" \
-            --window-icon="$XIBO_LOGO" \
+    layout=$(localectl list-x11-keymap-layouts 2>/dev/null \
+        | "$XIBO_KIOSK_DIR/xibo-picker.py" \
+            --title="xiboplayer — Keyboard layout" \
+            --brand-header="Keyboard layout" \
+            --text="Type a layout code or country (e.g. us, es, fr, gb):" \
             --column="Layout" \
-            --width=420 --height=500 \
+            --min-chars=2 \
+            --width=520 --height=520 \
+            --window-icon="$XIBO_LOGO" \
             2>/dev/null) || return 0
     [ -z "$layout" ] && return 0
 
