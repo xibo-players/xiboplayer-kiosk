@@ -147,6 +147,25 @@ zlib_brand() {
     printf '<span font_weight="bold" foreground="#0097D8">xibo</span><span font_weight="bold" foreground="#FFFFFF">player</span>%s' "${trailing:+ $trailing}"
 }
 
+# zlib_brand_header <subtitle> — emit a two-line header block suitable
+# for use at the top of a zenity --text body. The first line is the
+# branded "xiboplayer" name in the largest available Pango size; the
+# second line is smaller subtitle/context text. Used by the main
+# first-boot menu, settings sub-menu, and welcome splash so the
+# branded name is visually the header of every dialog (per user
+# directive 2026-04-12 "the header has to be branded too").
+#
+# Pango `size="xx-large"` is ~140% of the default size — as big as
+# Pango markup can render without custom font descriptions.
+zlib_brand_header() {
+    local subtitle="$1"
+    local header='<span size="xx-large" font_weight="bold" foreground="#0097D8">xibo</span><span size="xx-large" font_weight="bold" foreground="#FFFFFF">player</span>'
+    if [ -n "$subtitle" ]; then
+        header+=$'\n''<span size="small">'"$subtitle"'</span>'
+    fi
+    printf '%s' "$header"
+}
+
 # Return the current system locale (LANG=) in the form en_US.UTF-8
 # or "(unknown)" if it can't be read. Used by the Language row in
 # the first-boot menu.

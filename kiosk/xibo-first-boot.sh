@@ -340,21 +340,36 @@ handle_keyboard() {
 
 # --- Terminal handler -----------------------------------------------------
 #
-# Launches gnome-terminal directly in the xibo user's session (no doas
-# needed — we're already running as xibo). Used as a row in the Settings
-# sub-menu for operator debugging. Also bound to Ctrl+S via keyd.
+# Launches a terminal emulator directly in the xibo user's session (no
+# doas needed — we're already running as xibo). Used as a row in the
+# Settings sub-menu for operator debugging. Also bound to Ctrl+S via keyd.
+#
+# Terminal selection order (per user directive 2026-04-12 "gnome-terminal
+# not installed, we have a more modern option called ptyxis"):
+#   1. ptyxis     — Fedora 43's modern GNOME Console successor (default)
+#   2. kgx        — legacy GNOME Console
+#   3. gnome-terminal — traditional GNOME Terminal, deprecated
+#   4. xterm      — last-ditch fallback
 handle_terminal() {
-    if command -v gnome-terminal >/dev/null 2>&1; then
+    local term=""
+    for candidate in ptyxis kgx gnome-terminal xterm; do
+        if command -v "$candidate" >/dev/null 2>&1; then
+            term="$candidate"
+            break
+        fi
+    done
+
+    if [ -n "$term" ]; then
         # Fire-and-forget — we don't wait for the terminal to close.
         # Disown so the terminal survives even if the first-boot menu
         # closes.
-        setsid gnome-terminal >/dev/null 2>&1 &
+        setsid "$term" >/dev/null 2>&1 &
         disown 2>/dev/null || true
-        zlib_notify "Opened gnome-terminal"
+        zlib_notify "Opened $term"
     else
         zenity --error --title="xiboplayer — Terminal" --width=400 \
             --window-icon="$XIBO_LOGO" \
-            --text="gnome-terminal is not installed on this system." 2>/dev/null
+            --text="No terminal emulator installed (tried ptyxis, kgx, gnome-terminal, xterm)." 2>/dev/null
     fi
 }
 
@@ -371,31 +386,60 @@ handle_debug() {
     fi
 }
 
+# --- GNOME Settings handler -----------------------------------------------
+#
+# Launches gnome-control-center as an escape hatch for operators who
+# need tweaks not covered by the first-boot menu (bluetooth pairing,
+# display resolution, advanced accessibility, etc.).
+#
+# NOTE on the policy update: the earlier "avoid gnome-control-center
+# at all cost" directive referred to RELYING on it for the core
+# first-boot flows (WiFi / timezone / language). Those still go
+# through direct nmcli / timedatectl / localectl via the zenity
+# pickers — gnome-control-center is NEVER invoked from the Language,
+# Wi-Fi, Timezone, Keyboard, Player, or CMS rows. It's only offered
+# here as an optional ESCAPE HATCH under the Settings sub-menu for
+# operators who need something the main rows don't expose.
+handle_gnome_settings() {
+    if command -v gnome-control-center >/dev/null 2>&1; then
+        setsid gnome-control-center >/dev/null 2>&1 &
+        disown 2>/dev/null || true
+        zlib_notify "Opened GNOME Settings"
+    else
+        zenity --error --title="xiboplayer — GNOME Settings" --width=400 \
+            --window-icon="$XIBO_LOGO" \
+            --text="gnome-control-center is not installed on this system." 2>/dev/null
+    fi
+}
+
 # --- Settings sub-menu ----------------------------------------------------
 #
 # Two-tier menu split per user directive 2026-04-12 "keep the needed
 # things separated from the settings". The main menu holds first-boot
-# essentials (Language / Keyboard / Wi-Fi / Timezone / Player / CMS /
-# Done). This sub-menu holds advanced and diagnostic actions that most
-# operators won't need — Open Terminal, Collect debug info, Back.
+# essentials (Language / Keyboard / Wi-Fi / Timezone / Player / CMS).
+# This sub-menu holds advanced and diagnostic actions that most
+# operators won't need — Open Terminal, GNOME Settings, Debug, Back.
 handle_settings() {
     while true; do
         local action
         action=$(zenity --list \
             --title="xiboplayer — Settings" \
             --window-icon="$XIBO_LOGO" \
-            --text="$(zlib_brand "— Advanced and diagnostic")" \
+            --text="$(zlib_brand_header "Advanced and diagnostic")" \
+            --ok-label="Open" \
             --column="Action" --column="Description" \
-            --width=540 --height=300 \
+            --width=560 --height=360 \
             --hide-column=1 \
             --print-column=1 \
-            "terminal" "Open a shell (gnome-terminal)" \
+            "terminal" "Open a shell (ptyxis — GNOME Console)" \
+            "gnome"    "GNOME Settings (gnome-control-center — advanced tweaks)" \
             "debug"    "Collect diagnostic bundle (~/Downloads/xibo-debug-*.tar.zst)" \
             "back"     "Return to main menu" \
             2>/dev/null) || return 0
 
         case "$action" in
             terminal) handle_terminal ;;
+            gnome)    handle_gnome_settings ;;
             debug)    handle_debug ;;
             back|'')  return 0 ;;
         esac
@@ -413,10 +457,10 @@ welcome_splash() {
     zenity --info \
         --title="xiboplayer — First boot" \
         --window-icon="$XIBO_LOGO" \
-        --width=540 \
-        --text="$(zlib_brand "— Welcome")
+        --width=560 \
+        --text="$(zlib_brand_header "Welcome — this is the first boot of this kiosk")
 
-This is the first boot of this kiosk. The next screen lets you configure:
+The next screen lets you configure:
 
   • Language and keyboard
   • Wi-Fi or wired network
@@ -424,8 +468,9 @@ This is the first boot of this kiosk. The next screen lets you configure:
   • Player (Chromium or Electron)
   • CMS connection
 
-Advanced and diagnostic actions (terminal, debug bundle) live under the
-Settings row. When everything is set, pick Done to start the player.
+Advanced and diagnostic actions (terminal, GNOME Settings, debug bundle)
+live under the Settings row. When everything is ready, press Start to
+launch the player.
 
 Press OK to continue." \
         2>/dev/null || true
@@ -455,13 +500,16 @@ main_loop() {
         kbd_status=$(zlib_status_keyboard)
         player_status=$(zlib_status_player)
 
+        # "done" row removed — clicking Start (OK button) with no
+        # selection starts the player directly. User directive 2026-04-12.
         local action
         action=$(zenity --list \
             --title="xiboplayer — First boot setup" \
             --window-icon="$XIBO_LOGO" \
-            --text="$(zlib_brand "— Configure the kiosk, then select Done to start the player.")" \
+            --text="$(zlib_brand_header "First boot setup — configure the kiosk, then press Start")" \
+            --ok-label="Start" \
             --column="Action" --column="Setting" --column="Current status" \
-            --width=640 --height=460 \
+            --width=680 --height=480 \
             --hide-column=1 \
             --print-column=1 \
             --timeout=120 \
@@ -472,15 +520,21 @@ main_loop() {
             "player"   "Player"   "$player_status" \
             "cms"      "CMS"      "$cms_status" \
             "settings" "Settings" "Advanced and diagnostic" \
-            "done"     "Start player" "" \
             2>/dev/null)
         local rc=$?
 
         # Exit code 5 = timeout. Exit code 1 = cancel / close button.
-        # In either case, fall through to "done" (start the player) so
-        # the kiosk doesn't stall forever on walkaway.
+        # In either case, fall through to "start player" so the kiosk
+        # doesn't stall forever on walkaway.
         if [ $rc -eq 5 ] || [ $rc -eq 1 ]; then
             zlib_notify "First-boot menu dismissed, starting player"
+            return 0
+        fi
+
+        # Empty action = user clicked Start without selecting a row →
+        # start the player. This replaces the old "done" row.
+        if [ -z "$action" ]; then
+            zlib_notify "First-boot complete, starting player"
             return 0
         fi
 
@@ -492,7 +546,6 @@ main_loop() {
             player)   handle_player ;;
             cms)      handle_cms ;;
             settings) handle_settings ;;
-            done)     zlib_notify "First-boot complete, starting player"; return 0 ;;
             *)        return 0 ;;
         esac
     done
