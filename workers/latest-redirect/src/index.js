@@ -91,6 +91,45 @@ export default {
       );
     }
 
+    // Special case: SHA256SUMS and SHA256SUMS.asc — instead of a plain
+    // redirect, fetch the versioned file and rewrite filenames inside it
+    // so that `sha256sum --check` works after a /latest/ download (where
+    // filenames don't contain the version string).
+    if (requestedFilename === 'SHA256SUMS' || requestedFilename === 'SHA256SUMS.asc') {
+      const r2Key = `xiboplayer-kiosk/${version}/${requestedFilename}`;
+      const obj = await env.IMAGES_BUCKET.get(r2Key);
+      if (!obj) {
+        return new Response(`${requestedFilename} not found for version ${version}\n`, {
+          status: 404, headers: { 'Content-Type': 'text/plain' },
+        });
+      }
+
+      if (requestedFilename === 'SHA256SUMS') {
+        // Rewrite versioned filenames → version-stripped filenames.
+        // e.g. "abc123  xiboplayer-kiosk-netinstall_0.4.35_x86_64.iso"
+        //    → "abc123  xiboplayer-kiosk-netinstall_x86_64.iso"
+        const body = await obj.text();
+        const rewritten = body.replace(
+          new RegExp(`_${version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}_`, 'g'),
+          '_'
+        );
+        return new Response(rewritten, {
+          headers: {
+            'Content-Type': 'text/plain',
+            'Cache-Control': 'public, max-age=60',
+          },
+        });
+      }
+
+      // SHA256SUMS.asc — serve as-is (GPG signature, binary-ish)
+      return new Response(obj.body, {
+        headers: {
+          'Content-Type': 'application/pgp-signature',
+          'Cache-Control': 'public, max-age=60',
+        },
+      });
+    }
+
     // Build the versioned target URL
     const versionedFilename = versionizeFilename(requestedFilename, version);
     const target = `${url.origin}/xiboplayer-kiosk/${version}/${versionedFilename}`;
