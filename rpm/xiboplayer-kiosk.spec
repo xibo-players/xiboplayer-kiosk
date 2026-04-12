@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.32
+Version:        0.4.33
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -154,6 +154,9 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.33-1
+- First-boot menu restructure: Keyboard row, Settings sub-menu, branded welcome splash.
+
 * Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.32-1
 - Ctrl+S opens gnome-terminal (Ctrl+T conflicts with Chromium new-tab).
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.33 (2026-04-12)
+
+First-boot menu restructure: **Keyboard row** (#94 keyboard half — auto-infers layout from language, or pick manually), **Settings sub-menu** (Terminal + Debug moved out of main menu), **CMS row** now opens `xibo-show-cms.sh` (one source of truth with Ctrl+R), **branded welcome splash** with logo window icon and blue `xibo` + white `player` Pango markup, **env bridge fix in `xibo-keyd-run.sh`** so Ctrl+S (and any future GUI binding) actually launches `gnome-terminal`.
+
 ## 0.4.32 (2026-04-12)
 
 Ctrl+S opens `gnome-terminal` (Ctrl+T was unusable — Chromium intercepts it as "new tab").
