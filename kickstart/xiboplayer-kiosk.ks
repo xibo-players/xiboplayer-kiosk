@@ -93,6 +93,17 @@ zenity
 dunst
 unclutter
 opendoas
+# ptyxis — modern GNOME Console successor, launched from the first-boot
+# Settings sub-menu (handle_terminal) and via Ctrl+S keyd binding. In
+# Fedora 43 ptyxis is the default terminal; gnome-terminal is deprecated.
+ptyxis
+# gnome-control-center — optional escape hatch in the first-boot
+# Settings sub-menu (handle_gnome_settings). NOT used by the main
+# first-boot flows — WiFi / timezone / language / keyboard / player / CMS
+# all go through direct nmcli / timedatectl / localectl / alternatives
+# via the zenity pickers. Only invoked when the operator explicitly
+# picks "GNOME Settings" from the Settings sub-menu.
+gnome-control-center
 
 # Networking
 avahi
@@ -130,6 +141,14 @@ glibc-all-langpacks
 -yelp
 -gnome-user-docs
 -abrt*
+# Suppress the "rename standard directories" prompt that GNOME shows
+# when the locale changes (e.g. ca_ES → asks "rename ~/Downloads to
+# ~/Baixades?"). xdg-user-dirs-gtk owns that dialog; removing the
+# package kills the prompt at the source. xdg-user-dirs (CLI-only)
+# stays, so ~/Downloads etc. still get created on first login. The
+# %post block also writes /etc/xdg/user-dirs.conf with enabled=False
+# as a belt-and-braces measure.
+-xdg-user-dirs-gtk
 %end
 
 # RPMFusion repositories
@@ -511,6 +530,22 @@ su - xibo -c "dbus-run-session bash -c '
   gsettings set org.gnome.desktop.screensaver picture-options \"none\"
   gsettings set org.gnome.desktop.screensaver primary-color \"#000000\"
 '" || true
+%end
+
+# Suppress the xdg-user-dirs locale-rename dialog. Pair with the
+# `-xdg-user-dirs-gtk` package exclusion in %packages — the package
+# removal kills the GTK prompt at the source, and this config file
+# also disables xdg-user-dirs-update's auto-run so the CLI path
+# stays idle. Result: when the operator picks ca_ES from the Language
+# row, GNOME never asks "rename ~/Downloads to ~/Baixades?" and the
+# XDG paths stay in English for script / doc consistency.
+%post --erroronfail
+mkdir -p /etc/xdg
+cat > /etc/xdg/user-dirs.conf << 'EOF'
+# enabled=False tells xdg-user-dirs-update to NOT touch ~/.config/
+# user-dirs.dirs on login. Prevents locale-based directory renaming.
+enabled=False
+EOF
 %end
 
 # Enable services
