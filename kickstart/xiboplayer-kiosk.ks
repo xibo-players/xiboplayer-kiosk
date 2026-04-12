@@ -15,7 +15,18 @@
 url --mirrorlist=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-43&arch=$basearch
 
 # Installation settings
-text
+#
+# Mode: default to graphical anaconda so operators get a progress bar +
+# slide carousel during install (#104). Text-mode fallback is still
+# available via a dedicated grub/isolinux menuentry that appends
+# `inst.text` to the kernel line — use it on headless / low-VRAM /
+# serial-only targets.
+#
+# `skipx` is still set — the installed TARGET system does not run X11
+# at all (gnome-kiosk + gdm use Wayland). skipx tells anaconda to not
+# bother configuring an X11 server on the target; it does NOT affect
+# whether anaconda ITSELF uses a graphical (GTK) or text UI during
+# install. Those are orthogonal.
 skipx
 firstboot --disable
 reboot --eject
