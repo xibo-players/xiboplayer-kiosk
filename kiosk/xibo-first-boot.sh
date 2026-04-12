@@ -195,7 +195,7 @@ handle_language() {
     local filter
     filter=$(zenity --entry \
         --title="xiboplayer — Language" \
-        --text="Type a language or country to filter (e.g. English, en_, en_GB):" \
+        --text="Type a locale code to filter (e.g. en, en_GB, ca, es, fr, de):" \
         --width=480 \
         2>/dev/null) || return 0
     [ -z "$filter" ] && return 0
@@ -423,18 +423,20 @@ handle_settings() {
     while true; do
         local action
         action=$(zenity --list \
-            --title="xiboplayer — Settings" \
+            --title="xiboplayer" \
             --window-icon="$XIBO_LOGO" \
-            --text="$(zlib_brand_header "Advanced and diagnostic")" \
+            --text="$(zlib_brand_header "Settings")" \
             --ok-label="Open" \
-            --column="Action" --column="Description" \
-            --width=560 --height=360 \
+            --cancel-label=" " \
+            --column="id" --column="" \
+            --hide-header \
             --hide-column=1 \
             --print-column=1 \
-            "terminal" "Open a shell (ptyxis — GNOME Console)" \
-            "gnome"    "GNOME Settings (gnome-control-center — advanced tweaks)" \
-            "debug"    "Collect diagnostic bundle (~/Downloads/xibo-debug-*.tar.zst)" \
-            "back"     "Return to main menu" \
+            --width=480 --height=320 \
+            "terminal" "Open terminal" \
+            "gnome"    "GNOME Settings" \
+            "debug"    "Collect debug bundle" \
+            "back"     "‹ Back" \
             2>/dev/null) || return 0
 
         case "$action" in
@@ -500,26 +502,26 @@ main_loop() {
         kbd_status=$(zlib_status_keyboard)
         player_status=$(zlib_status_player)
 
-        # "done" row removed — clicking Start (OK button) with no
-        # selection starts the player directly. User directive 2026-04-12.
         local action
         action=$(zenity --list \
-            --title="xiboplayer — First boot setup" \
+            --title="xiboplayer" \
             --window-icon="$XIBO_LOGO" \
-            --text="$(zlib_brand_header "First boot setup — configure the kiosk, then press Start — v${XIBO_KIOSK_VERSION} (${XIBO_KIOSK_BUILD_DATE})")" \
+            --text="$(zlib_brand_header "First boot setup — v${XIBO_KIOSK_VERSION}")" \
             --ok-label="Start" \
-            --column="Action" --column="Setting" --column="Current status" \
-            --width=680 --height=480 \
+            --cancel-label=" " \
+            --column="id" --column="" --column="" \
+            --hide-header \
             --hide-column=1 \
             --print-column=1 \
+            --width=560 --height=440 \
             --timeout=120 \
-            "language" "Language" "$lang_status" \
+            "language" "Language"  "$lang_status" \
             "keyboard" "Keyboard" "$kbd_status" \
             "wifi"     "Wi-Fi"    "$wifi_status" \
             "timezone" "Timezone" "$tz_status" \
             "player"   "Player"   "$player_status" \
             "cms"      "CMS"      "$cms_status" \
-            "settings" "Settings" "Advanced and diagnostic" \
+            "settings" "Settings ›" "" \
             2>/dev/null)
         local rc=$?
 
