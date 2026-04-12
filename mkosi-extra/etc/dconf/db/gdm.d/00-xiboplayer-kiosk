@@ -19,6 +19,17 @@ idle-delay=uint32 0
 [org/gnome/desktop/screensaver]
 lock-enabled=false
 idle-activation-enabled=false
+picture-uri=''
+picture-options='none'
+primary-color='#000000'
+
+# Solid black GDM greeter background (#102) — the Fedora branded
+# wallpaper would otherwise flash briefly between boot and auto-login.
+[org/gnome/desktop/background]
+picture-uri=''
+picture-uri-dark=''
+picture-options='none'
+primary-color='#000000'
 
 [org/gnome/settings-daemon/plugins/power]
 idle-dim=false
@@ -29,5 +40,15 @@ power-button-action='nothing'
 [org/gnome/settings-daemon/plugins/housekeeping]
 donation-reminder-enabled=false
 
+# GDM greeter + dark mode suppression (#93) — see 90_xiboplayer-kiosk.gschema.override
+# header comment. color-scheme is the modern key, gtk-theme is the
+# legacy GTK 3 fallback.
 [org/gnome/desktop/interface]
 show-donation-popup=false
+color-scheme='prefer-dark'
+gtk-theme='Adwaita-dark'
+
+# Workspace / Activities Overview suppression (#99) — see header
+# comment in the matching 90_xiboplayer-kiosk.gschema.override.
+[org/gnome/desktop/wm/preferences]
+theme='Adwaita'

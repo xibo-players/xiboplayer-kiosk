@@ -16,3 +16,13 @@
 /org/gnome/settings-daemon/plugins/power/power-button-action
 /org/gnome/settings-daemon/plugins/housekeeping/donation-reminder-enabled
 /org/gnome/desktop/interface/show-donation-popup
+/org/gnome/desktop/interface/color-scheme
+/org/gnome/desktop/interface/gtk-theme
+/org/gnome/desktop/wm/preferences/theme
+/org/gnome/desktop/background/picture-uri
+/org/gnome/desktop/background/picture-uri-dark
+/org/gnome/desktop/background/picture-options
+/org/gnome/desktop/background/primary-color
+/org/gnome/desktop/screensaver/picture-uri
+/org/gnome/desktop/screensaver/picture-options
+/org/gnome/desktop/screensaver/primary-color

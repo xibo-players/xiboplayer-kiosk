@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.29
+Version:        0.4.35
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -75,6 +75,12 @@ install -Dm755 kiosk/xibo-zenity-lib.sh %{buildroot}%{_datadir}/xiboplayer-kiosk
 install -Dm755 kiosk/xibo-first-boot.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-first-boot.sh
 install -Dm755 kiosk/xibo-set-timezone.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-timezone.sh
 install -Dm755 kiosk/xibo-set-locale.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-locale.sh
+install -Dm755 kiosk/xibo-set-player.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-player.sh
+install -Dm755 kiosk/xibo-set-keyboard.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-keyboard.sh
+install -Dm755 kiosk/xibo-keyd-open-terminal.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-keyd-open-terminal.sh
+# Issue #102 branding — xiboplayer logo (used as zenity dialog window
+# icon in the first-boot menu splash, among other places).
+install -Dm644 kiosk/xiboplayer-kiosk-logo.png %{buildroot}%{_datadir}/xiboplayer-kiosk/xiboplayer-kiosk-logo.png
 # Issue #73 — USB /setup.json auto-detect (kickstart %post --trust, and
 # zenity-confirmation from runtime reconfigure paths).
 install -Dm755 kiosk/xibo-usb-preseed.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-usb-preseed.sh
@@ -94,6 +100,11 @@ install -Dm644 mkosi-extra/usr/share/glib-2.0/schemas/90_xiboplayer-kiosk.gschem
 install -Dm644 mkosi-extra/etc/dconf/profile/gdm %{buildroot}%{_sysconfdir}/dconf/profile/gdm
 install -Dm644 mkosi-extra/etc/dconf/db/gdm.d/00-xiboplayer-kiosk %{buildroot}%{_sysconfdir}/dconf/db/gdm.d/00-xiboplayer-kiosk
 install -Dm644 mkosi-extra/etc/dconf/db/gdm.d/locks/00-xiboplayer-kiosk %{buildroot}%{_sysconfdir}/dconf/db/gdm.d/locks/00-xiboplayer-kiosk
+
+# Chromium managed policies (#98) — disables "Save this password?" popup,
+# autofill, translate bar, Google sign-in, and "make default browser" nag.
+# Read by xiboplayer-chromium on startup; no dconf compilation needed.
+install -Dm644 mkosi-extra/etc/chromium/policies/managed/xiboplayer-kiosk.json %{buildroot}%{_sysconfdir}/chromium/policies/managed/xiboplayer-kiosk.json
 
 # Create skel directory for gnome-kiosk-script dispatcher
 install -d %{buildroot}%{_sysconfdir}/skel/.local/bin
@@ -117,7 +128,11 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_datadir}/xiboplayer-kiosk/xibo-first-boot.sh
 %{_datadir}/xiboplayer-kiosk/xibo-set-timezone.sh
 %{_datadir}/xiboplayer-kiosk/xibo-set-locale.sh
+%{_datadir}/xiboplayer-kiosk/xibo-set-player.sh
+%{_datadir}/xiboplayer-kiosk/xibo-set-keyboard.sh
+%{_datadir}/xiboplayer-kiosk/xibo-keyd-open-terminal.sh
 %{_datadir}/xiboplayer-kiosk/xibo-usb-preseed.sh
+%{_datadir}/xiboplayer-kiosk/xiboplayer-kiosk-logo.png
 %{_sysconfdir}/keyd/xibo.conf
 %{_sysconfdir}/yum.repos.d/copr-keyd.repo
 %{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
@@ -126,6 +141,7 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %config %{_sysconfdir}/dconf/profile/gdm
 %config %{_sysconfdir}/dconf/db/gdm.d/00-xiboplayer-kiosk
 %config %{_sysconfdir}/dconf/db/gdm.d/locks/00-xiboplayer-kiosk
+%config %{_sysconfdir}/chromium/policies/managed/xiboplayer-kiosk.json
 
 %post
 # Compile GSchema overrides + refresh dconf database so the Layer 2 and
@@ -140,6 +156,24 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.35-1
+- Branded xx-large header, Start button, ptyxis, GNOME Settings, no XDG rename.
+
+* Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.34-1
+- Graphical anaconda installer by default, text-mode fallback menuentry.
+
+* Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.33-1
+- First-boot menu restructure: Keyboard row, Settings sub-menu, branded welcome splash.
+
+* Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.32-1
+- Ctrl+S opens gnome-terminal (Ctrl+T conflicts with Chromium new-tab).
+
+* Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.31-1
+- Language picker shows every locale; Player row added to first-boot menu.
+
+* Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.30-1
+- Kiosk UX and branding fixes: dark mode, dark background.
+
 * Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.29-1
 - Revert the /etc/machine-id regen %post block added in 0.4.28.
   The regen was unnecessary for the anaconda-install path: anaconda

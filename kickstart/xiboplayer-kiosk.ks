@@ -15,7 +15,18 @@
 url --mirrorlist=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-43&arch=$basearch
 
 # Installation settings
-text
+#
+# Mode: default to graphical anaconda so operators get a progress bar +
+# slide carousel during install (#104). Text-mode fallback is still
+# available via a dedicated grub/isolinux menuentry that appends
+# `inst.text` to the kernel line — use it on headless / low-VRAM /
+# serial-only targets.
+#
+# `skipx` is still set — the installed TARGET system does not run X11
+# at all (gnome-kiosk + gdm use Wayland). skipx tells anaconda to not
+# bother configuring an X11 server on the target; it does NOT affect
+# whether anaconda ITSELF uses a graphical (GTK) or text UI during
+# install. Those are orthogonal.
 skipx
 firstboot --disable
 reboot --eject
@@ -62,8 +73,10 @@ gdm
 gnome-kiosk
 gnome-kiosk-script-session
 
-# gnome-initial-setup: language/keyboard/network/timezone/password on first boot
-gnome-initial-setup
+# gnome-initial-setup deliberately NOT installed (#101). The Welcome
+# to Fedora wizard is useless on a kiosk and confusing when operators
+# see "desktop preview" screens. The zenity first-boot menu (#67)
+# provides the kiosk-specific setup flow instead.
 
 # Media playback
 vlc
@@ -80,6 +93,17 @@ zenity
 dunst
 unclutter
 opendoas
+# ptyxis — modern GNOME Console successor, launched from the first-boot
+# Settings sub-menu (handle_terminal) and via Ctrl+S keyd binding. In
+# Fedora 43 ptyxis is the default terminal; gnome-terminal is deprecated.
+ptyxis
+# gnome-control-center — optional escape hatch in the first-boot
+# Settings sub-menu (handle_gnome_settings). NOT used by the main
+# first-boot flows — WiFi / timezone / language / keyboard / player / CMS
+# all go through direct nmcli / timedatectl / localectl / alternatives
+# via the zenity pickers. Only invoked when the operator explicitly
+# picks "GNOME Settings" from the Settings sub-menu.
+gnome-control-center
 
 # Networking
 avahi
@@ -91,10 +115,16 @@ openssh-server
 # Preseed tooling — jq parses xibo.config_url JSON + USB setup.json (#73)
 jq
 
+# Full glibc locale support so `localectl list-locales` shows every
+# UTF-8 locale the zenity Language picker can offer (#103). Without
+# this, @core only pulls glibc-minimal-langpack and the picker shows
+# only English variants — ca_ES, ca_AD, and every other non-English
+# locale are silently missing.
+glibc-all-langpacks
+
 # Remove unnecessary packages
 -gnome-tour
 -gnome-software
--gnome-terminal
 -gnome-text-editor
 -gnome-calculator
 -gnome-characters
@@ -111,6 +141,14 @@ jq
 -yelp
 -gnome-user-docs
 -abrt*
+# Suppress the "rename standard directories" prompt that GNOME shows
+# when the locale changes (e.g. ca_ES → asks "rename ~/Downloads to
+# ~/Baixades?"). xdg-user-dirs-gtk owns that dialog; removing the
+# package kills the prompt at the source. xdg-user-dirs (CLI-only)
+# stays, so ~/Downloads etc. still get created on first login. The
+# %post block also writes /etc/xdg/user-dirs.conf with enabled=False
+# as a belt-and-braces measure.
+-xdg-user-dirs-gtk
 %end
 
 # RPMFusion repositories
@@ -420,6 +458,8 @@ permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-deactivate-kiosk.sh
 permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-set-wifi.sh
 permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-set-timezone.sh
 permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-set-locale.sh
+permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-set-player.sh
+permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-set-keyboard.sh
 EOF
 chmod 600 /etc/doas.conf
 %end
@@ -452,15 +492,11 @@ chmod 755 /home/xibo/.local/bin/shutdown
 chown xibo:xibo /home/xibo/.local/bin/reboot /home/xibo/.local/bin/shutdown
 %end
 
-# Skip gnome-initial-setup completely — our wizard handles system config
-%post --erroronfail
-mkdir -p /usr/share/gnome-initial-setup
-cat > /usr/share/gnome-initial-setup/vendor.conf << 'EOF'
-[pages]
-skip=language;keyboard;network;timezone;privacy;software;account;summary;welcome;password
-EOF
-systemctl mask gnome-initial-setup.service gnome-initial-setup-first-login.service
-%end
+# NOTE: gnome-initial-setup is no longer installed as of #101 — the
+# package is removed from %packages at the top of this file. The old
+# vendor.conf / systemctl mask block that used to live here (skip
+# every page + mask both services) is gone because it's unreachable
+# when the package isn't on disk.
 
 # NOTE: the old libadwaita/GTK4 first-boot wizard (Python .py + .desktop
 # autostart) was replaced by the zenity first-boot menu (#67,
@@ -469,16 +505,47 @@ systemctl mask gnome-initial-setup.service gnome-initial-setup-first-login.servi
 # desktop-file autostart is needed, and the session never switches out
 # of gnome-kiosk to a normal GNOME session.
 
-# Disable GNOME donation popup.
+# Disable GNOME donation popup + workspace overview.
 # 0x0 Singularity 4 #374: the correct key is donation-reminder-enabled on the
 # housekeeping plugin. The old show-donation-popup key (on desktop.interface)
 # was confirmed ineffective in Singularity 6 #370 on 0.4.19. Set BOTH keys
 # for belt-and-braces across GNOME versions — unknown keys are harmless.
+#
+# wm.preferences/theme='Adwaita' (#99) suppresses the workspace preview /
+# Activities Overview that would flash on first login of a gnome-kiosk
+# session. Mirrored in the gschema override (Layer 2), GDM dconf db +
+# locks (Layer 4), and gnome-kiosk-script.xibo.sh runtime (Layer 3).
 %post --erroronfail
 su - xibo -c "dbus-run-session bash -c '
   gsettings set org.gnome.settings-daemon.plugins.housekeeping donation-reminder-enabled false
   gsettings set org.gnome.desktop.interface show-donation-popup false
+  gsettings set org.gnome.desktop.wm.preferences theme \"Adwaita\"
+  gsettings set org.gnome.desktop.interface color-scheme \"prefer-dark\"
+  gsettings set org.gnome.desktop.interface gtk-theme \"Adwaita-dark\"
+  gsettings set org.gnome.desktop.background picture-uri \"\"
+  gsettings set org.gnome.desktop.background picture-uri-dark \"\"
+  gsettings set org.gnome.desktop.background picture-options \"none\"
+  gsettings set org.gnome.desktop.background primary-color \"#000000\"
+  gsettings set org.gnome.desktop.screensaver picture-uri \"\"
+  gsettings set org.gnome.desktop.screensaver picture-options \"none\"
+  gsettings set org.gnome.desktop.screensaver primary-color \"#000000\"
 '" || true
+%end
+
+# Suppress the xdg-user-dirs locale-rename dialog. Pair with the
+# `-xdg-user-dirs-gtk` package exclusion in %packages — the package
+# removal kills the GTK prompt at the source, and this config file
+# also disables xdg-user-dirs-update's auto-run so the CLI path
+# stays idle. Result: when the operator picks ca_ES from the Language
+# row, GNOME never asks "rename ~/Downloads to ~/Baixades?" and the
+# XDG paths stay in English for script / doc consistency.
+%post --erroronfail
+mkdir -p /etc/xdg
+cat > /etc/xdg/user-dirs.conf << 'EOF'
+# enabled=False tells xdg-user-dirs-update to NOT touch ~/.config/
+# user-dirs.dirs on login. Prevents locale-based directory renaming.
+enabled=False
+EOF
 %end
 
 # Enable services

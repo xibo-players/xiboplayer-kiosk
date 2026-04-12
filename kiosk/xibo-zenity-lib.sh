@@ -90,6 +90,95 @@ zlib_status_tz() {
     timedatectl show -p Timezone --value 2>/dev/null || echo "(unknown)"
 }
 
+# Return the current player — "Chromium", "Electron", "Arexibo" or
+# "(unknown)". Reads /etc/alternatives/xiboplayer which is the
+# authoritative source (alternatives --set flips it via
+# xibo-set-player.sh). Used by the Player row in the first-boot menu.
+zlib_status_player() {
+    local target
+    target=$(readlink /etc/alternatives/xiboplayer 2>/dev/null) || {
+        echo "(unknown)"
+        return
+    }
+    case "$(basename "$target")" in
+        xiboplayer-chromium) echo "Chromium" ;;
+        xiboplayer-electron) echo "Electron" ;;
+        arexibo)             echo "Arexibo" ;;
+        *)                   echo "(unknown)" ;;
+    esac
+}
+
+# Return the current X11 keyboard layout — the "Layout:" line from
+# `localectl status`, e.g. "us", "es", "ch(fr)". Used by the Keyboard
+# row in the first-boot menu. Falls back to reading
+# /etc/X11/xorg.conf.d/00-keyboard.conf if localectl status is empty
+# (which happens on freshly-installed systems before the first boot
+# completes).
+zlib_status_keyboard() {
+    local layout variant
+    layout=$(localectl status 2>/dev/null | awk -F: '/X11 Layout:/{gsub(/^ +/,"",$2); print $2; exit}')
+    variant=$(localectl status 2>/dev/null | awk -F: '/X11 Variant:/{gsub(/^ +/,"",$2); print $2; exit}')
+    if [ -z "$layout" ] && [ -r /etc/X11/xorg.conf.d/00-keyboard.conf ]; then
+        layout=$(grep -oE '"XkbLayout" *"[^"]*"' /etc/X11/xorg.conf.d/00-keyboard.conf 2>/dev/null | sed -E 's/.*"([^"]*)".*/\1/')
+        variant=$(grep -oE '"XkbVariant" *"[^"]*"' /etc/X11/xorg.conf.d/00-keyboard.conf 2>/dev/null | sed -E 's/.*"([^"]*)".*/\1/')
+    fi
+    [ -z "$layout" ] && layout="(unknown)"
+    if [ -n "$variant" ]; then
+        echo "${layout}(${variant})"
+    else
+        echo "$layout"
+    fi
+}
+
+# Shared branding constants — the logo and the blue `xibo` + white
+# `player` Pango markup for zenity --text. Per
+# reference_xiboplayer_branding memory and BrandName.vue, the blue
+# is #0097D8 (cyan) and `player` is white. The logo ships via the
+# kiosk RPM.
+XIBO_LOGO="${XIBO_KIOSK_DIR}/xiboplayer-kiosk-logo.png"
+
+# zlib_brand <trailing text> — emit Pango markup with the branded
+# name followed by optional trailing text. Example:
+#   zlib_brand "— First boot setup"
+# yields:
+#   <span font_weight="bold" foreground="#0097D8">xibo</span><span font_weight="bold" foreground="#FFFFFF">player</span> — First boot setup
+zlib_brand() {
+    local trailing="$1"
+    printf '<span font_weight="bold" foreground="#0097D8">xibo</span><span font_weight="bold" foreground="#FFFFFF">player</span>%s' "${trailing:+ $trailing}"
+}
+
+# zlib_brand_header <subtitle> — emit a two-line header block suitable
+# for use at the top of a zenity --text body. The first line is the
+# branded "xiboplayer" name in the largest available Pango size; the
+# second line is smaller subtitle/context text. Used by the main
+# first-boot menu, settings sub-menu, and welcome splash so the
+# branded name is visually the header of every dialog (per user
+# directive 2026-04-12 "the header has to be branded too").
+#
+# Pango `size="xx-large"` is ~140% of the default size — as big as
+# Pango markup can render without custom font descriptions.
+zlib_brand_header() {
+    local subtitle="$1"
+    local header='<span size="xx-large" font_weight="bold" foreground="#0097D8">xibo</span><span size="xx-large" font_weight="bold" foreground="#FFFFFF">player</span>'
+    if [ -n "$subtitle" ]; then
+        header+=$'\n''<span size="small">'"$subtitle"'</span>'
+    fi
+    printf '%s' "$header"
+}
+
+# Return the current system locale (LANG=) in the form en_US.UTF-8
+# or "(unknown)" if it can't be read. Used by the Language row in
+# the first-boot menu.
+zlib_status_locale() {
+    local lang
+    lang=$(localectl status 2>/dev/null | awk -F= '/System Locale:.*LANG=/{gsub(/.*LANG=/,"",$0); gsub(/[[:space:]].*/,"",$0); print; exit}')
+    if [ -z "$lang" ] && [ -r /etc/locale.conf ]; then
+        lang=$(awk -F= '/^LANG=/ {gsub(/"/,"",$2); print $2; exit}' /etc/locale.conf)
+    fi
+    [ -z "$lang" ] && lang=$(printf '%s' "${LANG:-}" | cut -d: -f1)
+    echo "${lang:-(unknown)}"
+}
+
 zlib_status_cms() {
     # CMS URL is player-specific — read from the config file of whichever
     # player is the current alternative. For Arexibo, it's cms.json.

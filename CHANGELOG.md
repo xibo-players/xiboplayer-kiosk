@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.4.35 (2026-04-12)
+
+First-boot menu polish + packaging fixes: **xx-large branded header** (blue `xibo` + white `player` Pango at `xx-large` size in every dialog), **"Start" button** replaces "OK" and the "done" row (click Start without a selection to launch the player), **ptyxis** replaces `gnome-terminal` for the terminal option and the Ctrl+S keyd binding (Fedora 43 default), **GNOME Settings** added as an optional escape hatch in the Settings sub-menu (`gnome-control-center`), **XDG rename prompt suppressed** (removed `xdg-user-dirs-gtk` + `enabled=False` in `/etc/xdg/user-dirs.conf`, so ~/Downloads etc. stay in English after a locale change).
+
+## 0.4.34 (2026-04-12)
+
+Install experience: **graphical anaconda by default** with progress bar + slide carousel. Text-mode fallback available via a dedicated grub/isolinux menuentry (`inst.text`) for headless / low-VRAM targets. Phase 1 of #104 — custom branded slides follow in 0.4.35.
+
+## 0.4.33 (2026-04-12)
+
+First-boot menu restructure: **Keyboard row** (#94 keyboard half — auto-infers layout from language, or pick manually), **Settings sub-menu** (Terminal + Debug moved out of main menu), **CMS row** now opens `xibo-show-cms.sh` (one source of truth with Ctrl+R), **branded welcome splash** with logo window icon and blue `xibo` + white `player` Pango markup, **env bridge fix in `xibo-keyd-run.sh`** so Ctrl+S (and any future GUI binding) actually launches `gnome-terminal`.
+
+## 0.4.32 (2026-04-12)
+
+Ctrl+S opens `gnome-terminal` (Ctrl+T was unusable — Chromium intercepts it as "new tab").
+
+## 0.4.31 (2026-04-12)
+
+Language picker shows every locale (#103). Player row added to first-boot menu for Chromium ↔ Electron switch (#96).
+
+## 0.4.30 (2026-04-11)
+
+Kiosk UX and branding fixes: dark mode, dark background.
+
 ## 0.4.29 (2026-04-11)
 
 **Revert the `/etc/machine-id` regen `%post` block added in 0.4.28.**
