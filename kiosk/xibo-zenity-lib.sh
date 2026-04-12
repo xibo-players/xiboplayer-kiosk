@@ -108,6 +108,45 @@ zlib_status_player() {
     esac
 }
 
+# Return the current X11 keyboard layout — the "Layout:" line from
+# `localectl status`, e.g. "us", "es", "ch(fr)". Used by the Keyboard
+# row in the first-boot menu. Falls back to reading
+# /etc/X11/xorg.conf.d/00-keyboard.conf if localectl status is empty
+# (which happens on freshly-installed systems before the first boot
+# completes).
+zlib_status_keyboard() {
+    local layout variant
+    layout=$(localectl status 2>/dev/null | awk -F: '/X11 Layout:/{gsub(/^ +/,"",$2); print $2; exit}')
+    variant=$(localectl status 2>/dev/null | awk -F: '/X11 Variant:/{gsub(/^ +/,"",$2); print $2; exit}')
+    if [ -z "$layout" ] && [ -r /etc/X11/xorg.conf.d/00-keyboard.conf ]; then
+        layout=$(grep -oE '"XkbLayout" *"[^"]*"' /etc/X11/xorg.conf.d/00-keyboard.conf 2>/dev/null | sed -E 's/.*"([^"]*)".*/\1/')
+        variant=$(grep -oE '"XkbVariant" *"[^"]*"' /etc/X11/xorg.conf.d/00-keyboard.conf 2>/dev/null | sed -E 's/.*"([^"]*)".*/\1/')
+    fi
+    [ -z "$layout" ] && layout="(unknown)"
+    if [ -n "$variant" ]; then
+        echo "${layout}(${variant})"
+    else
+        echo "$layout"
+    fi
+}
+
+# Shared branding constants — the logo and the blue `xibo` + white
+# `player` Pango markup for zenity --text. Per
+# reference_xiboplayer_branding memory and BrandName.vue, the blue
+# is #0097D8 (cyan) and `player` is white. The logo ships via the
+# kiosk RPM.
+XIBO_LOGO="${XIBO_KIOSK_DIR}/xiboplayer-kiosk-logo.png"
+
+# zlib_brand <trailing text> — emit Pango markup with the branded
+# name followed by optional trailing text. Example:
+#   zlib_brand "— First boot setup"
+# yields:
+#   <span font_weight="bold" foreground="#0097D8">xibo</span><span font_weight="bold" foreground="#FFFFFF">player</span> — First boot setup
+zlib_brand() {
+    local trailing="$1"
+    printf '<span font_weight="bold" foreground="#0097D8">xibo</span><span font_weight="bold" foreground="#FFFFFF">player</span>%s' "${trailing:+ $trailing}"
+}
+
 # Return the current system locale (LANG=) in the form en_US.UTF-8
 # or "(unknown)" if it can't be read. Used by the Language row in
 # the first-boot menu.

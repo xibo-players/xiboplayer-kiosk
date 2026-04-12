@@ -76,6 +76,7 @@ install -Dm755 kiosk/xibo-first-boot.sh %{buildroot}%{_datadir}/xiboplayer-kiosk
 install -Dm755 kiosk/xibo-set-timezone.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-timezone.sh
 install -Dm755 kiosk/xibo-set-locale.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-locale.sh
 install -Dm755 kiosk/xibo-set-player.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-player.sh
+install -Dm755 kiosk/xibo-set-keyboard.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-set-keyboard.sh
 # Issue #102 branding — xiboplayer logo (used as zenity dialog window
 # icon in the first-boot menu splash, among other places).
 install -Dm644 kiosk/xiboplayer-kiosk-logo.png %{buildroot}%{_datadir}/xiboplayer-kiosk/xiboplayer-kiosk-logo.png
@@ -127,6 +128,7 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_datadir}/xiboplayer-kiosk/xibo-set-timezone.sh
 %{_datadir}/xiboplayer-kiosk/xibo-set-locale.sh
 %{_datadir}/xiboplayer-kiosk/xibo-set-player.sh
+%{_datadir}/xiboplayer-kiosk/xibo-set-keyboard.sh
 %{_datadir}/xiboplayer-kiosk/xibo-usb-preseed.sh
 %{_datadir}/xiboplayer-kiosk/xiboplayer-kiosk-logo.png
 %{_sysconfdir}/keyd/xibo.conf

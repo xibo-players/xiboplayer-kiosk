@@ -429,6 +429,7 @@ permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-set-wifi.sh
 permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-set-timezone.sh
 permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-set-locale.sh
 permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-set-player.sh
+permit nopass xibo cmd /usr/share/xiboplayer-kiosk/xibo-set-keyboard.sh
 EOF
 chmod 600 /etc/doas.conf
 %end
