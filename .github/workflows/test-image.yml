@@ -52,7 +52,7 @@ concurrency:
 
 jobs:
   build:
-    uses: xibo-players/.github/.github/workflows/build-iso.yml@97202e9661656e5d543a4a1b2d2db3cd62f17b6d  # main @ 2026-04-12 (grub overlay path fix + implantisomd5 --force — .github#26)
+    uses: xibo-players/.github/.github/workflows/build-iso.yml@f32d3d5a326d587303ed66c32e5cc95bfb1179ba  # main @ 2026-04-12 (GPG non-fatal — .github#27)
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
