@@ -40,6 +40,8 @@ install -m755 kiosk/xibo-zenity-lib.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-first-boot.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-set-timezone.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-set-locale.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+# Issue #96 — player selection (Chromium ↔ Electron) in zenity menu
+install -m755 kiosk/xibo-set-player.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 # Issue #73 — USB /setup.json auto-detect
 install -m755 kiosk/xibo-usb-preseed.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 # Branding — xiboplayer logo (zenity dialog icon, grub bg, plymouth)

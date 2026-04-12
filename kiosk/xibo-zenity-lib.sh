@@ -90,6 +90,24 @@ zlib_status_tz() {
     timedatectl show -p Timezone --value 2>/dev/null || echo "(unknown)"
 }
 
+# Return the current player — "Chromium", "Electron", "Arexibo" or
+# "(unknown)". Reads /etc/alternatives/xiboplayer which is the
+# authoritative source (alternatives --set flips it via
+# xibo-set-player.sh). Used by the Player row in the first-boot menu.
+zlib_status_player() {
+    local target
+    target=$(readlink /etc/alternatives/xiboplayer 2>/dev/null) || {
+        echo "(unknown)"
+        return
+    }
+    case "$(basename "$target")" in
+        xiboplayer-chromium) echo "Chromium" ;;
+        xiboplayer-electron) echo "Electron" ;;
+        arexibo)             echo "Arexibo" ;;
+        *)                   echo "(unknown)" ;;
+    esac
+}
+
 # Return the current system locale (LANG=) in the form en_US.UTF-8
 # or "(unknown)" if it can't be read. Used by the Language row in
 # the first-boot menu.

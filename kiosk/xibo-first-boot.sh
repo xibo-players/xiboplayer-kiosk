@@ -228,6 +228,60 @@ handle_language() {
     fi
 }
 
+# --- Player handler -------------------------------------------------------
+#
+# Chromium ↔ Electron switch (#96). Deliberately excludes arexibo
+# because arexibo is netinstall opt-in only per the 0.4.30 scope — the
+# default image ships Chromium + Electron, so those are the only two
+# rows we offer interactively.
+#
+# Calls xibo-set-player.sh via doas. That helper:
+#   - runs `alternatives --set xiboplayer /usr/bin/xiboplayer-<name>`
+#   - rewrites ~/.config/xiboplayer/setup-result.json
+#   - stops any currently-running player service
+#
+# Operator needs to reboot (or log out / back in) for the new player
+# to actually start. The helper does NOT kill the session itself —
+# matches the deliberately-minimal scope in #96.
+handle_player() {
+    local current
+    current=$(zlib_status_player)
+
+    local pick
+    pick=$(zenity --list \
+        --title="xiboplayer — Player" \
+        --text="Current player: $current\n\nChoose which player runs on next session." \
+        --column="Player" --column="Description" \
+        --width=520 --height=260 \
+        "Chromium" "Chromium kiosk (default, lighter)" \
+        "Electron" "Electron wrapper (heavier, more compatible)" \
+        2>/dev/null) || return 0
+    [ -z "$pick" ] && return 0
+
+    local arg
+    case "$pick" in
+        Chromium) arg=chromium ;;
+        Electron) arg=electron ;;
+        *)        return 0 ;;
+    esac
+
+    if [ "$pick" = "$current" ]; then
+        zlib_notify "Player already set to $pick"
+        return 0
+    fi
+
+    zlib_notify "Switching player to $pick..."
+    if doas "$XIBO_KIOSK_DIR/xibo-set-player.sh" "$arg" 2>&1; then
+        zlib_notify "Player: $pick (reboot or log out to apply)"
+        zenity --info --title="xiboplayer — Player" --width=460 \
+            --text="Player switched to $pick.\n\nReboot the kiosk (or log out and back in) to start the new player." \
+            2>/dev/null
+    else
+        zenity --error --title="xiboplayer — Player" --width=400 \
+            --text="Failed to switch player to $pick." 2>/dev/null
+    fi
+}
+
 # --- Debug handler --------------------------------------------------------
 handle_debug() {
     if [ -x "$XIBO_KIOSK_DIR/xibo-debug-dump.sh" ]; then
@@ -246,24 +300,26 @@ handle_debug() {
 # sitting. Auto-skip on 2-minute timeout (exit code 5).
 main_loop() {
     while true; do
-        local wifi_status tz_status cms_status lang_status
+        local wifi_status tz_status cms_status lang_status player_status
         wifi_status=$(zlib_status_wifi)
         tz_status=$(zlib_status_tz)
         cms_status=$(zlib_status_cms)
         lang_status=$(zlib_status_locale)
+        player_status=$(zlib_status_player)
 
         local action
         action=$(zenity --list \
             --title="xiboplayer — First boot setup" \
             --text="Configure the kiosk, then select Done to start the player." \
             --column="Action" --column="Setting" --column="Current status" \
-            --width=620 --height=400 \
+            --width=620 --height=420 \
             --hide-column=1 \
             --print-column=1 \
             --timeout=120 \
             "language" "Language" "$lang_status" \
             "wifi"     "Wi-Fi"    "$wifi_status" \
             "timezone" "Timezone" "$tz_status" \
+            "player"   "Player"   "$player_status" \
             "cms"      "CMS"      "$cms_status" \
             "debug"    "Collect debug info" "" \
             "done"     "Start player" "" \
@@ -282,6 +338,7 @@ main_loop() {
             language) handle_language ;;
             wifi)     handle_wifi ;;
             timezone) handle_timezone ;;
+            player)   handle_player ;;
             cms)      handle_cms ;;
             debug)    handle_debug ;;
             done)     zlib_notify "First-boot complete, starting player"; return 0 ;;
