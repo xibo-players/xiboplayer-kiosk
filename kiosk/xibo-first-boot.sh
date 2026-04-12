@@ -143,29 +143,33 @@ handle_timezone() {
 }
 
 # --- CMS handler ----------------------------------------------------------
+#
+# Delegates to xibo-show-cms.sh — the same script that Ctrl+R invokes.
+# This keeps the first-boot CMS row and the Ctrl+R reconfigure menu
+# as ONE source of truth for CMS configuration, instead of two
+# divergent zenity flows. Per user directive 2026-04-12 "in 1st
+# screen: CMS setting and open the current window".
+#
+# xibo-show-cms.sh shows the Ctrl+R top-level menu with "reconfigure"
+# (per-player CMS form), "full-setup" (re-run first-boot), and
+# "cancel" actions. From the first-boot CMS row the operator would
+# typically pick "reconfigure" to set CMS URL / key / display name.
+#
+# Note on recursion: if the operator picks "full-setup" while we're
+# inside this handler, xibo-show-cms.sh re-invokes xibo-first-boot.sh.
+# That nested invocation runs its own main_loop() and returns here
+# when the operator hits Done. The outer main_loop() then continues
+# as normal. Messy but functional — no infinite recursion because
+# each invocation writes the first-boot-done sentinel before
+# returning, and the sentinel is the gate that prevents auto-launch.
 handle_cms() {
-    CMS_URL=""; CMS_KEY=""; DISPLAY_NAME=""
-    zlib_cms_form || return 0
-    [ -z "$CMS_URL" ] && return 0
-    [ -z "$CMS_KEY" ] && return 0
-
-    zlib_write_player_config "$CMS_URL" "$CMS_KEY" "$DISPLAY_NAME"
-    zlib_notify "CMS configured: $CMS_URL"
-
-    # Post-save guidance — tell the operator to authorise the display.
-    zenity --info --title="xiboplayer — CMS configured" --width=500 \
-        --text="Display registered with CMS:
-
-  URL:  $CMS_URL
-  Name: $DISPLAY_NAME
-
-The display will appear as PENDING in the CMS admin panel.
-
-Ask your CMS administrator to authorise this display under
-Displays → (find your display name) → Authorise.
-
-Content will start playing within 60 seconds after authorisation." \
-        2>/dev/null || true
+    if [ -x "$XIBO_KIOSK_DIR/xibo-show-cms.sh" ]; then
+        "$XIBO_KIOSK_DIR/xibo-show-cms.sh" || true
+    else
+        zenity --error --title="xiboplayer — CMS" --width=400 \
+            --window-icon="$XIBO_LOGO" \
+            --text="xibo-show-cms.sh not found — cannot configure CMS." 2>/dev/null
+    fi
 }
 
 # --- Language handler -----------------------------------------------------
@@ -282,6 +286,78 @@ handle_player() {
     fi
 }
 
+# --- Keyboard handler -----------------------------------------------------
+#
+# Two-stage filter picker over `localectl list-x11-keymap-layouts`, same
+# UX as the Language and Timezone rows. Closes the keyboard half of #94
+# that was deferred from 0.4.30 scope.
+#
+# Language auto-inference (see xibo-set-locale.sh) gives a sensible
+# default keyboard when the operator picks Language — this explicit row
+# is for operators who need something different (e.g. a Portuguese kiosk
+# in a Spanish office that wants to keep Spanish layout).
+handle_keyboard() {
+    local filter
+    filter=$(zenity --entry \
+        --title="xiboplayer — Keyboard layout" \
+        --window-icon="$XIBO_LOGO" \
+        --text="Type a layout code or country to filter (e.g. us, es, fr, gb):" \
+        --width=480 \
+        2>/dev/null) || return 0
+    [ -z "$filter" ] && return 0
+
+    local matches
+    matches=$(localectl list-x11-keymap-layouts 2>/dev/null \
+        | grep -i -- "$filter")
+
+    if [ -z "$matches" ]; then
+        zenity --info --title="xiboplayer — Keyboard layout" --width=420 \
+            --window-icon="$XIBO_LOGO" \
+            --text="No layout matches '$filter'.\n\nTry a shorter filter like 'es', 'fr', 'de'." \
+            2>/dev/null
+        return 0
+    fi
+
+    local layout
+    layout=$(echo "$matches" \
+        | zenity --list \
+            --title="xiboplayer — Keyboard layout (matching '$filter')" \
+            --window-icon="$XIBO_LOGO" \
+            --column="Layout" \
+            --width=420 --height=500 \
+            2>/dev/null) || return 0
+    [ -z "$layout" ] && return 0
+
+    zlib_notify "Setting keyboard to $layout..."
+    if doas "$XIBO_KIOSK_DIR/xibo-set-keyboard.sh" "$layout" 2>&1; then
+        zlib_notify "Keyboard: $layout"
+    else
+        zenity --error --title="xiboplayer — Keyboard layout" --width=400 \
+            --window-icon="$XIBO_LOGO" \
+            --text="Failed to set keyboard layout to $layout." 2>/dev/null
+    fi
+}
+
+# --- Terminal handler -----------------------------------------------------
+#
+# Launches gnome-terminal directly in the xibo user's session (no doas
+# needed — we're already running as xibo). Used as a row in the Settings
+# sub-menu for operator debugging. Also bound to Ctrl+S via keyd.
+handle_terminal() {
+    if command -v gnome-terminal >/dev/null 2>&1; then
+        # Fire-and-forget — we don't wait for the terminal to close.
+        # Disown so the terminal survives even if the first-boot menu
+        # closes.
+        setsid gnome-terminal >/dev/null 2>&1 &
+        disown 2>/dev/null || true
+        zlib_notify "Opened gnome-terminal"
+    else
+        zenity --error --title="xiboplayer — Terminal" --width=400 \
+            --window-icon="$XIBO_LOGO" \
+            --text="gnome-terminal is not installed on this system." 2>/dev/null
+    fi
+}
+
 # --- Debug handler --------------------------------------------------------
 handle_debug() {
     if [ -x "$XIBO_KIOSK_DIR/xibo-debug-dump.sh" ]; then
@@ -290,38 +366,112 @@ handle_debug() {
         xibo-debug-dump
     else
         zenity --error --title="xiboplayer — Debug" --width=400 \
+            --window-icon="$XIBO_LOGO" \
             --text="xibo-debug-dump.sh not found." 2>/dev/null
     fi
 }
 
+# --- Settings sub-menu ----------------------------------------------------
+#
+# Two-tier menu split per user directive 2026-04-12 "keep the needed
+# things separated from the settings". The main menu holds first-boot
+# essentials (Language / Keyboard / Wi-Fi / Timezone / Player / CMS /
+# Done). This sub-menu holds advanced and diagnostic actions that most
+# operators won't need — Open Terminal, Collect debug info, Back.
+handle_settings() {
+    while true; do
+        local action
+        action=$(zenity --list \
+            --title="xiboplayer — Settings" \
+            --window-icon="$XIBO_LOGO" \
+            --text="$(zlib_brand "— Advanced and diagnostic")" \
+            --column="Action" --column="Description" \
+            --width=540 --height=300 \
+            --hide-column=1 \
+            --print-column=1 \
+            "terminal" "Open a shell (gnome-terminal)" \
+            "debug"    "Collect diagnostic bundle (~/Downloads/xibo-debug-*.tar.zst)" \
+            "back"     "Return to main menu" \
+            2>/dev/null) || return 0
+
+        case "$action" in
+            terminal) handle_terminal ;;
+            debug)    handle_debug ;;
+            back|'')  return 0 ;;
+        esac
+    done
+}
+
+# --- Welcome splash -------------------------------------------------------
+#
+# One-shot info prompt shown BEFORE the main menu on first boot. The
+# branded "xiboplayer" name (blue `xibo` + white `player` Pango markup)
+# is set in --text; the logo is the window icon. Per 2026-04-12 user
+# direction plus the deferred Option C in the consolidated plan's
+# "still pending" section.
+welcome_splash() {
+    zenity --info \
+        --title="xiboplayer — First boot" \
+        --window-icon="$XIBO_LOGO" \
+        --width=540 \
+        --text="$(zlib_brand "— Welcome")
+
+This is the first boot of this kiosk. The next screen lets you configure:
+
+  • Language and keyboard
+  • Wi-Fi or wired network
+  • Timezone
+  • Player (Chromium or Electron)
+  • CMS connection
+
+Advanced and diagnostic actions (terminal, debug bundle) live under the
+Settings row. When everything is set, pick Done to start the player.
+
+Press OK to continue." \
+        2>/dev/null || true
+}
+
 # --- main loop ------------------------------------------------------------
 # The menu re-displays itself after each row completes, so the operator
-# can configure WiFi → check status → configure TZ → ... → done in one
-# sitting. Auto-skip on 2-minute timeout (exit code 5).
+# can configure Language → Wi-Fi → Timezone → ... → Done in one sitting.
+# Auto-skip on 2-minute timeout (exit code 5) so a walkaway doesn't stall
+# the kiosk forever.
+#
+# Menu structure — two tiers per user directive 2026-04-12 ("keep the
+# needed things separated from the settings"):
+#
+#   Main menu (first-boot essentials):
+#     Language  Keyboard  Wi-Fi  Timezone  Player  CMS  Settings  Done
+#
+#   Settings sub-menu (advanced / diagnostic):
+#     Open Terminal  Collect debug info  Back
 main_loop() {
     while true; do
-        local wifi_status tz_status cms_status lang_status player_status
+        local wifi_status tz_status cms_status lang_status player_status kbd_status
         wifi_status=$(zlib_status_wifi)
         tz_status=$(zlib_status_tz)
         cms_status=$(zlib_status_cms)
         lang_status=$(zlib_status_locale)
+        kbd_status=$(zlib_status_keyboard)
         player_status=$(zlib_status_player)
 
         local action
         action=$(zenity --list \
             --title="xiboplayer — First boot setup" \
-            --text="Configure the kiosk, then select Done to start the player." \
+            --window-icon="$XIBO_LOGO" \
+            --text="$(zlib_brand "— Configure the kiosk, then select Done to start the player.")" \
             --column="Action" --column="Setting" --column="Current status" \
-            --width=620 --height=420 \
+            --width=640 --height=460 \
             --hide-column=1 \
             --print-column=1 \
             --timeout=120 \
             "language" "Language" "$lang_status" \
+            "keyboard" "Keyboard" "$kbd_status" \
             "wifi"     "Wi-Fi"    "$wifi_status" \
             "timezone" "Timezone" "$tz_status" \
             "player"   "Player"   "$player_status" \
             "cms"      "CMS"      "$cms_status" \
-            "debug"    "Collect debug info" "" \
+            "settings" "Settings" "Advanced and diagnostic" \
             "done"     "Start player" "" \
             2>/dev/null)
         local rc=$?
@@ -336,15 +486,17 @@ main_loop() {
 
         case "$action" in
             language) handle_language ;;
+            keyboard) handle_keyboard ;;
             wifi)     handle_wifi ;;
             timezone) handle_timezone ;;
             player)   handle_player ;;
             cms)      handle_cms ;;
-            debug)    handle_debug ;;
+            settings) handle_settings ;;
             done)     zlib_notify "First-boot complete, starting player"; return 0 ;;
             *)        return 0 ;;
         esac
     done
 }
 
+welcome_splash
 main_loop
