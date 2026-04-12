@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.30
+Version:        0.4.31
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -152,6 +152,9 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.31-1
+- Language picker shows every locale; Player row added to first-boot menu.
+
 * Sat Apr 11 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.30-1
 - Kiosk UX and branding fixes: dark mode, dark background.
 

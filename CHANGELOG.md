@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.31 (2026-04-12)
+
+Language picker shows every locale (#103). Player row added to first-boot menu for Chromium ↔ Electron switch (#96).
+
+## 0.4.30 (2026-04-11)
+
+Kiosk UX and branding fixes: dark mode, dark background.
+
 ## 0.4.29 (2026-04-11)
 
 **Revert the `/etc/machine-id` regen `%post` block added in 0.4.28.**
