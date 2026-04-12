@@ -57,6 +57,17 @@ bootloader --location=mbr --timeout=0 --append="quiet rhgb splash loglevel=3 rd.
 
 # Package selection
 %packages
+# Anaconda requires exactly one `@^environment` selection to consider the
+# Software Selection spoke complete. Without it the hub screen shows the
+# spoke with a warning triangle and blocks Begin Installation — and under
+# inst.noninteractive the install silently aborts. @^custom-environment
+# is the "I'll hand-pick everything" environment; we list @core, gdm,
+# gnome-kiosk, codecs, and our xiboplayer packages explicitly below.
+#
+# Reference: Fedora kickstart documentation — every kickstart MUST have
+# one environment group (single ^ prefix) regardless of individual
+# package picks.
+@^custom-environment
 @core
 @hardware-support
 
