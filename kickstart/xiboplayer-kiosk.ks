@@ -93,6 +93,13 @@ openssh-server
 # Preseed tooling — jq parses xibo.config_url JSON + USB setup.json (#73)
 jq
 
+# Full glibc locale support so `localectl list-locales` shows every
+# UTF-8 locale the zenity Language picker can offer (#103). Without
+# this, @core only pulls glibc-minimal-langpack and the picker shows
+# only English variants — ca_ES, ca_AD, and every other non-English
+# locale are silently missing.
+glibc-all-langpacks
+
 # Remove unnecessary packages
 -gnome-tour
 -gnome-software
