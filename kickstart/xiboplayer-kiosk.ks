@@ -398,7 +398,16 @@ chown -R xibo:xibo /home/xibo
 %end
 
 # Configure GDM autologin
+#
+# Defensive mkdir: the gdm RPM ships /etc/gdm/ via %files, but intermittent
+# install failures (dnf resolution drift, missing weak deps on noninteractive
+# builds, etc.) have been seen where /etc/gdm/ is absent when %post runs,
+# causing `cat > /etc/gdm/custom.conf` to fail with ENOENT on the parent
+# directory and aborting anaconda under --erroronfail. Creating the dir
+# unconditionally costs nothing and makes this step robust against upstream
+# packaging changes.
 %post --erroronfail
+mkdir -p /etc/gdm
 cat > /etc/gdm/custom.conf << 'EOF'
 [daemon]
 AutomaticLoginEnable=True
