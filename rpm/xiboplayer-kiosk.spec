@@ -168,7 +168,7 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 
 %changelog
 * Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.36-1
-- Package xibo-picker.py (GTK4+libadwaita live-filter dialog) + python3-gobject runtime (#119).
+- First-boot Language/Timezone/Keyboard/Wi-Fi rows use xibo-picker.py live-filter GTK4+libadwaita dialog (#119).
 
 * Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.35-1
 - Branded xx-large header, Start button, ptyxis, GNOME Settings, no XDG rename.
