@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    uses: xibo-players/.github/.github/workflows/build-iso.yml@bd8bb5b8c550210652a6aa1a7915df68b606a916  # main @ 2026-04-11 (iso-* customization inputs + R2 test prefix for fast test downloads — companion to #89)
+    uses: xibo-players/.github/.github/workflows/build-iso.yml@dbc7f59aefa3c643a95dbc8c401d70183f7ccc09  # main @ 2026-04-12 (retry on transient network errors — .github#23)
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
