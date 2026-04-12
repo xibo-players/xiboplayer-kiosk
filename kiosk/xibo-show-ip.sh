@@ -11,4 +11,5 @@ for svc in arexibo.service xiboplayer-electron.service xiboplayer-chromium.servi
 done
 CMS=$(grep -oP '"address"\s*:\s*"\K[^"]+' "${XIBO_DATA_DIR}/cms.json" 2>/dev/null || echo "not configured")
 PLAYER=$(basename "$(readlink /etc/alternatives/xiboplayer 2>/dev/null)" 2>/dev/null || echo "unknown")
-notify-send -t 5000 "Xibo Status" "IP: $IP\nCMS: $CMS\nPlayer: $PLAYER\nStatus: $STATUS"
+VERSION=$(rpm -q --queryformat '%{VERSION}-%{RELEASE}' xiboplayer-kiosk 2>/dev/null || echo "unknown")
+notify-send -t 8000 "Xibo Status" "IP: $IP\nVersion: $VERSION\nPlayer: $PLAYER\nCMS: $CMS\nStatus: $STATUS"

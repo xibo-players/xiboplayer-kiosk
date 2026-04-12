@@ -458,7 +458,7 @@ welcome_splash() {
         --title="xiboplayer — First boot" \
         --window-icon="$XIBO_LOGO" \
         --width=560 \
-        --text="$(zlib_brand_header "Welcome — this is the first boot of this kiosk")
+        --text="$(zlib_brand_header "Welcome — this is the first boot of this kiosk — v${XIBO_KIOSK_VERSION}")
 
 The next screen lets you configure:
 
@@ -506,7 +506,7 @@ main_loop() {
         action=$(zenity --list \
             --title="xiboplayer — First boot setup" \
             --window-icon="$XIBO_LOGO" \
-            --text="$(zlib_brand_header "First boot setup — configure the kiosk, then press Start")" \
+            --text="$(zlib_brand_header "First boot setup — configure the kiosk, then press Start — v${XIBO_KIOSK_VERSION}")" \
             --ok-label="Start" \
             --column="Action" --column="Setting" --column="Current status" \
             --width=680 --height=480 \

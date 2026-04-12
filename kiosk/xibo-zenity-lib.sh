@@ -137,6 +137,10 @@ zlib_status_keyboard() {
 # kiosk RPM.
 XIBO_LOGO="${XIBO_KIOSK_DIR}/xiboplayer-kiosk-logo.png"
 
+# Kiosk version — read once at lib load time. Used by the welcome
+# splash, the main menu subtitle, and the debug dump.
+XIBO_KIOSK_VERSION=$(rpm -q --queryformat '%{VERSION}' xiboplayer-kiosk 2>/dev/null || echo "dev")
+
 # zlib_brand <trailing text> — emit Pango markup with the branded
 # name followed by optional trailing text. Example:
 #   zlib_brand "— First boot setup"
