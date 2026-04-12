@@ -52,7 +52,7 @@ concurrency:
 
 jobs:
   build:
-    uses: xibo-players/.github/.github/workflows/build-iso.yml@e82d435f5c737850c16c6a0cde08385b966a0faa  # main @ 2026-04-12 (xorriso outdev fix — .github#29)
+    uses: xibo-players/.github/.github/workflows/build-iso.yml@c7a9ea831d9088b3f48dedbc14906b6d32ab3e76  # main @ 2026-04-12 (patch all grub.cfg paths, not just /EFI/BOOT — .github#31)
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
