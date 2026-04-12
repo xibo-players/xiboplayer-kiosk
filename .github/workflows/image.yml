@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    uses: xibo-players/.github/.github/workflows/build-iso.yml@f32d3d5a326d587303ed66c32e5cc95bfb1179ba  # main @ 2026-04-12 (GPG non-fatal — .github#27)
+    uses: xibo-players/.github/.github/workflows/build-iso.yml@1c5db5f5dfbd2c6de64338544fb1b8a49ed49d0e  # main @ 2026-04-12 (xorriso post-patch for grub — .github#28)
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
