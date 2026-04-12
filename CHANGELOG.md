@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.32 (2026-04-12)
+
+Ctrl+S opens `gnome-terminal` (Ctrl+T was unusable — Chromium intercepts it as "new tab").
+
 ## 0.4.31 (2026-04-12)
 
 Language picker shows every locale (#103). Player row added to first-boot menu for Chromium ↔ Electron switch (#96).
