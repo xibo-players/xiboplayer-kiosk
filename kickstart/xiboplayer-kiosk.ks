@@ -74,7 +74,14 @@ bootloader --location=mbr --timeout=0 --append="quiet rhgb splash loglevel=3 rd.
 # earlier --ignoremissing detour.
 
 # ── Environment ────────────────────────────────────────────────
-@^minimal-environment
+# `@^custom-environment` is the ONLY environment ID present on F43
+# (verified via `dnf environment list`). `@^minimal-environment` was
+# assumed by an earlier lean rewrite but does not exist as an
+# installable environment in F43 — referencing it leaves Software
+# Selection unsatisfied and anaconda opens the spoke at install time.
+# `custom-environment` adds zero packages by itself; we explicitly
+# list everything the kiosk needs below.
+@^custom-environment
 
 # ── Display manager + kiosk compositor ─────────────────────────
 gdm
@@ -93,10 +100,16 @@ wireguard-tools
 openssh-server
 
 # ── GPU / VA-API drivers ───────────────────────────────────────
+# NOTE: intel-media-driver (iHD, RPM Fusion non-free) and
+# libva-nvidia-driver (RPM Fusion non-free) are installed in %post
+# AFTER xiboplayer-release enables the RPM Fusion repos. Listing them
+# here would cause anaconda to fail with "No match for argument:
+# intel-media-driver" at stage-1 package resolution — RPM Fusion is
+# not available to the installer until xiboplayer-release runs. The
+# mesa-* drivers below ARE in Fedora's default repos and ship here.
 mesa-dri-drivers
 mesa-va-drivers
 mesa-vulkan-drivers
-intel-media-driver
 libva
 
 # ── Fonts ──────────────────────────────────────────────────────
@@ -114,7 +127,10 @@ python3-gobject
 dunst
 unclutter
 opendoas
-keyd
+# NOTE: keyd is a COPR package (Requires: keyd on the xiboplayer-kiosk
+# RPM, pulled transitively once xiboplayer-release enables the COPR in
+# %post). Listing it here causes "No match for argument: keyd" at
+# anaconda stage-1 — the COPR isn't enabled yet.
 ptyxis
 vim-enhanced
 jq

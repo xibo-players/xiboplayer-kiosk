@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.36
+Version:        0.5.0
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -87,6 +87,28 @@ install -Dm755 kiosk/xibo-set-keyboard.sh %{buildroot}%{_datadir}/xiboplayer-kio
 # Called by xibo-first-boot.sh for the Language / Timezone / Keyboard /
 # Wi-Fi rows, replacing the prior two-stage zenity entry+list flow.
 install -Dm755 kiosk/xibo-picker.py %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-picker.py
+
+# PR1+PR2 (Python rewrite) — install the xiboplayer_kiosk package tree
+# and the two entry-point wrappers. Replaces xibo-first-boot.sh,
+# xibo-show-cms.sh, xibo-zenity-lib.sh, and xibo-picker.py (those remain
+# installed but are no longer invoked — removed in a follow-up PR).
+install -d %{buildroot}%{_datadir}/xiboplayer-kiosk/xiboplayer_kiosk
+install -d %{buildroot}%{_datadir}/xiboplayer-kiosk/xiboplayer_kiosk/services
+install -d %{buildroot}%{_datadir}/xiboplayer-kiosk/xiboplayer_kiosk/dialogs
+for f in kiosk/xiboplayer_kiosk/*.py; do
+    install -Dm644 "$f" %{buildroot}%{_datadir}/xiboplayer-kiosk/xiboplayer_kiosk/$(basename "$f")
+done
+for f in kiosk/xiboplayer_kiosk/services/*.py; do
+    install -Dm644 "$f" %{buildroot}%{_datadir}/xiboplayer-kiosk/xiboplayer_kiosk/services/$(basename "$f")
+done
+for f in kiosk/xiboplayer_kiosk/dialogs/*.py; do
+    install -Dm644 "$f" %{buildroot}%{_datadir}/xiboplayer-kiosk/xiboplayer_kiosk/dialogs/$(basename "$f")
+done
+# Entry-point wrappers — invoked by gnome-kiosk-script.xibo.sh +
+# keyd-xibo.conf. No `.sh` extension so they stay invocable after PR3
+# drops the old shell scripts.
+install -Dm755 kiosk/xibo-first-boot  %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-first-boot
+install -Dm755 kiosk/xibo-reconfigure %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-reconfigure
 install -Dm755 kiosk/xibo-keyd-open-terminal.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/xibo-keyd-open-terminal.sh
 # Issue #102 branding — xiboplayer logo (used as zenity dialog window
 # icon in the first-boot menu splash, among other places).
@@ -141,6 +163,14 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_datadir}/xiboplayer-kiosk/xibo-set-player.sh
 %{_datadir}/xiboplayer-kiosk/xibo-set-keyboard.sh
 %{_datadir}/xiboplayer-kiosk/xibo-picker.py
+%dir %{_datadir}/xiboplayer-kiosk/xiboplayer_kiosk
+%dir %{_datadir}/xiboplayer-kiosk/xiboplayer_kiosk/services
+%dir %{_datadir}/xiboplayer-kiosk/xiboplayer_kiosk/dialogs
+%{_datadir}/xiboplayer-kiosk/xiboplayer_kiosk/*.py
+%{_datadir}/xiboplayer-kiosk/xiboplayer_kiosk/services/*.py
+%{_datadir}/xiboplayer-kiosk/xiboplayer_kiosk/dialogs/*.py
+%{_datadir}/xiboplayer-kiosk/xibo-first-boot
+%{_datadir}/xiboplayer-kiosk/xibo-reconfigure
 %{_datadir}/xiboplayer-kiosk/xibo-keyd-open-terminal.sh
 %{_datadir}/xiboplayer-kiosk/xibo-usb-preseed.sh
 %{_datadir}/xiboplayer-kiosk/xiboplayer-kiosk-logo.png
@@ -167,6 +197,9 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Mon Apr 13 2026 Pau Aliagas <linuxnow@gmail.com> - 0.5.0-1
+- Python + GTK4 + libadwaita first-boot wizard (sidebar + content panels).
+
 * Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.36-1
 - First-boot Language/Timezone/Keyboard/Wi-Fi rows use xibo-picker.py live-filter GTK4+libadwaita dialog (#119).
 
