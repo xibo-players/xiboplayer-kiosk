@@ -91,13 +91,19 @@ class Picker(BrandedAlertDialog):
         self._print_idx = max(0, min(print_column - 1, self._ncols - 1))
         self._min_chars = min_chars
 
-        # Compact size — the list scrolls inside the card; no wasted margin.
-        extra = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        extra.set_size_request(440, 380)
+        # Compact size — the list scrolls below the entry; no wasted margin.
+        extra = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        extra.set_size_request(460, 420)
 
-        self.entry = Gtk.SearchEntry()
-        self.entry.set_placeholder_text(combined_placeholder)
-        self.entry.add_css_class("flat")  # no border — the card supplies it
+        # Adw.EntryRow gives the same visual style as the CmsForm fields
+        # (libadwaita preferences row: floating title, padded, large hit
+        # area, matching font/size). Wrap in a single-row PreferencesGroup
+        # so it gets the rounded boxed-list border.
+        entry_group = Adw.PreferencesGroup()
+        self.entry = Adw.EntryRow()
+        self.entry.set_title(combined_placeholder)
+        entry_group.add(self.entry)
+        extra.append(entry_group)
 
         # Data model
         self._store = Gio.ListStore.new(Row)
@@ -136,27 +142,23 @@ class Picker(BrandedAlertDialog):
         scrolled.set_vexpand(True)
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_child(self._cv)
-        scrolled.set_has_frame(False)
-
-        # Visual grouping via subtle separator only — NOT the `.card`
-        # CSS class, which paints its own dark background that clashes
-        # with the AlertDialog's lighter chrome (user reported
-        # "black-on-grey"). Leaving the entry + list transparent lets
-        # them inherit the dialog's background so they blend seamlessly.
-        group = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        group.append(self.entry)
-        group.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
-        group.append(scrolled)
-        extra.append(group)
+        scrolled.set_has_frame(True)
+        # Match the EntryRow's rounded-border look so entry + list read
+        # as a vertically-stacked pair of cards (same idiom as
+        # PreferencesGroup → PreferencesGroup in GNOME Settings).
+        scrolled.add_css_class("card")
+        extra.append(scrolled)
 
         self.set_extra_child(extra)
 
         self.add_cancel()
         self.add_suggested("ok", "OK")
 
-        # Wire filter-as-you-type
-        self.entry.connect("search-changed", self._on_search_changed)
-        self.entry.connect("activate", self._on_entry_activate)
+        # Wire filter-as-you-type. Adw.EntryRow exposes Gtk.Editable's
+        # standard "changed" signal (not GtkSearchEntry's "search-changed").
+        # "entry-activated" is the libadwaita-specific Enter-press signal.
+        self.entry.connect("changed", self._on_search_changed)
+        self.entry.connect("entry-activated", self._on_entry_activate)
         self._cv.connect("activate", lambda *a: self.emit("response", "ok"))
 
         # Key: Down in entry → focus list, Escape → cancel

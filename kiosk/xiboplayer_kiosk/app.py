@@ -91,13 +91,16 @@ class KioskApp(Adw.Application):
 
     def _present_main_menu(self) -> None:
         assert self.state is not None
+        # MainMenu wires response → on_start internally; we don't need
+        # a second `connect("response", ...)` here. Doing both caused
+        # _finish() (= release) to fire twice → GLib-GIO-CRITICAL
+        # 'g_application_release: use_count > 0' assertion failure.
         self._main_menu = MainMenu(
             self.state,
             version=self._version(),
             on_pick=self._on_main_pick,
             on_start=self._finish,
         )
-        self._main_menu.connect("response", lambda _d, rid: self._finish() if rid == "start" else None)
         self._main_menu.present(None)
 
     def _on_main_pick(self, action: str) -> None:
