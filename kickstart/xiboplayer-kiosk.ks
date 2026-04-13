@@ -74,7 +74,14 @@ bootloader --location=mbr --timeout=0 --append="quiet rhgb splash loglevel=3 rd.
 # earlier --ignoremissing detour.
 
 # ── Environment ────────────────────────────────────────────────
-@^minimal-environment
+# `@^custom-environment` is the ONLY environment ID present on F43
+# (verified via `dnf environment list`). `@^minimal-environment` was
+# assumed by an earlier lean rewrite but does not exist as an
+# installable environment in F43 — referencing it leaves Software
+# Selection unsatisfied and anaconda opens the spoke at install time.
+# `custom-environment` adds zero packages by itself; we explicitly
+# list everything the kiosk needs below.
+@^custom-environment
 
 # ── Display manager + kiosk compositor ─────────────────────────
 gdm
