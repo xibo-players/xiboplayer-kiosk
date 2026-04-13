@@ -57,17 +57,6 @@ bootloader --location=mbr --timeout=0 --append="quiet rhgb splash loglevel=3 rd.
 
 # Package selection
 %packages
-# Anaconda requires exactly one `@^environment` selection to consider the
-# Software Selection spoke complete. Without it the hub screen shows the
-# spoke with a warning triangle and blocks Begin Installation — and under
-# inst.noninteractive the install silently aborts. @^custom-environment
-# is the "I'll hand-pick everything" environment; we list @core, gdm,
-# gnome-kiosk, codecs, and our xiboplayer packages explicitly below.
-#
-# Reference: Fedora kickstart documentation — every kickstart MUST have
-# one environment group (single ^ prefix) regardless of individual
-# package picks.
-@^custom-environment
 @core
 @hardware-support
 
@@ -81,12 +70,6 @@ google-noto-emoji-color-fonts
 
 # Display manager and kiosk
 gdm
-# gnome-shell is a hard Requires of gdm (for the greeter). Listing it
-# explicitly guarantees it's in the resolver tree even under
-# dnf --setopt=install_weak_deps=False-style constraints and makes
-# the "gdm requires gnome-shell" cascade visible when debugging
-# Software Selection exclusion conflicts.
-gnome-shell
 gnome-kiosk
 gnome-kiosk-script-session
 
@@ -144,20 +127,11 @@ jq
 # locale are silently missing.
 glibc-all-langpacks
 
-# Remove unnecessary GNOME desktop apps. The kiosk session autostarts
-# the player via gnome-kiosk-script-session — the operator never sees
-# GNOME Shell's overview, so apps like maps / calculator / weather /
-# totem / cheese are pure cruft. Trimmed list here excludes only
-# packages confirmed safe (no hard dep from gdm / gnome-shell on F43);
-# the permanently-needed `xdg-user-dirs-gtk` is NOT excluded — it's a
-# hard Requires of anaconda itself (removing it breaks install). The
-# rename-directories prompt is suppressed via /etc/xdg/user-dirs.conf
-# enabled=False in %post instead.
-#
-# Also kept OUT of the exclusion list: -yelp and -gnome-user-docs.
-# They can probably come out too but during the #127→#131 dep-tree
-# debugging they were implicated in cascade warnings, so leaving them
-# for a focused audit PR rather than risking another install regression.
+# Remove unnecessary packages — original pre-2026-04-12 list.
+# Restored as-was per user directive "leave the packages as they were".
+# The kickstart may generate a Software Selection warning that requires
+# an operator click-through on the anaconda hub; that's the tradeoff
+# for keeping the known-good install+boot pipeline that ran yesterday.
 -gnome-tour
 -gnome-software
 -gnome-text-editor
@@ -173,7 +147,10 @@ glibc-all-langpacks
 -cheese
 -evince
 -loupe
+-yelp
+-gnome-user-docs
 -abrt*
+-xdg-user-dirs-gtk
 #
 # The "rename directories" prompt is still suppressed by the %post
 # block that writes /etc/xdg/user-dirs.conf with enabled=False —
