@@ -79,19 +79,26 @@ class Picker(BrandedAlertDialog):
         hide_header: bool = False,
         placeholder: str = "",
     ):
-        super().__init__(heading_subtitle=subtitle, body=body)
+        # Body becomes the SearchEntry placeholder — folding the prompt
+        # into the entry kills the "disconnected prompt above entry"
+        # feel and lets the dialog shrink vertically.
+        combined_placeholder = placeholder or body or (
+            f"Type at least {min_chars} characters to filter" if min_chars > 0 else "Type to filter"
+        )
+        super().__init__(heading_subtitle=subtitle, body="")
         self._rows = rows
         self._ncols = len(columns)
         self._print_idx = max(0, min(print_column - 1, self._ncols - 1))
         self._min_chars = min_chars
 
-        extra = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        extra.set_size_request(520, 520)
+        # Tightened: smaller gap between entry and list, compact size.
+        extra = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        extra.set_size_request(480, 460)
 
         self.entry = Gtk.SearchEntry()
-        self.entry.set_placeholder_text(
-            placeholder or (f"Type at least {min_chars} characters to filter" if min_chars > 0 else "Type to filter"),
-        )
+        self.entry.set_placeholder_text(combined_placeholder)
+        # Visually flat search entry so it reads as "part of the list".
+        self.entry.add_css_class("flat")
         extra.append(self.entry)
 
         # Data model
@@ -129,10 +136,19 @@ class Picker(BrandedAlertDialog):
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_hexpand(True)
         scrolled.set_vexpand(True)
-        scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_child(self._cv)
-        scrolled.set_has_frame(True)
-        extra.append(scrolled)
+        scrolled.set_has_frame(False)
+        # Card container wraps both entry and list so they visually
+        # belong together — libadwaita's `card` CSS class gives a
+        # rounded border + subtle elevation.
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        card.add_css_class("card")
+        card.append(self.entry)
+        card.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+        card.append(scrolled)
+        extra.remove(self.entry)  # move entry into the card (just added above)
+        extra.append(card)
 
         self.set_extra_child(extra)
 
