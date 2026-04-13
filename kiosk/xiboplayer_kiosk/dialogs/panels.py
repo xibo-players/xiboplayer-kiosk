@@ -302,8 +302,8 @@ class SettingsPanel(Gtk.Box):
 
         group = Adw.PreferencesGroup()
         for action_id, title, subtitle in (
-            ("terminal", "Open terminal", "ptyxis (Ctrl+S also works)"),
             ("gnome",    "GNOME Settings", "Advanced system tweaks"),
+            ("terminal", "Open terminal", "ptyxis (Ctrl+S also works)"),
             ("debug",    "Collect debug bundle", "~/Downloads/xibo-debug-*.tar.zst"),
         ):
             row = Adw.ActionRow(title=title, subtitle=subtitle)
