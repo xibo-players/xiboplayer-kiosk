@@ -20,7 +20,8 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gtk  # noqa: E402
+gi.require_version("Gdk", "4.0")
+from gi.repository import Adw, Gdk, Gtk  # noqa: E402
 
 from .. import branding
 
@@ -137,7 +138,17 @@ class KioskWindow(Adw.ApplicationWindow):
         toolbar = Adw.ToolbarView()
         toolbar.add_top_bar(Adw.HeaderBar())
         status = Adw.StatusPage()
-        status.set_icon_name("preferences-system-symbolic")
+        # Use the xiboplayer logo as the status-page icon. Adw.StatusPage's
+        # `paintable` property accepts any Gdk.Paintable; Gdk.Texture
+        # loads a file straight off disk into a paintable. Falls back to
+        # a generic icon if the logo is missing (e.g. uninstalled dev runs).
+        if branding.LOGO_PATH.exists():
+            try:
+                status.set_paintable(Gdk.Texture.new_from_filename(str(branding.LOGO_PATH)))
+            except Exception:  # noqa: BLE001
+                status.set_icon_name("preferences-system-symbolic")
+        else:
+            status.set_icon_name("preferences-system-symbolic")
         status.set_title("xiboplayer first boot")
         status.set_description(
             "Select a category from the left to configure it.\n"
