@@ -91,15 +91,13 @@ class Picker(BrandedAlertDialog):
         self._print_idx = max(0, min(print_column - 1, self._ncols - 1))
         self._min_chars = min_chars
 
-        # Tightened: smaller gap between entry and list, compact size.
-        extra = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        extra.set_size_request(480, 460)
+        # Compact size — the list scrolls inside the card; no wasted margin.
+        extra = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        extra.set_size_request(440, 380)
 
         self.entry = Gtk.SearchEntry()
         self.entry.set_placeholder_text(combined_placeholder)
-        # Visually flat search entry so it reads as "part of the list".
-        self.entry.add_css_class("flat")
-        extra.append(self.entry)
+        self.entry.add_css_class("flat")  # no border — the card supplies it
 
         # Data model
         self._store = Gio.ListStore.new(Row)
@@ -139,15 +137,16 @@ class Picker(BrandedAlertDialog):
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.set_child(self._cv)
         scrolled.set_has_frame(False)
-        # Card container wraps both entry and list so they visually
-        # belong together — libadwaita's `card` CSS class gives a
-        # rounded border + subtle elevation.
+
+        # Single-card visual grouping: entry on top, separator, scrolled
+        # list below. Each widget is parented ONCE — GTK4 raises if a
+        # widget is appended to two containers. Earlier version had a
+        # double-append bug that orphaned the entry.
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         card.add_css_class("card")
         card.append(self.entry)
         card.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
         card.append(scrolled)
-        extra.remove(self.entry)  # move entry into the card (just added above)
         extra.append(card)
 
         self.set_extra_child(extra)

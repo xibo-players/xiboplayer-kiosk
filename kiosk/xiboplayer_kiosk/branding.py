@@ -1,5 +1,6 @@
 """Branding constants — single source of truth for colors, markup, logo."""
 
+import os
 from pathlib import Path
 
 # Canonical colors from kiosk/xibo-zenity-lib.sh:167 and reference_xiboplayer_branding
@@ -15,8 +16,16 @@ BRAND_HEADING_MARKUP = (
     f'<span size="xx-large" font_weight="bold" foreground="{BRAND_PLAYER_COLOR}">player</span>'
 )
 
-# Logo image shipped by the kiosk RPM at /usr/share/xiboplayer-kiosk/
-LOGO_PATH = Path("/usr/share/xiboplayer-kiosk/xiboplayer-kiosk-logo.png")
+# Logo image shipped by the kiosk RPM at /usr/share/xiboplayer-kiosk/.
+# Overridable via XIBO_KIOSK_LOGO env var so local dev runs can point at
+# the checked-out kiosk/xiboplayer-kiosk-logo.png before the package is
+# installed.
+LOGO_PATH = Path(
+    os.environ.get(
+        "XIBO_KIOSK_LOGO",
+        "/usr/share/xiboplayer-kiosk/xiboplayer-kiosk-logo.png",
+    ),
+)
 
 
 def branded_heading(subtitle: str = "") -> str:
