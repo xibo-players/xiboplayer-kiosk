@@ -128,9 +128,9 @@ class KioskApp(Adw.Application):
         rows = [(z,) for z in tz_svc.list_timezones()]
         panel = PickerPanel(
             rows=rows,
-            columns=["IANA timezone"],
+            columns=[""],  # blank column header — IANA is jargon for the operator
             min_chars=2,
-            placeholder="Type a city, region, or UTC (e.g. New_York, London, Tokyo)",
+            placeholder="Type UTC or a city (e.g. UTC, New_York, London, Tokyo)",
             apply_label="Set timezone",
             on_apply=lambda v: self._apply_via_doas("xibo-set-timezone.sh", v, "Timezone"),
         )
