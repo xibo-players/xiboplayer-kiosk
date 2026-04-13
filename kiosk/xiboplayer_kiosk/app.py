@@ -130,7 +130,7 @@ class KioskApp(Adw.Application):
             rows=rows,
             columns=["IANA timezone"],
             min_chars=2,
-            placeholder="Type a city or region (e.g. Madrid, Europe, UTC)",
+            placeholder="Type a city, region, or UTC (e.g. New_York, London, Tokyo)",
             apply_label="Set timezone",
             on_apply=lambda v: self._apply_via_doas("xibo-set-timezone.sh", v, "Timezone"),
         )
