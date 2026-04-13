@@ -63,6 +63,12 @@ def parse_args():
     p.add_argument('--heading', default=None)
     p.add_argument('--brand-header', default=None)
     p.add_argument('--text', default='')
+    # --welcome: info-splash mode (no list, no entry). Shows a horizontal
+    # header with the xiboplayer logo on the left and the branded brand
+    # + subtitle text on the right, followed by an OK button. Used by
+    # the first-boot welcome screen.
+    p.add_argument('--welcome', action='store_true')
+    p.add_argument('--logo', default='')
     p.add_argument('--column', action='append', default=[])
     p.add_argument('--tsv', action='store_true')
     p.add_argument('--hide-header', action='store_true')
@@ -126,15 +132,26 @@ def build_column_view(columns, filter_model, hide_header, hide_column):
         col.set_resizable(True)
         cv.append_column(col)
 
-    # Gtk.ColumnView's header is controlled by the CSS class .view on
-    # the header widgets; --hide-header on the CLI just strips the
-    # whole header row.
     if hide_header or ncols == 1:
-        cv.set_show_column_separators(False)
-        # There's no direct toggle for showing/hiding the header in
-        # Gtk.ColumnView 4.x — but for single-column lists GTK already
-        # hides the header if the column has no title.
-        pass
+        # Gtk.ColumnView has no public hide-header API in GTK 4.x.
+        # The header row is a child widget with node-name "header" —
+        # we hide it via a CSS provider scoped to this ColumnView
+        # instance (style class "hide-columnview-header" gate).
+        cv.add_css_class('hide-columnview-header')
+        css = Gtk.CssProvider()
+        css.load_from_data(
+            b'columnview.hide-columnview-header > header { '
+            b'  opacity: 0; min-height: 0; padding: 0; '
+            b'} '
+            b'columnview.hide-columnview-header > header > * { '
+            b'  min-height: 0; padding: 0; '
+            b'}'
+        )
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            css,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+        )
 
     return cv, selection
 
@@ -149,15 +166,85 @@ class PickerApp(Adw.Application):
 
     def do_activate(self):
         args = self._args
+        self.hold()
+
+        if args.welcome:
+            self._do_welcome()
+        else:
+            self._do_picker()
+
+    def _do_welcome(self):
+        """Welcome-splash mode: logo left, branded text right, OK button.
+
+        Used by xibo-first-boot.sh's welcome_splash() at the top of the
+        first-boot flow. No list, no entry — just an info dialog with
+        a prominent logo.
+        """
+        args = self._args
+        dlg = Adw.AlertDialog(heading='', body='')
+
+        # Horizontal box: logo on the left, text on the right.
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+        row.set_margin_top(4)
+        row.set_margin_bottom(4)
+        if args.logo:
+            try:
+                img = Gtk.Image.new_from_file(args.logo)
+                img.set_pixel_size(96)
+                img.set_valign(Gtk.Align.CENTER)
+                row.append(img)
+            except Exception:
+                pass
+
+        text_col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        text_col.set_hexpand(True)
+        text_col.set_valign(Gtk.Align.CENTER)
+
+        brand = Gtk.Label()
+        brand.set_markup(BRAND_XIBO_MARKUP)
+        brand.set_xalign(0)
+        text_col.append(brand)
+
+        if args.brand_header:
+            sub = Gtk.Label()
+            sub.set_markup('<span size="medium">' + args.brand_header + '</span>')
+            sub.set_xalign(0)
+            sub.set_wrap(True)
+            text_col.append(sub)
+
+        row.append(text_col)
+
+        wrapper = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        wrapper.set_size_request(max(args.width - 40, 420), -1)
+        wrapper.append(row)
+
+        if args.text:
+            body = Gtk.Label()
+            body.set_markup(args.text)
+            body.set_xalign(0)
+            body.set_wrap(True)
+            body.set_margin_top(8)
+            wrapper.append(body)
+
+        dlg.set_extra_child(wrapper)
+
+        dlg.add_response('ok', args.ok_label)
+        dlg.set_response_appearance('ok', Adw.ResponseAppearance.SUGGESTED)
+        dlg.set_default_response('ok')
+        dlg.set_close_response('ok')
+
+        def on_response(_dlg, _response_id):
+            self._result = 'ok'  # any non-None → exit 0
+            self.release()
+        dlg.connect('response', on_response)
+        dlg.connect('closed', lambda _d: self.release())
+
+        dlg.present(None)
+
+    def _do_picker(self):
+        args = self._args
         columns = args.column or ['']
         ncols = len(columns)
-
-        # Keep the application alive for the dialog's lifetime —
-        # Adw.AlertDialog presented with parent=None becomes its own
-        # top-level window, but Adw.Application doesn't track dialogs
-        # directly (only windows), so we hold() here and release() on
-        # response. Without hold, the app quits before the dialog shows.
-        self.hold()
 
         # Adw.AlertDialog (libadwaita 1.5+) — the non-deprecated
         # replacement for Adw.MessageDialog. Same libadwaita look:
@@ -268,10 +355,15 @@ class PickerApp(Adw.Application):
         key_ctl.connect('key-pressed', on_key)
         dlg.add_controller(key_ctl)
 
-        entry.grab_focus()
         # Present with parent=None — the dialog becomes its own top-
         # level window without needing a phantom parent window.
         dlg.present(None)
+        # Grab focus AFTER present via idle_add, otherwise AdwAlertDialog's
+        # default-response button (the blue "OK") steals focus away from
+        # the entry and the operator has to click the entry before they
+        # can type. idle_add runs on the next GLib main-loop iteration,
+        # by which time the dialog's internal focus grab has completed.
+        GLib.idle_add(entry.grab_focus)
 
 
 def main():

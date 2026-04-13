@@ -168,12 +168,16 @@ handle_timezone() {
 # each invocation writes the first-boot-done sentinel before
 # returning, and the sentinel is the gate that prevents auto-launch.
 handle_cms() {
-    if [ -x "$XIBO_KIOSK_DIR/xibo-show-cms.sh" ]; then
-        "$XIBO_KIOSK_DIR/xibo-show-cms.sh" || true
-    else
-        zenity --error --title="xiboplayer — CMS" --width=400 \
-            --window-icon="$XIBO_LOGO" \
-            --text="xibo-show-cms.sh not found — cannot configure CMS." 2>/dev/null
+    # Direct CMS configuration — goes straight to the URL/key/display-name
+    # form via zlib_cms_form + zlib_write_player_config. No intermediate
+    # reconfigure menu (that's what Ctrl+R is for, accessed via
+    # xibo-show-cms.sh). Matches user directive: "CMS leads to reconfig
+    # should be direct CMS config".
+    if zlib_cms_form; then
+        local player
+        player=$(python3 -c "import json; print(json.load(open('${HOME}/.config/xiboplayer/setup-result.json'))['player'])" 2>/dev/null || echo "Chromium")
+        zlib_write_player_config "$player" "$CMS_URL" "$CMS_KEY" "$DISPLAY_NAME"
+        zlib_notify "CMS configured: $CMS_URL"
     fi
 }
 
@@ -245,15 +249,23 @@ handle_player() {
     local current
     current=$(zlib_status_player)
 
+    # Live-filter picker (#119) — same GTK4+libadwaita dialog as the
+    # other pickers so the Player menu gets blue-OK + no-column-header
+    # styling consistent with Language / Timezone / Keyboard / Wi-Fi.
+    # min-chars=0 because we only have 2 rows — always show both.
     local pick
-    pick=$(zenity --list \
-        --title="xiboplayer — Player" \
-        --text="Current player: $current\n\nChoose which player runs on next session." \
-        --column="Player" --column="Description" \
-        --width=520 --height=260 \
-        "Chromium" "Chromium kiosk (default, lighter)" \
-        "Electron" "Electron wrapper (heavier, more compatible)" \
-        2>/dev/null) || return 0
+    pick=$(printf "Chromium\tChromium kiosk (default, lighter)\nElectron\tElectron wrapper (heavier, more compatible)\n" \
+        | "$XIBO_KIOSK_DIR/xibo-picker.py" --tsv \
+            --title="xiboplayer — Player" \
+            --brand-header="Player" \
+            --text="Current player: $current — choose which runs on next session." \
+            --column="Player" --column="Description" \
+            --hide-header \
+            --print-column=1 \
+            --min-chars=0 \
+            --width=560 --height=260 \
+            --window-icon="$XIBO_LOGO" \
+            2>/dev/null) || return 0
     [ -z "$pick" ] && return 0
 
     local arg
@@ -435,25 +447,18 @@ handle_settings() {
 # direction plus the deferred Option C in the consolidated plan's
 # "still pending" section.
 welcome_splash() {
-    zenity --info \
+    # Use xibo-picker.py --welcome (GTK4+libadwaita AlertDialog) so the
+    # logo PNG appears prominently to the left of the branded
+    # "xiboplayer" title, matching the visual style of the rest of the
+    # first-boot menu. The old zenity --info couldn't embed the logo
+    # image in the dialog body (only as the tiny title-bar window icon).
+    "$XIBO_KIOSK_DIR/xibo-picker.py" --welcome \
+        --logo="$XIBO_LOGO" \
         --title="xiboplayer — First boot" \
-        --window-icon="$XIBO_LOGO" \
-        --width=560 \
-        --text="$(zlib_brand_header "Welcome — this is the first boot of this kiosk — v${XIBO_KIOSK_VERSION} (${XIBO_KIOSK_BUILD_DATE})")
-
-The next screen lets you configure:
-
-  • Language and keyboard
-  • Wi-Fi or wired network
-  • Timezone
-  • Player (Chromium or Electron)
-  • CMS connection
-
-Advanced and diagnostic actions (terminal, GNOME Settings, debug bundle)
-live under the Settings row. When everything is ready, press Start to
-launch the player.
-
-Press OK to continue." \
+        --brand-header="Welcome — v${XIBO_KIOSK_VERSION} (${XIBO_KIOSK_BUILD_DATE})" \
+        --text="The next screen lets you configure Language, Keyboard, Wi-Fi, Timezone, Player, and CMS connection. Advanced and diagnostic actions live under the Settings row. Press Start when ready." \
+        --ok-label="Continue" \
+        --width=620 \
         2>/dev/null || true
 }
 
