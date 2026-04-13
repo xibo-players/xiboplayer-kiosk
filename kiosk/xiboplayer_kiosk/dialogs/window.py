@@ -134,27 +134,49 @@ class KioskWindow(Adw.ApplicationWindow):
         return page
 
     def _build_content_placeholder(self) -> Adw.NavigationPage:
-        """Initial right-pane content. Replaced on the first sidebar click."""
+        """Initial right-pane content. Replaced on the first sidebar click.
+
+        Uses a tight custom layout instead of Adw.StatusPage because the
+        latter vertically centers content with large padding — that
+        looked like "wasted middle space". This version pins the logo +
+        text near the top with compact spacing.
+        """
         toolbar = Adw.ToolbarView()
         toolbar.add_top_bar(Adw.HeaderBar())
-        status = Adw.StatusPage()
-        # Use the xiboplayer logo as the status-page icon. Adw.StatusPage's
-        # `paintable` property accepts any Gdk.Paintable; Gdk.Texture
-        # loads a file straight off disk into a paintable. Falls back to
-        # a generic icon if the logo is missing (e.g. uninstalled dev runs).
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        box.set_margin_top(36)
+        box.set_margin_bottom(24)
+        box.set_margin_start(24)
+        box.set_margin_end(24)
+        box.set_halign(Gtk.Align.CENTER)
+        box.set_valign(Gtk.Align.START)
+
         if branding.LOGO_PATH.exists():
             try:
-                status.set_paintable(Gdk.Texture.new_from_filename(str(branding.LOGO_PATH)))
+                pic = Gtk.Picture.new_for_filename(str(branding.LOGO_PATH))
+                pic.set_size_request(160, 160)
+                pic.set_can_shrink(True)
+                pic.set_content_fit(Gtk.ContentFit.CONTAIN)
+                box.append(pic)
             except Exception:  # noqa: BLE001
-                status.set_icon_name("preferences-system-symbolic")
-        else:
-            status.set_icon_name("preferences-system-symbolic")
-        status.set_title("xiboplayer first boot")
-        status.set_description(
-            "Select a category from the left to configure it.\n"
-            "Press Start player when ready.",
+                pass
+
+        title = Gtk.Label()
+        title.set_markup('<span size="x-large" weight="bold">xiboplayer first boot</span>')
+        title.set_xalign(0.5)
+        box.append(title)
+
+        desc = Gtk.Label(
+            label="Select a category from the left to configure it.\n"
+                  "Press Start player when ready.",
         )
-        toolbar.set_content(status)
+        desc.set_justify(Gtk.Justification.CENTER)
+        desc.set_xalign(0.5)
+        desc.add_css_class("dim-label")
+        box.append(desc)
+
+        toolbar.set_content(box)
         page = Adw.NavigationPage()
         page.set_title("xiboplayer")
         page.set_child(toolbar)
