@@ -7,4 +7,4 @@ in docs/ (or the #PR1-PR4 sequence of PRs) for architecture.
 
 from .branding import BRAND_HEADING_MARKUP, BRAND_XIBO, BRAND_PLAYER, LOGO_PATH  # noqa: F401
 
-__version__ = "0.4.36"
+__version__ = "0.5.0"

@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.4.36
+Version:        0.5.0
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -197,6 +197,9 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Mon Apr 13 2026 Pau Aliagas <linuxnow@gmail.com> - 0.5.0-1
+- Python + GTK4 + libadwaita first-boot wizard (sidebar + content panels).
+
 * Sun Apr 12 2026 Pau Aliagas <linuxnow@gmail.com> - 0.4.36-1
 - First-boot Language/Timezone/Keyboard/Wi-Fi rows use xibo-picker.py live-filter GTK4+libadwaita dialog (#119).
 
