@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0 (2026-04-13)
+
+First-boot + reconfigure wizard rewritten in **Python + GTK4 + libadwaita** with a GNOME Settings-style **sidebar + content** layout (`Adw.NavigationSplitView`). Replaces the zenity/shell/`xibo-picker.py` patchwork with a single `Adw.ApplicationWindow` where the 7 categories (Language / Keyboard / Wi-Fi / Timezone / Player / CMS / Settings) live as persistent sidebar rows with live status subtitles, and the selected category's UI renders inline in the right pane — no new windows for sub-screens. Picker input fields use `Adw.EntryRow` matching the CMS form style, Esc closes pickers, filter-as-you-type with live `Gtk.FilterListModel`, xiboplayer logo on the welcome page. Old shell scripts (`xibo-first-boot.sh` etc.) remain installed but no longer invoked — removed in 0.5.1. 54 unit tests covering branding / preseed / doas_runner / state / cms writers / wifi parser / locale filter / status probes.
+
 ## 0.4.35 (2026-04-12)
 
 First-boot menu polish + packaging fixes: **xx-large branded header** (blue `xibo` + white `player` Pango at `xx-large` size in every dialog), **"Start" button** replaces "OK" and the "done" row (click Start without a selection to launch the player), **ptyxis** replaces `gnome-terminal` for the terminal option and the Ctrl+S keyd binding (Fedora 43 default), **GNOME Settings** added as an optional escape hatch in the Settings sub-menu (`gnome-control-center`), **XDG rename prompt suppressed** (removed `xdg-user-dirs-gtk` + `enabled=False` in `/etc/xdg/user-dirs.conf`, so ~/Downloads etc. stay in English after a locale change).
