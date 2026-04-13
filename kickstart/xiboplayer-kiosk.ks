@@ -57,6 +57,10 @@ bootloader --location=mbr --timeout=0 --append="quiet rhgb splash loglevel=3 rd.
 
 # Package selection
 %packages
+# @^custom-environment: anaconda needs exactly one @^environment or
+# Software Selection warns. This is the "hand-pick everything" one —
+# adds no packages, just satisfies the environment requirement.
+@^custom-environment
 @core
 @hardware-support
 
@@ -70,6 +74,11 @@ google-noto-emoji-color-fonts
 
 # Display manager and kiosk
 gdm
+# gnome-shell — explicit because gdm's greeter Requires it and the
+# exclusion list below would otherwise let dnf drop gdm when it finds
+# a dep conflict. Listing gnome-shell directly forces the resolver to
+# keep it (and gdm) in the install set.
+gnome-shell
 gnome-kiosk
 gnome-kiosk-script-session
 
@@ -150,7 +159,12 @@ glibc-all-langpacks
 -yelp
 -gnome-user-docs
 -abrt*
--xdg-user-dirs-gtk
+# NOTE — `-xdg-user-dirs-gtk` is NOT excluded. It's a hard Requires of
+# anaconda itself — excluding it produces "anaconda requires
+# xdg-user-dirs-gtk but package xdg-user-dirs-gtk is filtered out" on
+# the Software Selection spoke and under inst.noninteractive aborts
+# the install silently. The rename-directories prompt it provides is
+# suppressed by /etc/xdg/user-dirs.conf enabled=False in %post.
 #
 # The "rename directories" prompt is still suppressed by the %post
 # block that writes /etc/xdg/user-dirs.conf with enabled=False —
