@@ -351,10 +351,13 @@ handle_terminal() {
     done
 
     if [ -n "$term" ]; then
-        # Fire-and-forget — we don't wait for the terminal to close.
-        # Disown so the terminal survives even if the first-boot menu
-        # closes.
-        setsid "$term" >/dev/null 2>&1 &
+        # Fire-and-forget. We previously used `setsid` which creates a
+        # new session, and mutter's window manager doesn't associate
+        # the resulting window with our kiosk session → terminal shows
+        # up as an orphan without decorations or focus. Plain
+        # background-spawn keeps the terminal in our session and
+        # mutter decorates it like any other window.
+        "$term" >/dev/null 2>&1 &
         disown 2>/dev/null || true
         zlib_notify "Opened $term"
     else
@@ -393,7 +396,7 @@ handle_debug() {
 # operators who need something the main rows don't expose.
 handle_gnome_settings() {
     if command -v gnome-control-center >/dev/null 2>&1; then
-        setsid gnome-control-center >/dev/null 2>&1 &
+        gnome-control-center >/dev/null 2>&1 &
         disown 2>/dev/null || true
         zlib_notify "Opened GNOME Settings"
     else
@@ -413,28 +416,31 @@ handle_gnome_settings() {
 handle_settings() {
     while true; do
         local action
-        action=$(zenity --list \
-            --title="xiboplayer" \
-            --window-icon="$XIBO_LOGO" \
-            --text="$(zlib_brand_header "Settings")" \
-            --ok-label="Open" \
-            --cancel-label=" " \
-            --column="id" --column="" \
-            --hide-header \
-            --hide-column=1 \
-            --print-column=1 \
-            --width=480 --height=320 \
-            "terminal" "Open terminal" \
-            "gnome"    "GNOME Settings" \
-            "debug"    "Collect debug bundle" \
-            "back"     "‹ Back" \
-            2>/dev/null) || return 0
+        action=$(printf "terminal\tOpen terminal\ngnome\tGNOME Settings\ndebug\tCollect debug bundle\nback\t‹ Back\n" \
+            | "$XIBO_KIOSK_DIR/xibo-picker.py" --tsv \
+                --title="xiboplayer — Settings" \
+                --brand-header="Settings" \
+                --column="id" --column="" \
+                --hide-header \
+                --hide-column=1 \
+                --print-column=1 \
+                --min-chars=0 \
+                --width=520 --height=360 \
+                --ok-label="Open" \
+                --cancel-label="Back" \
+                --window-icon="$XIBO_LOGO" \
+                2>/dev/null)
+        local rc=$?
+        # Cancel (rc=1) or timeout (rc=5) = back to main. action empty = back.
+        if [ $rc -ne 0 ] || [ -z "$action" ]; then
+            return 0
+        fi
 
         case "$action" in
             terminal) handle_terminal ;;
             gnome)    handle_gnome_settings ;;
             debug)    handle_debug ;;
-            back|'')  return 0 ;;
+            back)     return 0 ;;
         esac
     done
 }
@@ -487,39 +493,25 @@ main_loop() {
         player_status=$(zlib_status_player)
 
         local action
-        action=$(zenity --list \
-            --title="xiboplayer" \
-            --window-icon="$XIBO_LOGO" \
-            --text="$(zlib_brand_header "First boot setup — v${XIBO_KIOSK_VERSION}")" \
-            --ok-label="Start" \
-            --cancel-label=" " \
-            --column="id" --column="" --column="" \
-            --hide-header \
-            --hide-column=1 \
-            --print-column=1 \
-            --width=560 --height=440 \
-            --timeout=120 \
-            "language" "Language"  "$lang_status" \
-            "keyboard" "Keyboard" "$kbd_status" \
-            "wifi"     "Wi-Fi"    "$wifi_status" \
-            "timezone" "Timezone" "$tz_status" \
-            "player"   "Player"   "$player_status" \
-            "cms"      "CMS"      "$cms_status" \
-            "settings" "Settings ›" "" \
-            2>/dev/null)
+        action=$(printf "language\tLanguage\t%s\nkeyboard\tKeyboard\t%s\nwifi\tWi-Fi\t%s\ntimezone\tTimezone\t%s\nplayer\tPlayer\t%s\ncms\tCMS\t%s\nsettings\tSettings ›\t\n" \
+            "$lang_status" "$kbd_status" "$wifi_status" "$tz_status" "$player_status" "$cms_status" \
+            | "$XIBO_KIOSK_DIR/xibo-picker.py" --tsv \
+                --title="xiboplayer — First boot" \
+                --brand-header="First boot setup — v${XIBO_KIOSK_VERSION}" \
+                --column="id" --column="" --column="" \
+                --hide-header \
+                --hide-column=1 \
+                --print-column=1 \
+                --min-chars=0 \
+                --width=620 --height=480 \
+                --ok-label="Start" \
+                --cancel-label="Start" \
+                --window-icon="$XIBO_LOGO" \
+                2>/dev/null)
         local rc=$?
 
-        # Exit code 5 = timeout. Exit code 1 = cancel / close button.
-        # In either case, fall through to "start player" so the kiosk
-        # doesn't stall forever on walkaway.
-        if [ $rc -eq 5 ] || [ $rc -eq 1 ]; then
-            zlib_notify "First-boot menu dismissed, starting player"
-            return 0
-        fi
-
-        # Empty action = user clicked Start without selecting a row →
-        # start the player. This replaces the old "done" row.
-        if [ -z "$action" ]; then
+        # Cancel (rc=1) or empty = Start without selecting = proceed to player.
+        if [ $rc -ne 0 ] || [ -z "$action" ]; then
             zlib_notify "First-boot complete, starting player"
             return 0
         fi
