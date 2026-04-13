@@ -57,119 +57,67 @@ bootloader --location=mbr --timeout=0 --append="quiet rhgb splash loglevel=3 rd.
 
 # Package selection
 %packages
-# @^custom-environment: anaconda needs exactly one @^environment or
-# Software Selection warns. This is the "hand-pick everything" one —
-# adds no packages, just satisfies the environment requirement.
-@^custom-environment
-@core
-@hardware-support
+# ── Lean baseline: start from @^minimal-environment, add ONLY what
+# the kiosk explicitly needs. No -exclude lines anywhere — every
+# excluded package we've tried created hidden dep-tree conflicts
+# (xdg-user-dirs-gtk + gdm cascade, #127→#140 debugging saga).
+# Apps we don't want (gnome-tour, cheese, etc.) either don't get
+# pulled by @^minimal-environment at all, or we remove them via
+# `dnf remove` in %post where failures are loud and the system is
+# already booting.
+#
+# Codec stack (ffmpeg + gstreamer-plugin-libav + friends) lives in
+# RPM Fusion free, which isn't enabled until %post installs
+# xiboplayer-release. Those packages therefore install via
+# `dnf install` in %post, NOT here — doing it here would cause the
+# "Software Selection: missing packages" warning that spurred the
+# earlier --ignoremissing detour.
 
-# Fonts — minimal set (saves ~100 MB vs @fonts group)
+# ── Environment ────────────────────────────────────────────────
+@^minimal-environment
+
+# ── Display manager + kiosk compositor ─────────────────────────
+gdm
+gnome-kiosk
+gnome-kiosk-script-session
+xorg-x11-server-Xwayland
+
+# ── Audio (pipewire + wireplumber pulled transitively) ─────────
+pipewire-alsa
+
+# ── Networking + WiFi + mDNS + VPN + SSH ───────────────────────
+NetworkManager-wifi
+avahi
+nss-mdns
+wireguard-tools
+openssh-server
+
+# ── GPU / VA-API drivers ───────────────────────────────────────
+mesa-dri-drivers
+mesa-va-drivers
+mesa-vulkan-drivers
+intel-media-driver
+libva
+
+# ── Fonts ──────────────────────────────────────────────────────
 dejavu-sans-fonts
 dejavu-sans-mono-fonts
-liberation-sans-fonts
-liberation-mono-fonts
 google-noto-sans-fonts
 google-noto-emoji-color-fonts
 
-# Display manager and kiosk
-gdm
-# gnome-shell — explicit because gdm's greeter Requires it and the
-# exclusion list below would otherwise let dnf drop gdm when it finds
-# a dep conflict. Listing gnome-shell directly forces the resolver to
-# keep it (and gdm) in the install set.
-gnome-shell
-gnome-kiosk
-gnome-kiosk-script-session
+# ── Locale coverage for the first-boot Language picker (#103) ──
+glibc-all-langpacks
 
-# gnome-initial-setup deliberately NOT installed (#101). The Welcome
-# to Fedora wizard is useless on a kiosk and confusing when operators
-# see "desktop preview" screens. The zenity first-boot menu (#67)
-# provides the kiosk-specific setup flow instead.
-
-# Media playback
-vlc
-mpv
-gstreamer1-plugins-base
-gstreamer1-plugins-good
-gstreamer1-plugins-bad-free
-gstreamer1-plugins-ugly-free
-gstreamer1-plugin-openh264
-gstreamer1-plugin-libav
-
-# Kiosk utilities
+# ── Kiosk runtime + first-boot menu ────────────────────────────
 zenity
-# python3-gobject — runtime for /usr/share/xiboplayer-kiosk/xibo-picker.py
-# (#119), the GTK4+libadwaita live-filter picker used by the first-boot
-# Language / Timezone / Keyboard / Wi-Fi rows. gtk4 + libadwaita are
-# already pulled transitively by zenity 4.2 on Fedora 43.
 python3-gobject
 dunst
 unclutter
 opendoas
-# ptyxis — modern GNOME Console successor, launched from the first-boot
-# Settings sub-menu (handle_terminal) and via Ctrl+S keyd binding. In
-# Fedora 43 ptyxis is the default terminal; gnome-terminal is deprecated.
+keyd
 ptyxis
-# gnome-control-center — optional escape hatch in the first-boot
-# Settings sub-menu (handle_gnome_settings). NOT used by the main
-# first-boot flows — WiFi / timezone / language / keyboard / player / CMS
-# all go through direct nmcli / timedatectl / localectl / alternatives
-# via the zenity pickers. Only invoked when the operator explicitly
-# picks "GNOME Settings" from the Settings sub-menu.
-gnome-control-center
-
-# Networking
-avahi
-nss-mdns
-wireguard-tools
-NetworkManager-wifi
-openssh-server
-
-# Preseed tooling — jq parses xibo.config_url JSON + USB setup.json (#73)
+vim-enhanced
 jq
-
-# Full glibc locale support so `localectl list-locales` shows every
-# UTF-8 locale the zenity Language picker can offer (#103). Without
-# this, @core only pulls glibc-minimal-langpack and the picker shows
-# only English variants — ca_ES, ca_AD, and every other non-English
-# locale are silently missing.
-glibc-all-langpacks
-
-# Remove unnecessary packages — original pre-2026-04-12 list.
-# Restored as-was per user directive "leave the packages as they were".
-# The kickstart may generate a Software Selection warning that requires
-# an operator click-through on the anaconda hub; that's the tradeoff
-# for keeping the known-good install+boot pipeline that ran yesterday.
--gnome-tour
--gnome-software
--gnome-text-editor
--gnome-calculator
--gnome-characters
--gnome-clocks
--gnome-connections
--gnome-contacts
--gnome-logs
--gnome-maps
--gnome-weather
--totem
--cheese
--evince
--loupe
--yelp
--gnome-user-docs
--abrt*
-# NOTE — `-xdg-user-dirs-gtk` is NOT excluded. It's a hard Requires of
-# anaconda itself — excluding it produces "anaconda requires
-# xdg-user-dirs-gtk but package xdg-user-dirs-gtk is filtered out" on
-# the Software Selection spoke and under inst.noninteractive aborts
-# the install silently. The rename-directories prompt it provides is
-# suppressed by /etc/xdg/user-dirs.conf enabled=False in %post.
-#
-# The "rename directories" prompt is still suppressed by the %post
-# block that writes /etc/xdg/user-dirs.conf with enabled=False —
-# which is the canonical config-file approach anyway. The belt
-# became the braces.
 %end
 
 # RPMFusion repositories
