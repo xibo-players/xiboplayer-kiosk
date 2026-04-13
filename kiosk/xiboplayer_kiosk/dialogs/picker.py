@@ -161,8 +161,13 @@ class Picker(BrandedAlertDialog):
         self.entry.connect("entry-activated", self._on_entry_activate)
         self._cv.connect("activate", lambda *a: self.emit("response", "ok"))
 
-        # Key: Down in entry → focus list, Escape → cancel
+        # Key controller: Escape → cancel, Down (in entry) → focus list.
+        # Use CAPTURE propagation so we see Escape BEFORE Adw.EntryRow's
+        # default handler consumes it to clear the entry text. Without
+        # capture, pressing Escape just empties the search field instead
+        # of closing the picker.
         key_ctl = Gtk.EventControllerKey.new()
+        key_ctl.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
         key_ctl.connect("key-pressed", self._on_key)
         self.add_controller(key_ctl)
 
