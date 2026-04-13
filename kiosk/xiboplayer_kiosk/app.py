@@ -33,15 +33,23 @@ from .dialogs.wifi_password import WifiPasswordDialog
 
 
 def _apply_dark_theme() -> None:
-    """Mirror zenity: honour GNOME color-scheme preference."""
+    """Honour GNOME's color-scheme preference via Adw.StyleManager.
+
+    libadwaita has its own color-scheme property that is the canonical
+    way to set light/dark for Adwaita apps. The older GTK property
+    `gtk-application-prefer-dark-theme` still works but prints a
+    deprecation warning on every app start when libadwaita is active.
+    """
     try:
         s = Gio.Settings.new("org.gnome.desktop.interface")
         cs = s.get_string("color-scheme") if "color-scheme" in s.list_keys() else ""
-        prefer_dark = (cs == "prefer-dark")
-        from gi.repository import Gtk
-        Gtk.Settings.get_default().set_property(
-            "gtk-application-prefer-dark-theme", prefer_dark,
-        )
+        mgr = Adw.StyleManager.get_default()
+        if cs == "prefer-dark":
+            mgr.set_color_scheme(Adw.ColorScheme.FORCE_DARK)
+        elif cs == "prefer-light":
+            mgr.set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
+        else:
+            mgr.set_color_scheme(Adw.ColorScheme.PREFER_DARK)
     except Exception:  # noqa: BLE001
         pass
 

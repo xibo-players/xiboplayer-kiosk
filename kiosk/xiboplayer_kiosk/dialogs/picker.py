@@ -138,16 +138,16 @@ class Picker(BrandedAlertDialog):
         scrolled.set_child(self._cv)
         scrolled.set_has_frame(False)
 
-        # Single-card visual grouping: entry on top, separator, scrolled
-        # list below. Each widget is parented ONCE — GTK4 raises if a
-        # widget is appended to two containers. Earlier version had a
-        # double-append bug that orphaned the entry.
-        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        card.add_css_class("card")
-        card.append(self.entry)
-        card.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
-        card.append(scrolled)
-        extra.append(card)
+        # Visual grouping via subtle separator only — NOT the `.card`
+        # CSS class, which paints its own dark background that clashes
+        # with the AlertDialog's lighter chrome (user reported
+        # "black-on-grey"). Leaving the entry + list transparent lets
+        # them inherit the dialog's background so they blend seamlessly.
+        group = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        group.append(self.entry)
+        group.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+        group.append(scrolled)
+        extra.append(group)
 
         self.set_extra_child(extra)
 
@@ -157,7 +157,7 @@ class Picker(BrandedAlertDialog):
         # Wire filter-as-you-type
         self.entry.connect("search-changed", self._on_search_changed)
         self.entry.connect("activate", self._on_entry_activate)
-        self._cv.connect("activate", lambda *a: self.response("ok"))
+        self._cv.connect("activate", lambda *a: self.emit("response", "ok"))
 
         # Key: Down in entry → focus list, Escape → cancel
         key_ctl = Gtk.EventControllerKey.new()
@@ -197,11 +197,11 @@ class Picker(BrandedAlertDialog):
     def _on_entry_activate(self, _e) -> None:
         if self._selection.get_selected() == Gtk.INVALID_LIST_POSITION:
             self._auto_select_first()
-        self.response("ok")
+        self.emit("response", "ok")
 
     def _on_key(self, _ctl, keyval, _kc, _mods) -> bool:
         if keyval == Gdk.KEY_Escape:
-            self.response("cancel")
+            self.emit("response", "cancel")
             return True
         if keyval == Gdk.KEY_Down and self.entry.has_focus():
             self._cv.grab_focus()
