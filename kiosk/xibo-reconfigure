@@ -1,0 +1,9 @@
+#!/bin/sh
+# xibo-reconfigure — thin wrapper for Ctrl+R reconfigure flow.
+#
+# Bound to Ctrl+R via kiosk/keyd-xibo.conf. Launches the Python wizard
+# in reconfigure mode, which presents ReconfigureMenu (edit CMS / re-run
+# full setup / open Settings / close) rather than the first-boot flow.
+set -e
+export PYTHONPATH="/usr/share/xiboplayer-kiosk${PYTHONPATH:+:${PYTHONPATH}}"
+exec python3 -m xiboplayer_kiosk --mode=reconfigure "$@"

@@ -46,6 +46,14 @@ install -m755 kiosk/xibo-set-player.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/xibo-set-keyboard.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 # Issue #119 — GTK4+libadwaita live-filter picker (Adw.AlertDialog)
 install -m755 kiosk/xibo-picker.py "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+# PR1+PR2 (Python rewrite) — library + services + dialogs + entry-points.
+install -d "${DEB_DIR}/usr/share/xiboplayer-kiosk/xiboplayer_kiosk/services"
+install -d "${DEB_DIR}/usr/share/xiboplayer-kiosk/xiboplayer_kiosk/dialogs"
+install -m644 kiosk/xiboplayer_kiosk/*.py              "${DEB_DIR}/usr/share/xiboplayer-kiosk/xiboplayer_kiosk/"
+install -m644 kiosk/xiboplayer_kiosk/services/*.py     "${DEB_DIR}/usr/share/xiboplayer-kiosk/xiboplayer_kiosk/services/"
+install -m644 kiosk/xiboplayer_kiosk/dialogs/*.py      "${DEB_DIR}/usr/share/xiboplayer-kiosk/xiboplayer_kiosk/dialogs/"
+install -m755 kiosk/xibo-first-boot  "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m755 kiosk/xibo-reconfigure "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 # keyd Ctrl+S terminal wrapper (picks ptyxis/kgx/gnome-terminal/xterm)
 install -m755 kiosk/xibo-keyd-open-terminal.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 # Issue #73 — USB /setup.json auto-detect

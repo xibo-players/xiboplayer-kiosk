@@ -77,9 +77,17 @@ wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.9 2>/dev/null || true
 #   - Can be deleted manually (or by Ctrl+R "full-setup") to re-run the menu.
 mkdir -p "$XIBO_DATA_DIR" 2>/dev/null || true
 FIRST_BOOT_SENTINEL="$XIBO_DATA_DIR/first-boot-done"
-if [ ! -f "$FIRST_BOOT_SENTINEL" ] && [ -x "$XIBO_KIOSK_DIR/xibo-first-boot.sh" ]; then
-    "$XIBO_KIOSK_DIR/xibo-first-boot.sh" 2>&1 | logger -t xibo-first-boot || true
-    touch "$FIRST_BOOT_SENTINEL" 2>/dev/null || true
+# First-boot wizard: prefer the Python wrapper (PR1/PR2 rewrite); fall
+# back to the old shell script if the Python one is missing (defensive
+# for mixed-version installs).
+if [ ! -f "$FIRST_BOOT_SENTINEL" ]; then
+    if [ -x "$XIBO_KIOSK_DIR/xibo-first-boot" ]; then
+        "$XIBO_KIOSK_DIR/xibo-first-boot" 2>&1 | logger -t xibo-first-boot || true
+        touch "$FIRST_BOOT_SENTINEL" 2>/dev/null || true
+    elif [ -x "$XIBO_KIOSK_DIR/xibo-first-boot.sh" ]; then
+        "$XIBO_KIOSK_DIR/xibo-first-boot.sh" 2>&1 | logger -t xibo-first-boot || true
+        touch "$FIRST_BOOT_SENTINEL" 2>/dev/null || true
+    fi
 fi
 
 # Helper: get IP address

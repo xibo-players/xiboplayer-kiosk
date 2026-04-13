@@ -1,0 +1,11 @@
+#!/bin/sh
+# xibo-first-boot — thin wrapper that launches the Python wizard.
+#
+# Invoked by kiosk/gnome-kiosk-script.xibo.sh once per fresh install (the
+# first-boot-done sentinel in ~/.local/share/xibo/ prevents subsequent
+# runs). Sets PYTHONPATH so the package tree at
+# /usr/share/xiboplayer-kiosk/xiboplayer_kiosk/ is importable, then
+# exec's the __main__ module in first-boot mode.
+set -e
+export PYTHONPATH="/usr/share/xiboplayer-kiosk${PYTHONPATH:+:${PYTHONPATH}}"
+exec python3 -m xiboplayer_kiosk --mode=first-boot "$@"
