@@ -91,9 +91,10 @@ class Picker(BrandedAlertDialog):
         self._print_idx = max(0, min(print_column - 1, self._ncols - 1))
         self._min_chars = min_chars
 
-        # Compact size — the list scrolls below the entry; no wasted margin.
+        # Compact size — list has only as much room as it needs; the
+        # ScrolledWindow handles overflow. ~10 visible rows.
         extra = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        extra.set_size_request(460, 420)
+        extra.set_size_request(460, 300)
 
         # Adw.EntryRow gives the same visual style as the CmsForm fields
         # (libadwaita preferences row: floating title, padded, large hit
@@ -161,15 +162,23 @@ class Picker(BrandedAlertDialog):
         self.entry.connect("entry-activated", self._on_entry_activate)
         self._cv.connect("activate", lambda *a: self.emit("response", "ok"))
 
-        # Key controller: Escape → cancel, Down (in entry) → focus list.
-        # Use CAPTURE propagation so we see Escape BEFORE Adw.EntryRow's
-        # default handler consumes it to clear the entry text. Without
-        # capture, pressing Escape just empties the search field instead
-        # of closing the picker.
-        key_ctl = Gtk.EventControllerKey.new()
-        key_ctl.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
-        key_ctl.connect("key-pressed", self._on_key)
-        self.add_controller(key_ctl)
+        # Key controller — must be on the ENTRY (the focused widget),
+        # not the dialog. Adw.EntryRow's default key handler eats
+        # Escape to clear text; a dialog-level controller in any
+        # propagation phase doesn't run before the entry's own bound
+        # action, because Adw.EntryRow installs its Escape handler at
+        # the widget action level (not as an event controller). The
+        # only reliable way to override is to attach a CAPTURE-phase
+        # controller directly on the entry widget itself, which sees
+        # the keystroke before the entry's action class processes it.
+        ec_entry = Gtk.EventControllerKey.new()
+        ec_entry.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        ec_entry.connect("key-pressed", self._on_key)
+        self.entry.add_controller(ec_entry)
+        # Also at the dialog level for when focus moves to the list/buttons.
+        ec_dialog = Gtk.EventControllerKey.new()
+        ec_dialog.connect("key-pressed", self._on_key)
+        self.add_controller(ec_dialog)
 
         self.focus_after_present(self.entry)
 
