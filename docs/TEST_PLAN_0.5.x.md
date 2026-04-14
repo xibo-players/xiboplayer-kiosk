@@ -101,17 +101,17 @@ Each stage is pass/fail. A stage "passes" only when ALL its checkpoints tick.
 
 | # | Bug | Source | Fix status | Verified |
 |---|---|---|---|---|
-| 1 | Player fails to start after CMS auth (Stage E blocker) | Sing7 #70, #94, #96 | ⏳ open | |
-| 2 | xorriso GRUB overlay breaks VM kernel auto-detect on some VM configs | Sing7 #98 (0x0: "double-reported in .36") | ⏳ open | |
-| 3 | kiosk#57 Raspberry Pi 4 install can't find bootable partition | GH issue #57 (Yunus1903) | ⏳ open | |
-| 4 | kiosk#58 anaconda --device-link error | GH issue #58 (0x0-0xf) | ⏳ open | |
+| 1 | Player fails to start after CMS auth (Stage E blocker) | [#145](https://github.com/xibo-players/xiboplayer-kiosk/issues/145) + Sing7 #70, #94, #96 | ⏳ open | |
+| 2 | xorriso GRUB overlay breaks VM kernel auto-detect on some VM configs | [#146](https://github.com/xibo-players/xiboplayer-kiosk/issues/146) + Sing7 #98 | ⏳ open | |
+| 3 | Raspberry Pi 4 install can't find bootable partition | [#57](https://github.com/xibo-players/xiboplayer-kiosk/issues/57) (Yunus1903) | ⏳ open | |
+| 4 | anaconda --device-link error | [#58](https://github.com/xibo-players/xiboplayer-kiosk/issues/58) (0x0-0xf) | ⏳ open | |
 
 ## Enhancement tracker (not release-blockers)
 
 | # | Request | Source | Status |
 |---|---|---|---|
-| E1 | "Locality" unified menu — Lang + Keyboard + Timezone in one category | Sing7 #76, #80 | design pending |
-| E2 | Reconfigure window visual polish | Sing7 #98 | design pending |
+| E1 | "Locality" unified menu — Lang + Keyboard + Timezone in one category | [#147](https://github.com/xibo-players/xiboplayer-kiosk/issues/147) + Sing7 #76, #80 | design pending |
+| E2 | Reconfigure window visual polish | [#148](https://github.com/xibo-players/xiboplayer-kiosk/issues/148) + Sing7 #98 | design pending |
 | E3 | Headless first-boot via captive portal (DNSMASQ + Apache) | horizon2026 (0x0) | memory tracked |
 | E4 | Plymouth branding (6-slide carousel + anaconda sidebar) | PR4 blueprint | blueprint ready |
 | E5 | Drop deprecated shell scripts (xibo-first-boot.sh etc.) | PR3 blueprint | ready for 0.5.1 |
