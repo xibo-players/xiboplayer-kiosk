@@ -116,7 +116,7 @@ inst.ks=https://raw.githubusercontent.com/xibo-players/xiboplayer-kiosk/main/kic
 
 | File | Location | Purpose |
 |------|----------|---------|
-| `gnome-kiosk-script.sh` | `/usr/share/xiboplayer-kiosk/` | Dispatcher (wizard or session holder) |
+| `xiboplayer-kiosk-session` | `/usr/share/xiboplayer-kiosk/` | Dispatcher — invoked by xibo's `~/.local/bin/gnome-kiosk-script` wrapper |
 | `gnome-kiosk-script.xibo.sh` | `/usr/share/xiboplayer-kiosk/` | Session holder with health monitoring |
 | `gnome-kiosk-script.xibo-init.sh` | `/usr/share/xiboplayer-kiosk/` | First-boot CMS registration wizard |
 | `xibo-player.service` | `~/.config/systemd/user/` | Systemd user service for the player |

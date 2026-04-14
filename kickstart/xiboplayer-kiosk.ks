@@ -458,10 +458,19 @@ EOF
 chmod 600 /etc/doas.conf
 %end
 
-# Install kiosk dispatcher for xibo user
-# (skel handles new users, but the kickstart-created user needs it too)
+# Install kiosk dispatcher wrapper for xibo user.
+# gnome-kiosk-script-wayland-session (from Fedora gnome-kiosk-script-session)
+# hardcodes the filename $HOME/.local/bin/gnome-kiosk-script — it's not
+# configurable. Write a thin wrapper at that path that execs our real
+# dispatcher at /usr/share/xiboplayer-kiosk/xiboplayer-kiosk-session. This
+# avoids the file-conflict race where Fedora's default demo script (also
+# at /etc/skel/.local/bin/gnome-kiosk-script, calls gnome-text-editor)
+# could end up as xibo's kiosk session entry point (#153).
 %post --erroronfail
-cp /etc/skel/.local/bin/gnome-kiosk-script /home/xibo/.local/bin/gnome-kiosk-script
+cat > /home/xibo/.local/bin/gnome-kiosk-script <<'WRAPPER_EOF'
+#!/bin/bash
+exec /usr/share/xiboplayer-kiosk/xiboplayer-kiosk-session "$@"
+WRAPPER_EOF
 chmod 755 /home/xibo/.local/bin/gnome-kiosk-script
 
 # Add local bin to PATH
