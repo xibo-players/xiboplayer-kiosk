@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    uses: xibo-players/.github/.github/workflows/build-iso.yml@c7a9ea831d9088b3f48dedbc14906b6d32ab3e76  # main @ 2026-04-12 (patch all grub.cfg paths, not just /EFI/BOOT — .github#31)
+    uses: xibo-players/.github/.github/workflows/build-iso.yml@a4fc03795a8235d87022e5e8330004b4a74f65a4  # main @ 2026-04-14 (drop xorriso post-patch — .github#32, closes #146)
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
