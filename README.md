@@ -51,7 +51,7 @@ All images ship with: xiboplayer-electron + xiboplayer-chromium + arexibo, VLC +
 
 ## Features
 
-- **First-boot registration wizard** — libadwaita GTK4 player selection wizard with zenity fallback
+- **First-boot registration wizard** — single-window Python + GTK4 + libadwaita wizard with sidebar categories (Language / Keyboard / Wi-Fi / Timezone / Player / CMS / Settings) and inline content panels (`Adw.NavigationSplitView`). Ctrl+R re-opens it in reconfigure mode
 - **Session holder** — keeps GNOME Kiosk alive with health monitoring and auto-restart
 - **Systemd user service** — manages the player process with resource limits
 - **Keyboard shortcuts** — Ctrl+I (show IP/status), Ctrl+R (reconfigure CMS)
