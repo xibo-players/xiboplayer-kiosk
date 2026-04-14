@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.5.0
+Version:        0.5.1
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -54,7 +54,7 @@ Select the active player:
 %autosetup -n %{name}-%{version}
 
 %install
-install -Dm755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/gnome-kiosk-script.sh
+install -Dm755 kiosk/xiboplayer-kiosk-session %{buildroot}%{_datadir}/xiboplayer-kiosk/xiboplayer-kiosk-session
 install -Dm755 kiosk/gnome-kiosk-script.xibo.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/gnome-kiosk-script.xibo.sh
 install -Dm755 kiosk/gnome-kiosk-script.xibo-init.sh %{buildroot}%{_datadir}/xiboplayer-kiosk/gnome-kiosk-script.xibo-init.sh
 install -Dm644 kiosk/dunstrc %{buildroot}%{_datadir}/xiboplayer-kiosk/dunstrc
@@ -138,13 +138,18 @@ install -Dm644 mkosi-extra/etc/dconf/db/gdm.d/locks/00-xiboplayer-kiosk %{buildr
 # Read by xiboplayer-chromium on startup; no dconf compilation needed.
 install -Dm644 mkosi-extra/etc/chromium/policies/managed/xiboplayer-kiosk.json %{buildroot}%{_sysconfdir}/chromium/policies/managed/xiboplayer-kiosk.json
 
-# Create skel directory for gnome-kiosk-script dispatcher
-install -d %{buildroot}%{_sysconfdir}/skel/.local/bin
-install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
+# No /etc/skel install for the kiosk-script dispatcher.
+# The Fedora `gnome-kiosk-script-session` RPM ships a default demo at
+# /etc/skel/.local/bin/gnome-kiosk-script that calls gnome-text-editor.
+# We deliberately do NOT write to /etc/skel/ — the xibo user's
+# ~/.local/bin/gnome-kiosk-script is populated explicitly by kickstart
+# as a thin wrapper that execs our dispatcher at the unambiguous path
+# /usr/share/xiboplayer-kiosk/xiboplayer-kiosk-session. This avoids the
+# install-order file-conflict race with gnome-kiosk-script-session (#153).
 
 %files
 %dir %{_datadir}/xiboplayer-kiosk
-%{_datadir}/xiboplayer-kiosk/gnome-kiosk-script.sh
+%{_datadir}/xiboplayer-kiosk/xiboplayer-kiosk-session
 %{_datadir}/xiboplayer-kiosk/gnome-kiosk-script.xibo.sh
 %{_datadir}/xiboplayer-kiosk/gnome-kiosk-script.xibo-init.sh
 %{_datadir}/xiboplayer-kiosk/dunstrc
@@ -176,7 +181,6 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 %{_datadir}/xiboplayer-kiosk/xiboplayer-kiosk-logo.png
 %{_sysconfdir}/keyd/xibo.conf
 %{_sysconfdir}/yum.repos.d/copr-keyd.repo
-%{_sysconfdir}/skel/.local/bin/gnome-kiosk-script
 %config(noreplace) %{_sysconfdir}/systemd/logind.conf.d/no-idle.conf
 %{_datadir}/glib-2.0/schemas/90_xiboplayer-kiosk.gschema.override
 %config %{_sysconfdir}/dconf/profile/gdm
@@ -197,6 +201,10 @@ install -m755 kiosk/gnome-kiosk-script.sh %{buildroot}%{_sysconfdir}/skel/.local
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Tue Apr 14 2026 Pau Aliagas <linuxnow@gmail.com> - 0.5.1-1
+- Rename dispatcher to xiboplayer-kiosk-session; drop /etc/skel install to avoid
+  file conflict with gnome-kiosk-script-session default demo (#153).
+
 * Mon Apr 13 2026 Pau Aliagas <linuxnow@gmail.com> - 0.5.0-1
 - Python + GTK4 + libadwaita first-boot wizard (sidebar + content panels).
 

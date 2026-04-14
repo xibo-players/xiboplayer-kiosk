@@ -24,7 +24,7 @@ mkdir -p "${DEB_DIR}/etc/dconf/db/gdm.d/locks"
 mkdir -p "${DEB_DIR}/etc/chromium/policies/managed"
 
 # Install kiosk scripts
-install -m755 kiosk/gnome-kiosk-script.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
+install -m755 kiosk/xiboplayer-kiosk-session "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/gnome-kiosk-script.xibo.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m755 kiosk/gnome-kiosk-script.xibo-init.sh "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
 install -m644 kiosk/dunstrc "${DEB_DIR}/usr/share/xiboplayer-kiosk/"
@@ -83,8 +83,11 @@ install -m644 mkosi-extra/etc/dconf/db/gdm.d/locks/00-xiboplayer-kiosk "${DEB_DI
 # Chromium managed policies (#98) — disables Save Password, autofill, translate
 install -m644 mkosi-extra/etc/chromium/policies/managed/xiboplayer-kiosk.json "${DEB_DIR}/etc/chromium/policies/managed/xiboplayer-kiosk.json"
 
-# Install dispatcher to skel (copied to new users' ~/.local/bin/)
-install -m755 kiosk/gnome-kiosk-script.sh "${DEB_DIR}/etc/skel/.local/bin/gnome-kiosk-script"
+# NO /etc/skel install for the kiosk dispatcher — Fedora/Ubuntu's
+# gnome-kiosk-script-session package ships a default demo at the same
+# path. The xibo user gets its ~/.local/bin/gnome-kiosk-script from a
+# postinst that writes a 2-line wrapper execing our real dispatcher at
+# /usr/share/xiboplayer-kiosk/xiboplayer-kiosk-session (#153).
 
 # Install systemd service
 install -m644 kiosk/xibo-player.service "${DEB_DIR}/usr/lib/systemd/user/"
