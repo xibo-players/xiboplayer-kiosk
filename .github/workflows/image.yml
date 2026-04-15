@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    uses: xibo-players/.github/.github/workflows/build-iso.yml@96da5ad926a365cb7d2fbde1d1d207253dd1c861  # main @ 2026-04-14 (xorriso post-patch with -boot_image any replay — .github#33, re-brands grub menu while preserving #146 fix)
+    uses: xibo-players/.github/.github/workflows/build-iso.yml@66aa291944bb2773302afcf6e13c1cec25ad5cbc  # main @ 2026-04-14 (xorriso post-patch with -boot_image any replay — .github#33, re-brands grub menu while preserving #146 fix)
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
