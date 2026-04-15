@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   deb:
-    uses: xibo-players/.github/.github/workflows/build-deb.yml@66aa291944bb2773302afcf6e13c1cec25ad5cbc  # main
+    uses: xibo-players/.github/.github/workflows/build-deb.yml@3dcfbc978c4b1be83b2eea590f3d591a7142cdd1  # main
     with:
       package-name: xiboplayer-kiosk
       deb-script: 'deb/build-deb.sh'
