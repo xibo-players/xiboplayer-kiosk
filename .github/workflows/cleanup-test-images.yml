@@ -1,0 +1,85 @@
+name: Cleanup test ISO images
+# Prune old test/<sha>/ ISO directories on R2, keeping the most recent
+# N (default 3). Runs manually via workflow_dispatch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: 'How many recent test builds to keep (newest first by LastModified)'
+        required: false
+        default: '3'
+        type: string
+      dry_run:
+        description: 'Preview deletions without executing'
+        required: false
+        default: 'true'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prune old test/<sha>/ prefixes
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          KEEP: ${{ inputs.keep }}
+          DRY: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          BUCKET="${R2_BUCKET}"
+          PREFIX="xiboplayer-kiosk/test/"
+
+          # List every immediate sub-prefix under test/ with its newest
+          # file's LastModified. Each sub-prefix looks like test/<sha>/.
+          # aws s3 ls with --recursive gives file timestamps; we collapse
+          # to sub-prefix by cutting at the 3rd path segment and taking
+          # the max timestamp per prefix.
+          aws s3 ls "$BUCKET/$PREFIX" --recursive --endpoint-url "$R2_ENDPOINT" \
+            | awk '{
+                # columns: date time size key
+                key = $4
+                for (i=5;i<=NF;i++) key = key " " $i
+                split(key, parts, "/")
+                # parts[1]=xiboplayer-kiosk parts[2]=test parts[3]=<sha> parts[4]=file
+                sub_prefix = parts[1] "/" parts[2] "/" parts[3] "/"
+                ts = $1 " " $2
+                if (ts > newest[sub_prefix]) newest[sub_prefix] = ts
+              }
+              END {
+                for (p in newest) printf "%s\t%s\n", newest[p], p
+              }' \
+            | sort -r \
+            > /tmp/prefixes.txt
+
+          echo "All test/<sha>/ prefixes (newest first):"
+          cat /tmp/prefixes.txt
+          echo
+          echo "Keep newest $KEEP; delete the rest."
+
+          TO_DELETE=$(tail -n +$((KEEP + 1)) /tmp/prefixes.txt | cut -f2)
+          if [ -z "$TO_DELETE" ]; then
+            echo "Nothing to delete."
+            exit 0
+          fi
+
+          for pfx in $TO_DELETE; do
+            echo "--- $pfx ---"
+            if [ "$DRY" = "true" ]; then
+              aws s3 ls "$BUCKET/$pfx" --recursive --endpoint-url "$R2_ENDPOINT" \
+                | awk '{print "  [dry-run] would delete:", $4}'
+            else
+              aws s3 rm "$BUCKET/$pfx" --recursive --endpoint-url "$R2_ENDPOINT"
+            fi
+          done
+
+          if [ "$DRY" = "true" ]; then
+            echo
+            echo "DRY RUN — nothing actually deleted. Re-run with dry_run=false to execute."
+          fi
