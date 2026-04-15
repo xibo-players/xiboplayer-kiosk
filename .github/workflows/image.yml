@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    uses: xibo-players/.github/.github/workflows/build-iso.yml@66aa291944bb2773302afcf6e13c1cec25ad5cbc  # main @ 2026-04-14 (xorriso post-patch with -boot_image any replay — .github#33, re-brands grub menu while preserving #146 fix)
+    uses: xibo-players/.github/.github/workflows/build-iso.yml@3dcfbc978c4b1be83b2eea590f3d591a7142cdd1  # main @ 2026-04-14 (xorriso post-patch with -boot_image any replay — .github#33, re-brands grub menu while preserving #146 fix)
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
@@ -28,6 +28,10 @@ jobs:
       # order, player-selection submenu, and kernel params. Replaces
       # the old string-replacement approach (iso-grub-replacements).
       iso-grub-file: 'kickstart/grub.cfg'
+      # BIOS-firmware guests (GNOME Boxes default, libvirt BIOS loader,
+      # CSM bare-metal) boot via isolinux — match the grub.cfg branding
+      # at that path too.
+      iso-isolinux-file: 'kickstart/isolinux.cfg'
 
       # Volume ID must match the inst.stage2=hd:LABEL= in grub.cfg
       iso-volid: 'XIBOPLAYER'
