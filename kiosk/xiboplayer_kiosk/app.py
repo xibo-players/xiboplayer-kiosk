@@ -34,7 +34,7 @@ from .services import timezone as tz_svc
 from .services import wifi as wifi_svc
 from .state import KioskState
 from .dialogs.info import ErrorDialog, InfoDialog
-from .dialogs.panels import CmsFormPanel, PickerPanel, PlayerPanel, SettingsPanel
+from .dialogs.panels import CmsFormPanel, LocalityPanel, PickerPanel, PlayerPanel, SettingsPanel
 from .dialogs.window import KioskWindow
 from .dialogs.wifi_password import WifiPasswordDialog
 
@@ -84,19 +84,46 @@ class KioskApp(Adw.Application):
     # ── category dispatch ───────────────────────────────────────────────
 
     def _on_category(self, category: str) -> None:
-        """User clicked a sidebar row — swap the content panel."""
+        """User clicked a sidebar row — swap the content panel.
+
+        Top-level sidebar has only three rows: Locality, CMS, Settings.
+        Locality contains Language/Keyboard/Timezone sub-rows; Settings
+        contains Wi-Fi/Player plus the ops actions.
+        """
         dispatch = {
-            "language": self._show_language,
-            "keyboard": self._show_keyboard,
-            "wifi":     self._show_wifi,
-            "timezone": self._show_timezone,
-            "player":   self._show_player,
+            "locality": self._show_locality,
             "cms":      self._show_cms,
             "settings": self._show_settings,
         }
         fn = dispatch.get(category)
         if fn:
             fn()
+
+    # ── Locality overview + sub-picker dispatch ─────────────────────────
+
+    def _show_locality(self) -> None:
+        """Locality overview — shows current Language/Keyboard/Timezone.
+
+        Clicking a row opens the corresponding picker; after a successful
+        apply, the picker's apply callback navigates back here so the
+        operator sees the new value in the row subtitle.
+        """
+        s = self.state
+        panel = LocalityPanel(
+            locale=s.locale,
+            keyboard=s.keyboard_layout,
+            timezone=s.timezone,
+            on_pick=self._locality_pick,
+        )
+        self._window.set_content_panel("Locality", panel)
+
+    def _locality_pick(self, action: str) -> None:
+        if action == "language":
+            self._show_language()
+        elif action == "keyboard":
+            self._show_keyboard()
+        elif action == "timezone":
+            self._show_timezone()
 
     # ── content panels ──────────────────────────────────────────────────
 
@@ -108,7 +135,9 @@ class KioskApp(Adw.Application):
             min_chars=2,
             placeholder="Type a locale code (e.g. en, en_GB, ca, es, fr, de)",
             apply_label="Set language",
-            on_apply=lambda v: self._apply_via_doas("xibo-set-locale.sh", v, "Language"),
+            on_apply=lambda v: self._apply_via_doas(
+                "xibo-set-locale.sh", v, "Language", back_to=self._show_locality,
+            ),
         )
         self._window.set_content_panel("Language", panel)
 
@@ -120,7 +149,9 @@ class KioskApp(Adw.Application):
             min_chars=2,
             placeholder="Type a layout code or country (e.g. us, es, fr, gb)",
             apply_label="Set keyboard",
-            on_apply=lambda v: self._apply_via_doas("xibo-set-keyboard.sh", v, "Keyboard"),
+            on_apply=lambda v: self._apply_via_doas(
+                "xibo-set-keyboard.sh", v, "Keyboard", back_to=self._show_locality,
+            ),
         )
         self._window.set_content_panel("Keyboard", panel)
 
@@ -132,7 +163,9 @@ class KioskApp(Adw.Application):
             min_chars=2,
             placeholder="Type UTC or a city (e.g. UTC, New_York, London, Tokyo)",
             apply_label="Set timezone",
-            on_apply=lambda v: self._apply_via_doas("xibo-set-timezone.sh", v, "Timezone"),
+            on_apply=lambda v: self._apply_via_doas(
+                "xibo-set-timezone.sh", v, "Timezone", back_to=self._show_locality,
+            ),
         )
         self._window.set_content_panel("Timezone", panel)
 
@@ -197,6 +230,8 @@ class KioskApp(Adw.Application):
         else:
             ErrorDialog(subtitle="Wi-Fi", body=f"Failed to connect to {ssid}.\n\n{err}").present(self._window)
         self._window.refresh_sidebar()
+        # Back to the Settings overview (same parent as Wi-Fi sub-picker).
+        self._show_settings()
 
     def _show_player(self) -> None:
         panel = PlayerPanel(
@@ -216,6 +251,8 @@ class KioskApp(Adw.Application):
         else:
             ErrorDialog(subtitle="Player", body=f"Failed to switch player.\n\n{err}").present(self._window)
         self._window.refresh_sidebar()
+        # Back to Settings overview (Player sub-picker's parent).
+        self._show_settings()
 
     def _show_cms(self) -> None:
         s = self.state
@@ -236,10 +273,28 @@ class KioskApp(Adw.Application):
         self._window.refresh_sidebar()
 
     def _show_settings(self) -> None:
-        panel = SettingsPanel(on_pick=self._settings_pick)
+        s = self.state
+        wifi_sub = s.wifi_ssid if s.wifi_ssid else (
+            "(not connected)" if s.wifi_hardware_present else "(no wireless hardware)"
+        )
+        panel = SettingsPanel(
+            wifi_subtitle=wifi_sub,
+            player_subtitle=s.player or "(unknown)",
+            on_pick=self._settings_pick,
+        )
         self._window.set_content_panel("Settings", panel)
 
     def _settings_pick(self, action: str) -> None:
+        # Wi-Fi + Player are "sub-pickers": clicking them opens a picker
+        # panel in the content pane (not a modal), same pattern as
+        # Locality sub-rows. After apply the callback navigates back to
+        # the Settings overview so the new value is visible.
+        if action == "wifi":
+            self._show_wifi()
+            return
+        if action == "player":
+            self._show_player()
+            return
         if action == "terminal":
             for cand in ("ptyxis", "kgx", "gnome-terminal", "xterm"):
                 try:
@@ -265,7 +320,7 @@ class KioskApp(Adw.Application):
 
     # ── helpers ─────────────────────────────────────────────────────────
 
-    def _apply_via_doas(self, helper: str, value: str, label: str) -> None:
+    def _apply_via_doas(self, helper: str, value: str, label: str, *, back_to=None) -> None:
         notify.send(f"Setting {label.lower()} to {value}...")
         ok, err = self.doas.run(helper, value)
         if ok:
@@ -273,6 +328,11 @@ class KioskApp(Adw.Application):
         else:
             ErrorDialog(subtitle=label, body=f"Failed to set {label} to {value}.\n\n{err}").present(self._window)
         self._window.refresh_sidebar()
+        # After apply, navigate back to the parent overview panel so the
+        # operator sees the new value in the row subtitle and doesn't
+        # stare at a stale picker wondering if anything happened.
+        if callable(back_to):
+            back_to()
 
     def _info_status_widget(self, *, icon: str, title: str, body: str) -> Adw.StatusPage:
         sp = Adw.StatusPage()

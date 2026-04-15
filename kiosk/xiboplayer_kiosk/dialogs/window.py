@@ -26,12 +26,13 @@ from gi.repository import Adw, Gdk, Gtk  # noqa: E402
 from .. import branding
 
 
+# Sidebar top-level categories. Grouped per user feedback to reduce
+# cognitive load — Locality bundles Language/Keyboard/Timezone,
+# Settings bundles Wi-Fi/Player and the ops actions (GNOME Settings,
+# terminal, debug bundle). Each group's overview panel lists sub-
+# actions with live subtitles showing the current value.
 _CATEGORIES = [
-    ("language", "Language"),
-    ("keyboard", "Keyboard"),
-    ("wifi",     "Wi-Fi"),
-    ("timezone", "Timezone"),
-    ("player",   "Player"),
+    ("locality", "Locality"),
     ("cms",      "CMS"),
     ("settings", "Settings"),
 ]
@@ -207,14 +208,14 @@ class KioskWindow(Adw.ApplicationWindow):
 
     def _sidebar_subtitle(self, category_id: str) -> str:
         s = self.state
+        # Locality + Settings show a condensed summary — the expanded
+        # per-row values live inside the category's overview panel.
+        locality_parts = [p for p in (s.locale, s.keyboard_layout, s.timezone) if p]
+        settings_parts = [s.wifi_ssid, s.player] if s.wifi_ssid else [s.player]
         return {
-            "language": s.locale or "(unknown)",
-            "keyboard": s.keyboard_layout,
-            "wifi":     s.wifi_ssid,
-            "timezone": s.timezone,
-            "player":   s.player,
+            "locality": " · ".join(locality_parts) or "(not set)",
             "cms":      s.cms_url,
-            "settings": "Terminal · GNOME Settings · Debug",
+            "settings": " · ".join(settings_parts),
         }.get(category_id, "")
 
     def _on_sidebar_row_activated(self, _box, row) -> None:
