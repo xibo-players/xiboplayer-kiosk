@@ -285,14 +285,20 @@ class PlayerPanel(Gtk.Box):
 # ───────────────────────────────────────────────────────────────────────
 
 
-class SettingsPanel(Gtk.Box):
-    """Sub-actions list: terminal / GNOME settings / debug bundle."""
+class _OverviewPanel(Gtk.Box):
+    """Reusable overview panel: a labelled PreferencesGroup of ActionRows.
+
+    Each row has a ``title``, a live ``subtitle`` showing the current
+    value, and activates an ``action_id`` on click. Used for both the
+    Locality overview (Language / Keyboard / Timezone) and the Settings
+    overview (Wi-Fi / Player / GNOME Settings / Open terminal / Debug).
+    """
 
     __gsignals__ = {
         "picked": (GObject.SignalFlags.RUN_FIRST, None, (str,)),
     }
 
-    def __init__(self, *, on_pick=None):
+    def __init__(self, *, rows, on_pick=None, group_description=None):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         self.set_margin_top(12)
         self.set_margin_bottom(12)
@@ -301,11 +307,9 @@ class SettingsPanel(Gtk.Box):
         self._on_pick = on_pick
 
         group = Adw.PreferencesGroup()
-        for action_id, title, subtitle in (
-            ("gnome",    "GNOME Settings", "Advanced system tweaks"),
-            ("terminal", "Open terminal", "ptyxis (Ctrl+S also works)"),
-            ("debug",    "Collect debug bundle", "~/Downloads/xibo-debug-*.tar.zst"),
-        ):
+        if group_description:
+            group.set_description(group_description)
+        for action_id, title, subtitle in rows:
             row = Adw.ActionRow(title=title, subtitle=subtitle)
             row.set_activatable(True)
             row._action_id = action_id  # type: ignore[attr-defined]
@@ -319,3 +323,49 @@ class SettingsPanel(Gtk.Box):
         self.emit("picked", action)
         if callable(self._on_pick):
             self._on_pick(action)
+
+
+class LocalityPanel(_OverviewPanel):
+    """Locality overview — Language / Keyboard / Timezone with current values.
+
+    Clicking a row opens the corresponding picker; the controller
+    (``KioskApp``) navigates back to this overview after a successful
+    apply so the operator sees the new value in the subtitle.
+    """
+
+    def __init__(self, *, locale: str, keyboard: str, timezone: str, on_pick=None):
+        super().__init__(
+            group_description="Region and input settings",
+            rows=(
+                ("language", "Language", locale or "(not set)"),
+                ("keyboard", "Keyboard", keyboard or "(not set)"),
+                ("timezone", "Timezone", timezone or "(not set)"),
+            ),
+            on_pick=on_pick,
+        )
+
+
+class SettingsPanel(_OverviewPanel):
+    """Settings overview — Wi-Fi / Player / GNOME / terminal / debug.
+
+    Wi-Fi and Player live here (not at sidebar top-level) so the main
+    sidebar has only three category rows: Locality / CMS / Settings.
+    """
+
+    def __init__(
+        self,
+        *,
+        wifi_subtitle: str,
+        player_subtitle: str,
+        on_pick=None,
+    ):
+        super().__init__(
+            rows=(
+                ("wifi",     "Wi-Fi",               wifi_subtitle),
+                ("player",   "Player",              player_subtitle),
+                ("gnome",    "GNOME Settings",      "Advanced system tweaks"),
+                ("terminal", "Open terminal",       "ptyxis (Ctrl+S also works)"),
+                ("debug",    "Collect debug bundle", "~/Downloads/xibo-debug-*.tar.zst"),
+            ),
+            on_pick=on_pick,
+        )

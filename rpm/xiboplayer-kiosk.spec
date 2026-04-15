@@ -1,5 +1,5 @@
 Name:           xiboplayer-kiosk
-Version:        0.5.1
+Version:        0.5.2
 Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
@@ -201,6 +201,10 @@ install -Dm644 mkosi-extra/etc/chromium/policies/managed/xiboplayer-kiosk.json %
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Wed Apr 15 2026 Pau Aliagas <linuxnow@gmail.com> - 0.5.2-1
+- Sidebar regrouped to 3 top-level rows: Locality / CMS / Settings.
+- Picker panels return to parent overview after apply (visible feedback).
+
 * Tue Apr 14 2026 Pau Aliagas <linuxnow@gmail.com> - 0.5.1-1
 - Rename dispatcher to xiboplayer-kiosk-session; drop /etc/skel install to avoid
   file conflict with gnome-kiosk-script-session default demo (#153).
