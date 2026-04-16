@@ -73,7 +73,8 @@ jobs:
         Test this media & install Fedora 43|Test media and install xiboplayer kiosk
         Install Fedora 43 in basic graphics mode|Install xiboplayer kiosk (basic graphics)
         Rescue a Fedora system|Rescue xiboplayer kiosk system
-      iso-volid: 'XIBOPLAYER'
+      # Volume ID kept at Fedora default so Boxes/libosinfo auto-detects
+      # (see image.yml for rationale).
 
       # ── Verbose debug kernel cmdline (test builds only) + default player ──
       iso-cmdline-remove: 'quiet rhgb splash'
