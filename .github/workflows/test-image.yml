@@ -77,5 +77,5 @@ jobs:
 
       # ── Verbose debug kernel cmdline (test builds only) + default player ──
       iso-cmdline-remove: 'quiet rhgb splash'
-      iso-cmdline-append: 'xibo.profile=chromium systemd.log_level=debug inst.debug rd.shell rd.debug console=tty0 console=ttyS0,115200'
+      iso-cmdline-append: 'xibo.profile=chromium inst.loglevel=info systemd.log_level=debug inst.debug rd.shell rd.debug console=ttyS0,115200 console=tty0'
     secrets: inherit
