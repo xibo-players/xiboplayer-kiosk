@@ -127,6 +127,7 @@ jobs:
   push-manifest:
     name: Push multi-arch manifest
     needs: [build-oci-x86_64, build-oci-aarch64]
+    if: ${{ !cancelled() && needs.build-oci-x86_64.result == 'success' && needs.build-oci-aarch64.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -166,6 +167,7 @@ jobs:
   build-iso-x86_64:
     name: Build ISO (x86_64)
     needs: build-oci-x86_64
+    if: ${{ !cancelled() && needs.build-oci-x86_64.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -237,6 +239,7 @@ jobs:
   build-iso-aarch64:
     name: Build ISO (aarch64)
     needs: build-oci-aarch64
+    if: ${{ !cancelled() && needs.build-oci-aarch64.result == 'success' }}
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
 
