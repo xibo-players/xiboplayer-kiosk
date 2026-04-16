@@ -72,3 +72,21 @@
     foreground = "#ffffff"
     frame_color = "#ff0000"
     timeout = 0
+
+# Hide low + normal urgency notifications. Rationale: kiosk mode fires a
+# lot of routine status_notify / notify-send calls (WiFi connecting, CMS
+# waiting, player restarting, etc.) that previously popped up constantly
+# and felt noisy. They still reach dunst's history buffer (queryable via
+# dunstctl) and the journal — just no screen popup.
+#
+# Only "-u critical" notifications display (operator-initiated Ctrl+I /
+# Ctrl+D, and genuine failure alerts). The notify-send defaults to
+# "normal" so older call sites stay silent by default — intentional.
+# Any caller that wants visible output must pass "-u critical" explicitly.
+[hide-low]
+    urgency = low
+    skip_display = yes
+
+[hide-normal]
+    urgency = normal
+    skip_display = yes

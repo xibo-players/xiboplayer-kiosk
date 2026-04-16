@@ -1,6 +1,6 @@
 Name:           xiboplayer-kiosk
 Version:        0.5.2
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
 License:        AGPLv3+
@@ -201,6 +201,14 @@ install -Dm644 mkosi-extra/etc/chromium/policies/managed/xiboplayer-kiosk.json %
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Thu Apr 16 2026 Pau Aliagas <pau@xiboplayer.org> - 0.5.2-3
+- keyd: block Ctrl+T in kiosk (was leaking through Chromium --kiosk and
+  spawning phantom new tabs behind the player).
+- dunst: hide low + normal urgency notifications; only critical pops up.
+  Operator-initiated Ctrl+I (show IP) and Ctrl+D (debug dump) promoted
+  to critical so they still appear. Routine status_notify calls silently
+  log to dunst history + journal without cluttering the screen.
+
 * Thu Apr 16 2026 Pau Aliagas <pau@xiboplayer.org> - 0.5.2-2
 - Touchpad tap-to-click + tap-and-drag (#172, #179), start gsd-mouse so
   gschema keys reach libinput. Drop XIBOPLAYER volid so Boxes auto-detects
