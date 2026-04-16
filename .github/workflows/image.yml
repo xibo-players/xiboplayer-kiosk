@@ -33,6 +33,7 @@ jobs:
         Test this media & install Fedora 43|Test media and install xiboplayer kiosk
         Install Fedora 43 in basic graphics mode|Install xiboplayer kiosk (basic graphics)
         Rescue a Fedora system|Rescue xiboplayer kiosk system
+        set default="1"|set default="0"
 
       # Default player for the single branded install entry. Users
       # switch to Electron/Arexibo post-install via Settings > Player.
