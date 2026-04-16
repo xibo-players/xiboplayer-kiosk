@@ -38,9 +38,11 @@ jobs:
       # switch to Electron/Arexibo post-install via Settings > Player.
       iso-cmdline-append: 'xibo.profile=chromium inst.loglevel=info'
 
-      # Volume ID — stage2 lookup via inst.stage2=hd:LABEL=XIBOPLAYER
-      # in the kickstart file.
-      iso-volid: 'XIBOPLAYER'
+      # Volume ID: left at Fedora's default so libosinfo / GNOME Boxes
+      # / virt-install recognise the ISO as Fedora 43 and pre-fill their
+      # OS picker. We ARE installing Fedora (+ a kickstart), so it's
+      # legitimate — stage2 / kickstart lookup uses the ipxe / mkksiso
+      # mechanisms, not a LABEL-based match on the volid.
     secrets: inherit
 
   # ──────────────────────────────────────────────────────────────────
