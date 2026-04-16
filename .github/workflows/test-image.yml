@@ -73,6 +73,7 @@ jobs:
         Test this media & install Fedora 43|Test media and install xiboplayer kiosk
         Install Fedora 43 in basic graphics mode|Install xiboplayer kiosk (basic graphics)
         Rescue a Fedora system|Rescue xiboplayer kiosk system
+        set default="1"|set default="0"
       # Volume ID kept at Fedora default so Boxes/libosinfo auto-detects
       # (see image.yml for rationale).
 
