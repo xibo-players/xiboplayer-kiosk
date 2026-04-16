@@ -280,7 +280,7 @@ echo "xibo-debug-dump: wrote $TARBALL ($SIZE)"
 # print to stderr as well in case this script is run from a non-graphical
 # context (e.g. SSH or a systemd unit with no DISPLAY).
 if command -v notify-send >/dev/null 2>&1; then
-    notify-send -t 15000 "Xibo debug dump" \
+    notify-send -u critical -t 15000 "Xibo debug dump" \
         "$TARBALL ($SIZE)
 Copy to USB or email to support." 2>/dev/null || true
 fi
