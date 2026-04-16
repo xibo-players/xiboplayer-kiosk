@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: [preflight-rpm]
-    if: ${{ !startsWith(github.ref, 'refs/tags/v') || needs.preflight-rpm.result == 'success' }}
+    if: ${{ always() && (!startsWith(github.ref, 'refs/tags/v') || needs.preflight-rpm.result == 'success') }}
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
     needs: [preflight-rpm]
-    if: ${{ !startsWith(github.ref, 'refs/tags/v') || needs.preflight-rpm.result == 'success' }}
+    if: ${{ always() && (!startsWith(github.ref, 'refs/tags/v') || needs.preflight-rpm.result == 'success') }}
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -175,11 +175,14 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
-          fi
+          # Atomic ISOs ALWAYS use date-based versioning (YYYYMMDD) for
+          # both R2 paths and filenames, regardless of whether this is a
+          # tag push or a scheduled/dispatch build. The kiosk semver
+          # (v0.5.2) is only used for OCI image tags — not for ISOs.
+          # This keeps the naming convention consistent with what the
+          # website composable (useKioskImages.ts) expects: LATEST
+          # contains "atomic-YYYYMMDD", filenames use just "YYYYMMDD".
+          echo "version=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
 
       - name: Pull OCI image (with retry)
         run: |
@@ -243,11 +246,14 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
-          fi
+          # Atomic ISOs ALWAYS use date-based versioning (YYYYMMDD) for
+          # both R2 paths and filenames, regardless of whether this is a
+          # tag push or a scheduled/dispatch build. The kiosk semver
+          # (v0.5.2) is only used for OCI image tags — not for ISOs.
+          # This keeps the naming convention consistent with what the
+          # website composable (useKioskImages.ts) expects: LATEST
+          # contains "atomic-YYYYMMDD", filenames use just "YYYYMMDD".
+          echo "version=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
 
       - name: Pull OCI image (with retry)
         run: |
@@ -312,23 +318,16 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          # IMPORTANT: emit BOTH `tag` (used as the R2 path prefix) AND
-          # `version` (used as the ISO-filename infix). For a tag push,
-          # strip the leading "v" so the filename uses plain semver
-          # (matches the build-iso-{x86_64,aarch64} jobs above which
-          # already produce xiboplayer-kiosk-atomic_${VERSION}_{arch}.iso
-          # with VERSION being the stripped value). The release-notes
-          # step at the bottom of this file consumes `version` for the
-          # download URLs — if it's empty, URLs get a double underscore
-          # and 404 (issue flagged after v0.4.29 release).
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          else
-            DATE=$(date +%Y%m%d)
-            echo "tag=atomic-${DATE}" >> "$GITHUB_OUTPUT"
-            echo "version=${DATE}" >> "$GITHUB_OUTPUT"
-          fi
+          # Atomic ISOs ALWAYS use date-based naming, even on tag pushes.
+          # `tag` = R2 directory prefix (atomic-YYYYMMDD).
+          # `version` = bare date for ISO filenames (YYYYMMDD).
+          # The kiosk semver from the tag (v0.5.2) is used for OCI image
+          # tags only — never for ISO paths. This matches the website
+          # composable which expects LATEST to contain "atomic-YYYYMMDD"
+          # and strips the "atomic-" prefix for filenames.
+          DATE=$(date +%Y%m%d)
+          echo "tag=atomic-${DATE}" >> "$GITHUB_OUTPUT"
+          echo "version=${DATE}" >> "$GITHUB_OUTPUT"
 
       - name: Download all artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
