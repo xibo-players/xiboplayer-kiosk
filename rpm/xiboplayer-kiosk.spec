@@ -1,6 +1,6 @@
 Name:           xiboplayer-kiosk
 Version:        0.5.2
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
 License:        AGPLv3+
@@ -201,6 +201,13 @@ install -Dm644 mkosi-extra/etc/chromium/policies/managed/xiboplayer-kiosk.json %
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Thu Apr 16 2026 Pau Aliagas <pau@xiboplayer.org> - 0.5.2-4
+- dunstrc: fix hide-low/hide-normal rules — match criterion is
+  match_urgency, not urgency (which is the SET action). Previous rules
+  had no match criterion so matched every notification and silenced
+  even critical popups — Ctrl+I / Ctrl+D hit dunst history but never
+  displayed.
+
 * Thu Apr 16 2026 Pau Aliagas <pau@xiboplayer.org> - 0.5.2-3
 - keyd: block Ctrl+T in kiosk (was leaking through Chromium --kiosk and
   spawning phantom new tabs behind the player).
