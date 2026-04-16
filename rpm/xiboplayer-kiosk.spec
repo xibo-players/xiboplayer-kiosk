@@ -1,6 +1,6 @@
 Name:           xiboplayer-kiosk
 Version:        0.5.2
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
 License:        AGPLv3+
@@ -201,6 +201,13 @@ install -Dm644 mkosi-extra/etc/chromium/policies/managed/xiboplayer-kiosk.json %
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Thu Apr 16 2026 Pau Aliagas <pau@xiboplayer.org> - 0.5.2-5
+- keyd: drop `t = noop` added in 0.5.2-3 — it silently broke the other
+  command() bindings in the xibo_ctrl layer (Ctrl+I / Ctrl+D / Ctrl+S
+  stopped working; only Ctrl+R survived). Ctrl+T phantom-tab blocking
+  will be addressed via GSD custom-keybinding or Chromium managed
+  policy in a follow-up.
+
 * Thu Apr 16 2026 Pau Aliagas <pau@xiboplayer.org> - 0.5.2-4
 - dunstrc: fix hide-low/hide-normal rules — match criterion is
   match_urgency, not urgency (which is the SET action). Previous rules
