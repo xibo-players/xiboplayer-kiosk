@@ -36,7 +36,7 @@ jobs:
 
       # Default player for the single branded install entry. Users
       # switch to Electron/Arexibo post-install via Settings > Player.
-      iso-cmdline-append: 'xibo.profile=chromium'
+      iso-cmdline-append: 'xibo.profile=chromium inst.loglevel=info'
 
       # Volume ID — stage2 lookup via inst.stage2=hd:LABEL=XIBOPLAYER
       # in the kickstart file.
