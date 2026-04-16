@@ -80,3 +80,14 @@ picture-uri=''
 picture-uri-dark=''
 picture-options='none'
 primary-color='#000000'
+
+# Touchpad tap-to-click + tap-and-drag — laptop-as-kiosk deployments
+# expect the "tap to click" behavior most desktop OSes ship by default.
+# Without this, operators have to physically press the touchpad to click,
+# which is especially awkward during first-boot zenity menus. Fedora's
+# @^minimal-environment inherits the upstream GNOME default (false), so
+# setting it explicitly is required — relying on inheritance is brittle
+# across GNOME versions.
+[org.gnome.desktop.peripherals.touchpad]
+tap-to-click=true
+tap-and-drag=true

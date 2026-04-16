@@ -26,3 +26,5 @@
 /org/gnome/desktop/screensaver/picture-uri
 /org/gnome/desktop/screensaver/picture-options
 /org/gnome/desktop/screensaver/primary-color
+/org/gnome/desktop/peripherals/touchpad/tap-to-click
+/org/gnome/desktop/peripherals/touchpad/tap-and-drag

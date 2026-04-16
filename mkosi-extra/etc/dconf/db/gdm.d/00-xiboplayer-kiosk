@@ -52,3 +52,9 @@ gtk-theme='Adwaita-dark'
 # comment in the matching 90_xiboplayer-kiosk.gschema.override.
 [org/gnome/desktop/wm/preferences]
 theme='Adwaita'
+
+# Touchpad tap-to-click — mirrors the xibo-session gschema override so
+# the GDM greeter behaves the same on laptop-as-kiosk deployments.
+[org/gnome/desktop/peripherals/touchpad]
+tap-to-click=true
+tap-and-drag=true
