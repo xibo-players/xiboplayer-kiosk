@@ -600,38 +600,6 @@ done
 %end
 
 # ========================================================================
-# Pre-anaconda installer banner — guarantee the operator sees
-# "we are working" feedback from the very start of the install phase.
-# ========================================================================
-# Runs BEFORE the WiFi picker and disk-detect %pre blocks (file order
-# determines %pre sequencing in anaconda). Writes to /dev/tty1 AND any
-# available serial console so the banner appears on the VGA screen,
-# Boxes/QEMU spice display, and captured serial log.
-#
-# Without this, the window between kernel handoff and anaconda's first
-# TUI paint can look like a frozen black screen — especially under
-# Boxes where the default SeaBIOS boot + Fedora stock grub skips most
-# of the familiar "loading stuff" messages.
-%pre --log=/tmp/xibo-banner.log
-for con in /dev/tty1 /dev/ttyS0 /dev/ttyS1; do
-  [ -w "$con" ] || continue
-  {
-    printf '\n\n'
-    printf '  ═══════════════════════════════════════════════════════════════\n'
-    printf '    xiboplayer kiosk  —  installing Fedora 43\n'
-    printf '  ═══════════════════════════════════════════════════════════════\n'
-    printf '\n'
-    printf '    Install takes 10-20 minutes on a good network connection.\n'
-    printf '    Do NOT power off — progress will appear below shortly.\n'
-    printf '\n'
-    printf '    Default player: Chromium  (switch post-install in Settings)\n'
-    printf '  ═══════════════════════════════════════════════════════════════\n'
-    printf '\n'
-  } > "$con" 2>/dev/null || true
-done
-%end
-
-# ========================================================================
 # Pre-anaconda WiFi picker (#72) — whiptail TUI for WiFi-only machines
 # ========================================================================
 # Runs BEFORE anaconda's network phase so the user never sees the complex
