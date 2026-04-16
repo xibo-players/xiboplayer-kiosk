@@ -60,6 +60,14 @@ gsettings set org.gnome.desktop.screensaver picture-uri '' 2>/dev/null || true
 gsettings set org.gnome.desktop.screensaver picture-options 'none' 2>/dev/null || true
 gsettings set org.gnome.desktop.screensaver primary-color '#000000' 2>/dev/null || true
 
+# Touchpad tap-to-click + tap-and-drag for laptop-as-kiosk deployments.
+# Single tap = click, double tap = double-click, tap+hold+move = drag.
+# Layer 2 (gschema override) + Layer 4 (GDM dconf) already cover system
+# defaults and the greeter; this Layer 3 call is belt-and-braces at
+# session start to overwrite any stale per-user dconf value.
+gsettings set org.gnome.desktop.peripherals.touchpad tap-to-click true 2>/dev/null || true
+gsettings set org.gnome.desktop.peripherals.touchpad tap-and-drag true 2>/dev/null || true
+
 # Set audio volume (90%)
 wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.9 2>/dev/null || true
 
