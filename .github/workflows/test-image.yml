@@ -52,7 +52,7 @@ concurrency:
 
 jobs:
   build:
-    uses: xibo-players/.github/.github/workflows/build-iso.yml@4e957065fbcc94992c6a30d9ef5e28f8b8cfde22  # main @ 2026-04-14 (xorriso post-patch with -boot_image any replay — .github#33, re-brands grub menu while preserving #146 fix)
+    uses: xibo-players/.github/.github/workflows/build-iso.yml@e54c80aa9c5a89decd9f978f082047759eddf705  # main @ 2026-04-16 (mkksiso -R native text replace, .github#40)
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
@@ -67,13 +67,15 @@ jobs:
       skip-preflight: true
       upload-as-artifact: true
 
-      # ── Custom grub menu ─────────────────────────────────────
-      # Full grub.cfg replacement — same file as production (image.yml)
-      iso-grub-file: 'kickstart/grub.cfg'
-      iso-isolinux-file: 'kickstart/isolinux.cfg'
+      # ── Branded boot menu via mkksiso -R (same as production) ──
+      iso-grub-replacements: |
+        Install Fedora 43|Install xiboplayer kiosk
+        Test this media & install Fedora 43|Test media and install xiboplayer kiosk
+        Install Fedora 43 in basic graphics mode|Install xiboplayer kiosk (basic graphics)
+        Rescue a Fedora system|Rescue xiboplayer kiosk system
       iso-volid: 'XIBOPLAYER'
 
-      # ── Verbose debug kernel cmdline (test builds only) ────────
+      # ── Verbose debug kernel cmdline (test builds only) + default player ──
       iso-cmdline-remove: 'quiet rhgb splash'
-      iso-cmdline-append: 'systemd.log_level=debug inst.debug rd.shell rd.debug console=tty0 console=ttyS0,115200'
+      iso-cmdline-append: 'xibo.profile=chromium systemd.log_level=debug inst.debug rd.shell rd.debug console=tty0 console=ttyS0,115200'
     secrets: inherit

@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    uses: xibo-players/.github/.github/workflows/build-iso.yml@4e957065fbcc94992c6a30d9ef5e28f8b8cfde22  # main @ 2026-04-14 (xorriso post-patch with -boot_image any replay — .github#33, re-brands grub menu while preserving #146 fix)
+    uses: xibo-players/.github/.github/workflows/build-iso.yml@e54c80aa9c5a89decd9f978f082047759eddf705  # main @ 2026-04-16 (mkksiso -R native text replace, .github#40)
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
@@ -23,17 +23,23 @@ jobs:
       build-netinstall: true
       architectures: 'x86_64,aarch64'
 
-      # Custom grub.cfg — full file replacement via mkksiso --add
-      # overlay. Gives us full control over menu structure, entry
-      # order, player-selection submenu, and kernel params. Replaces
-      # the old string-replacement approach (iso-grub-replacements).
-      iso-grub-file: 'kickstart/grub.cfg'
-      # BIOS-firmware guests (GNOME Boxes default, libvirt BIOS loader,
-      # CSM bare-metal) boot via isolinux — match the grub.cfg branding
-      # at that path too.
-      iso-isolinux-file: 'kickstart/isolinux.cfg'
+      # Brand the stock Fedora boot-menu entry text via mkksiso -R
+      # (native text substitution). Applies to every boot-config path
+      # in one pass: EFI grub.cfg, BOOT.conf, BIOS grub.cfg × 2 paths,
+      # isolinux.cfg. No custom grub.cfg / isolinux.cfg overlay file.
+      # No xorriso post-patch. mkksiso handles everything internally.
+      iso-grub-replacements: |
+        Install Fedora 43|Install xiboplayer kiosk
+        Test this media & install Fedora 43|Test media and install xiboplayer kiosk
+        Install Fedora 43 in basic graphics mode|Install xiboplayer kiosk (basic graphics)
+        Rescue a Fedora system|Rescue xiboplayer kiosk system
 
-      # Volume ID must match the inst.stage2=hd:LABEL= in grub.cfg
+      # Default player for the single branded install entry. Users
+      # switch to Electron/Arexibo post-install via Settings > Player.
+      iso-cmdline-append: 'xibo.profile=chromium'
+
+      # Volume ID — stage2 lookup via inst.stage2=hd:LABEL=XIBOPLAYER
+      # in the kickstart file.
       iso-volid: 'XIBOPLAYER'
     secrets: inherit
 
