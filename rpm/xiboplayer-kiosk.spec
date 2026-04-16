@@ -1,6 +1,6 @@
 Name:           xiboplayer-kiosk
 Version:        0.5.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
 License:        AGPLv3+
@@ -201,6 +201,12 @@ install -Dm644 mkosi-extra/etc/chromium/policies/managed/xiboplayer-kiosk.json %
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Thu Apr 16 2026 Pau Aliagas <pau@xiboplayer.org> - 0.5.2-2
+- Touchpad tap-to-click + tap-and-drag (#172, #179), start gsd-mouse so
+  gschema keys reach libinput. Drop XIBOPLAYER volid so Boxes auto-detects
+  Fedora (#175). Default grub entry = install, not test-media (#177).
+  Installer feedback: console= swap + inst.loglevel=info (#168, #170).
+
 * Wed Apr 15 2026 Pau Aliagas <linuxnow@gmail.com> - 0.5.2-1
 - Sidebar regrouped to 3 top-level rows: Locality / CMS / Settings.
 - Picker panels return to parent overview after apply (visible feedback).
