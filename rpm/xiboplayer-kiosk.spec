@@ -1,6 +1,6 @@
 Name:           xiboplayer-kiosk
 Version:        0.5.2
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
 License:        AGPLv3+
@@ -201,6 +201,19 @@ install -Dm644 mkosi-extra/etc/chromium/policies/managed/xiboplayer-kiosk.json %
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Thu Apr 16 2026 Pau Aliagas <pau@xiboplayer.org> - 0.5.2-6
+- Undo the dunst/gsd-mouse iteration churn accumulated in 0.5.2-2 → -5:
+  (1) drop the gsd-mouse startup line in gnome-kiosk-script.xibo.sh —
+  it broke dunst's follow=mouse query on Wayland; (2) drop the
+  [hide-low] / [hide-normal] dunst rules — both urgency= and
+  match_urgency= forms silenced every notification on this dunst
+  version; (3) revert the `-u critical` flag on Ctrl+I / Ctrl+D
+  notify-send calls — stock "normal" urgency was fine once the rules
+  are gone. Kiosk session back to pre-churn behavior. Touchpad
+  tap-to-click gschema default (#172) kept — Mutter reads it directly
+  on Wayland. Ctrl+T phantom-tab and routine-popup silencing deferred
+  to follow-up issues with a different approach.
+
 * Thu Apr 16 2026 Pau Aliagas <pau@xiboplayer.org> - 0.5.2-5
 - keyd: drop `t = noop` added in 0.5.2-3 — it silently broke the other
   command() bindings in the xibo_ctrl layer (Ctrl+I / Ctrl+D / Ctrl+S
