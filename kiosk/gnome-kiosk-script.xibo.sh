@@ -19,6 +19,18 @@ sleep 2
 # Import display environment into systemd user manager
 systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_RUNTIME_DIR
 
+# Start GNOME Settings Daemon plugins that push gsettings into the live
+# input/display stack (gnome-kiosk's minimal session target does NOT
+# auto-activate these, unlike gnome-session).
+#
+# Mouse plugin (#xxx): applies org.gnome.desktop.peripherals.touchpad
+# keys (tap-to-click, tap-and-drag, natural-scroll, etc.) to libinput
+# devices. Without it the gschema defaults sit inert and touchpad taps
+# don't register as clicks in GTK apps — notably the first-boot zenity
+# picker. --no-block so session startup isn't delayed if the service
+# fails for any reason.
+systemctl --user start --no-block org.gnome.SettingsDaemon.Mouse.service 2>/dev/null || true
+
 # Disable screen blanking and power management.
 # This is Layer 3 (runtime session gsettings) of the 4-layer power mgmt fix
 # — belt-and-braces guard against any stray user-level dconf override that
