@@ -121,7 +121,6 @@ jobs:
   dispatch-www:
     name: Trigger xiboplayer-www regeneration
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: Send repository_dispatch to xiboplayer-www
@@ -137,7 +136,13 @@ jobs:
             echo "::warning::WWW_DISPATCH_TOKEN not set — skipping www regen trigger. See #86."
             exit 0
           fi
-          TAG="${GITHUB_REF#refs/tags/v}"
+          # Extract version from tag (v0.5.2 → 0.5.2) or fall back to
+          # the spec Version for workflow_dispatch / push-on-main runs.
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF#refs/tags/v}"
+          else
+            TAG=$(grep -m1 '^Version:' rpm/xiboplayer-kiosk.spec 2>/dev/null | awk '{print $2}' || echo 'unknown')
+          fi
           echo "Firing repository_dispatch kiosk-released to xiboplayer-www with version=$TAG"
           gh api \
             --method POST \
