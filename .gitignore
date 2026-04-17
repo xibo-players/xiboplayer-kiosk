@@ -1,3 +1,7 @@
 dist/
 *.rpm
 *.deb
+
+# Node.js build artifacts
+node_modules/
+.wrangler/
