@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    uses: xibo-players/.github/.github/workflows/build-iso.yml@e54c80aa9c5a89decd9f978f082047759eddf705  # main @ 2026-04-16 (mkksiso -R native text replace, .github#40)
+    uses: xiboplayer/.github/.github/workflows/build-iso.yml@e54c80aa9c5a89decd9f978f082047759eddf705  # main @ 2026-04-16 (mkksiso -R native text replace, .github#40)
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
@@ -126,7 +126,7 @@ jobs:
       - name: Send repository_dispatch to xiboplayer-www
         env:
           # WWW_DISPATCH_TOKEN is a fine-grained PAT with actions:write
-          # on xibo-players/xiboplayer-www. See #86 for the setup steps.
+          # on xiboplayer/xiboplayer-www. See #86 for the setup steps.
           # If unset, this step logs a warning and exits 0 so the rest of
           # the release pipeline continues.
           GH_TOKEN: ${{ secrets.WWW_DISPATCH_TOKEN }}
@@ -148,7 +148,7 @@ jobs:
             --method POST \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            /repos/xibo-players/xiboplayer-www/dispatches \
+            /repos/xiboplayer/xiboplayer-www/dispatches \
             -f event_type=kiosk-released \
             -f "client_payload[version]=${TAG}" \
             -f "client_payload[source]=xiboplayer-kiosk" \

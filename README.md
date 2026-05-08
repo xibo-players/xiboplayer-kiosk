@@ -2,7 +2,7 @@
 
 Turn any PC or Raspberry Pi into a digital signage kiosk. Download a ready-made image, flash it to a USB stick or SD card, boot and connect to your Xibo CMS.
 
-**[Download kiosk images](https://github.com/xibo-players/xiboplayer-kiosk/releases/latest)** | **[Installation guide](https://www.xiboplayer.org/downloads/)** | **[First-boot guide](https://www.xiboplayer.org/guide/first-boot)**
+**[Download kiosk images](https://github.com/xiboplayer/xiboplayer-kiosk/releases/latest)** | **[Installation guide](https://www.xiboplayer.org/downloads/)** | **[First-boot guide](https://www.xiboplayer.org/guide/first-boot)**
 
 ### Images
 
@@ -21,7 +21,7 @@ Turn any PC or Raspberry Pi into a digital signage kiosk. Download a ready-made 
 | **Atomic (immutable OS, container-native updates)** | | | | |
 | Atomic ISO | x86_64 | ~3.1GB | [xiboplayer-kiosk-atomic_x86_64.iso](https://images.xiboplayer.org/xiboplayer-kiosk-atomic/atomic-20260407/xiboplayer-kiosk-atomic_20260407_x86_64.iso) | Immutable Fedora bootc kiosk. `bootc upgrade` with instant rollback. Best for fleet deployments. |
 | Atomic ISO | aarch64 | ~2.9GB | [xiboplayer-kiosk-atomic_aarch64.iso](https://images.xiboplayer.org/xiboplayer-kiosk-atomic/atomic-20260407/xiboplayer-kiosk-atomic_20260407_aarch64.iso) | Same for ARM64. RPi5 fleets, ARM kiosks. |
-| OCI Container | multi-arch | — | `ghcr.io/xibo-players/xiboplayer-kiosk:43` | Pull with podman/docker. Base for custom images or `bootc switch` from existing Fedora. |
+| OCI Container | multi-arch | — | `ghcr.io/xiboplayer/xiboplayer-kiosk:43` | Pull with podman/docker. Base for custom images or `bootc switch` from existing Fedora. |
 | **Network boot (no USB/SD card needed)** | | | | |
 | iPXE BIOS | x86 | 400KB | [xiboplayer-ipxe-bios.img](https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe-bios.img) | Legacy BIOS PCs. Flash to USB or embed in PXE ROM. Boots from network, shows install menu. |
 | iPXE UEFI | x86_64 | 1.1MB | [xiboplayer-ipxe-uefi-x86_64.img](https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe-uefi-x86_64.img) | Modern UEFI PCs. Chainload from existing PXE or flash to USB. |
@@ -32,16 +32,16 @@ Turn any PC or Raspberry Pi into a digital signage kiosk. Download a ready-made 
 
 | I want to... | Download |
 |--------------|----------|
-| Install on a PC with USB stick, no internet | [Everything ISO x86_64](https://github.com/xibo-players/xiboplayer-kiosk/releases/latest) |
-| Install on Raspberry Pi 5 | [Raw disk aarch64](https://github.com/xibo-players/xiboplayer-kiosk/releases/latest) — dd to SD card |
-| Test in a VM quickly | [QCOW2 x86_64](https://github.com/xibo-players/xiboplayer-kiosk/releases/latest) — import into Gnome Boxes |
+| Install on a PC with USB stick, no internet | [Everything ISO x86_64](https://github.com/xiboplayer/xiboplayer-kiosk/releases/latest) |
+| Install on Raspberry Pi 5 | [Raw disk aarch64](https://github.com/xiboplayer/xiboplayer-kiosk/releases/latest) — dd to SD card |
+| Test in a VM quickly | [QCOW2 x86_64](https://github.com/xiboplayer/xiboplayer-kiosk/releases/latest) — import into Gnome Boxes |
 | Deploy 50 identical kiosks with fleet updates | [Atomic ISO](https://images.xiboplayer.org/xiboplayer-kiosk-atomic/atomic-20260407/xiboplayer-kiosk-atomic_20260407_x86_64.iso) + `bootc upgrade` |
 | Network boot a room of PCs | [iPXE UEFI](https://dl.xiboplayer.org/ipxe/xiboplayer-ipxe-uefi-x86_64.img) + [boot.ipxe](https://dl.xiboplayer.org/ipxe/boot.ipxe) |
-| Rebase existing Fedora to kiosk | `bootc switch ghcr.io/xibo-players/xiboplayer-kiosk:43` |
+| Rebase existing Fedora to kiosk | `bootc switch ghcr.io/xiboplayer/xiboplayer-kiosk:43` |
 | Install on existing Fedora via RPM | `sudo dnf install xiboplayer-release && sudo dnf install xiboplayer-kiosk xiboplayer-chromium` |
 | Install on Ubuntu/Debian | See [downloads page](https://www.xiboplayer.org/downloads/) |
 
-**[Download images](https://github.com/xibo-players/xiboplayer-kiosk/releases/latest)** — Default login: `xibo` / `xibo` — change your password after first boot.
+**[Download images](https://github.com/xiboplayer/xiboplayer-kiosk/releases/latest)** — Default login: `xibo` / `xibo` — change your password after first boot.
 
 ### What's included
 
@@ -109,7 +109,7 @@ sudo apt update && sudo apt install xiboplayer-kiosk
 Boot from Fedora netinstall and add to kernel command line:
 
 ```
-inst.ks=https://raw.githubusercontent.com/xibo-players/xiboplayer-kiosk/main/kickstart/xiboplayer-kiosk.ks
+inst.ks=https://raw.githubusercontent.com/xiboplayer/xiboplayer-kiosk/main/kickstart/xiboplayer-kiosk.ks
 ```
 
 ## Files Installed

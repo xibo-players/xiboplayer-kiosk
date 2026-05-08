@@ -16,7 +16,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: xibo-players/xiboplayer-kiosk
+  IMAGE_NAME: xiboplayer/xiboplayer-kiosk
   FEDORA_VERSION: '43'
 
 concurrency:
@@ -411,7 +411,7 @@ jobs:
 
           To update manually or switch from the traditional image:
           ```
-          bootc switch ghcr.io/xibo-players/xiboplayer-kiosk:43
+          bootc switch ghcr.io/xiboplayer/xiboplayer-kiosk:43
           systemctl reboot
           ```
 
