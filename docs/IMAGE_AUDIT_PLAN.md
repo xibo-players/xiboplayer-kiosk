@@ -49,7 +49,7 @@ For each image type, extract the package list and compare:
 guestfish -a disk.qcow2 -i : rpm -qa > qcow2-packages.txt
 
 # From Atomic OCI (inspect container)
-podman run --rm ghcr.io/xibo-players/xiboplayer-kiosk:43 rpm -qa > atomic-packages.txt
+podman run --rm ghcr.io/xiboplayer/xiboplayer-kiosk:43 rpm -qa > atomic-packages.txt
 
 # From kickstart (parse %packages + %post dnf commands)
 grep -v '^#\|^-\|^%' <(sed -n '/%packages/,/%end/p' kickstart/xiboplayer-kiosk.ks) > kickstart-packages.txt
@@ -141,7 +141,7 @@ diff <(sort qcow2-packages.txt) <(sort atomic-packages.txt)
 guestfish -a disk.qcow2 -i : find / | grep -E "gnome-kiosk-script|xiboplayer-setup|firstboot|sysusers|tmpfiles|doas.conf|AccountsService"
 
 # For Atomic OCI
-podman run --rm ghcr.io/xibo-players/xiboplayer-kiosk:43 find / -name "gnome-kiosk-script*" -o -name "xiboplayer-setup*" -o -name "*firstboot*" -o -name "doas.conf" 2>/dev/null
+podman run --rm ghcr.io/xiboplayer/xiboplayer-kiosk:43 find / -name "gnome-kiosk-script*" -o -name "xiboplayer-setup*" -o -name "*firstboot*" -o -name "doas.conf" 2>/dev/null
 ```
 
 ---

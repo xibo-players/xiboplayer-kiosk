@@ -12,7 +12,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: xibo-players/xiboplayer-kiosk
+  IMAGE_NAME: xiboplayer/xiboplayer-kiosk
   FEDORA_VERSION: '43'
 
 concurrency:

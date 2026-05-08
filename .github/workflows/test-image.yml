@@ -52,7 +52,7 @@ concurrency:
 
 jobs:
   build:
-    uses: xibo-players/.github/.github/workflows/build-iso.yml@e54c80aa9c5a89decd9f978f082047759eddf705  # main @ 2026-04-16 (mkksiso -R native text replace, .github#40)
+    uses: xiboplayer/.github/.github/workflows/build-iso.yml@e54c80aa9c5a89decd9f978f082047759eddf705  # main @ 2026-04-16 (mkksiso -R native text replace, .github#40)
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'

@@ -3,8 +3,8 @@
 # Minimal bootc-based image: fedora-bootc + gdm + gnome-kiosk + codecs + players.
 # ~1.5 GB smaller than Silverblue-based image by starting from a minimal base.
 #
-# Build:  podman build -t ghcr.io/xibo-players/xiboplayer-kiosk:43 -f atomic/Containerfile .
-# Update: bootc switch --transport registry ghcr.io/xibo-players/xiboplayer-kiosk:43
+# Build:  podman build -t ghcr.io/xiboplayer/xiboplayer-kiosk:43 -f atomic/Containerfile .
+# Update: bootc switch --transport registry ghcr.io/xiboplayer/xiboplayer-kiosk:43
 #
 # Base: fedora-bootc (systemd + kernel + dnf, no desktop) — 1.0 GB compressed
 # vs Silverblue (full GNOME desktop + apps) — 2.5 GB compressed
@@ -28,7 +28,7 @@ RUN dnf install -y \
 # Xiboplayer repos (adds keyd COPR + GPG key)
 ARG RELEASE_VER=43-7
 RUN dnf install -y \
-    https://github.com/xibo-players/xibo-players.github.io/releases/download/v${RELEASE_VER}/xiboplayer-release-${RELEASE_VER}.fc43.noarch.rpm && \
+    https://github.com/xiboplayer/xiboplayer.github.io/releases/download/v${RELEASE_VER}/xiboplayer-release-${RELEASE_VER}.fc43.noarch.rpm && \
     dnf clean all
 
 # Display manager + kiosk compositor (minimal GNOME, no apps)
