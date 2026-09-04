@@ -12,11 +12,12 @@ concurrency:
 
 jobs:
   rpm:
-    uses: xiboplayer/.github/.github/workflows/build-rpm.yml@66aa291944bb2773302afcf6e13c1cec25ad5cbc  # main
+    uses: xiboplayer/.github/.github/workflows/build-rpm.yml@cb1cc4593f5292fa2d5bd9c69b2d5c49dddde55a  # main
     with:
       package-name: xiboplayer-kiosk
       rpm-spec: 'rpm/xiboplayer-kiosk.spec'
-      fedora-matrix: '["43"]'
+      fedora-matrix: '["43", "44"]'
       source-tarball: 'full'
       gpg-sign: true
+      publish-to-repo: ${{ startsWith(github.ref, 'refs/tags/v') }}
     secrets: inherit
