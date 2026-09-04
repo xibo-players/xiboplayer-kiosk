@@ -9,7 +9,7 @@ jobs:
   bats:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6.0.2
       - name: Install bats + jq + zstd
         run: sudo apt-get update && sudo apt-get install -y bats jq zstd
       - name: Run bats unit tests
