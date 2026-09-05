@@ -1,6 +1,6 @@
 Name:           xiboplayer-kiosk
-Version:        0.5.2
-Release:        6%{?dist}
+Version:        0.5.3
+Release:        1%{?dist}
 Summary:        Kiosk session scripts for Xibo digital signage players
 
 License:        AGPLv3+
@@ -201,6 +201,14 @@ install -Dm644 mkosi-extra/etc/chromium/policies/managed/xiboplayer-kiosk.json %
 /usr/bin/dconf update &>/dev/null || :
 
 %changelog
+* Fri Sep 05 2026 Pau Aliagas <pau@xiboplayer.org> - 0.5.3-1
+- Fedora 43 and 44 packages
+- RPM is published to dl.xiboplayer.org only from tag builds: pushes to
+  main had rebuilt 0.5.2-6 and overwritten the file on R2 while the
+  repodata dispatch was silently dropped, so dnf failed with a checksum
+  mismatch (atomic image builds broken since July)
+- Reusable workflow pins bumped to xiboplayer/.github@cb1cc45
+
 * Thu Apr 16 2026 Pau Aliagas <pau@xiboplayer.org> - 0.5.2-6
 - Undo the dunst/gsd-mouse iteration churn accumulated in 0.5.2-2 → -5:
   (1) drop the gsd-mouse startup line in gnome-kiosk-script.xibo.sh —
