@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.3 (2026-09-05)
+
+Packaging-only release. RPMs are now built for **Fedora 43 and 44**, and are published to the repository only from tag builds (pushes to main had been overwriting the 0.5.2-6 RPM on R2 without re-indexing, breaking `dnf install` with a checksum mismatch and with it the nightly atomic image build). Reusable workflow pins moved to `xiboplayer/.github@cb1cc45`, whose notify step dispatches `update-repos` to the renamed org.
+
 ## 0.5.0 (2026-04-13)
 
 First-boot + reconfigure wizard rewritten in **Python + GTK4 + libadwaita** with a GNOME Settings-style **sidebar + content** layout (`Adw.NavigationSplitView`). Replaces the zenity/shell/`xibo-picker.py` patchwork with a single `Adw.ApplicationWindow` where the 7 categories (Language / Keyboard / Wi-Fi / Timezone / Player / CMS / Settings) live as persistent sidebar rows with live status subtitles, and the selected category's UI renders inline in the right pane — no new windows for sub-screens. Picker input fields use `Adw.EntryRow` matching the CMS form style, Esc closes pickers, filter-as-you-type with live `Gtk.FilterListModel`, xiboplayer logo on the welcome page. Old shell scripts (`xibo-first-boot.sh` etc.) remain installed but no longer invoked — removed in 0.5.1. 54 unit tests covering branding / preseed / doas_runner / state / cms writers / wifi parser / locale filter / status probes.
