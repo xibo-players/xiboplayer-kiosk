@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   cleanup:
-    uses: xiboplayer/.github/.github/workflows/cleanup-releases.yml@cb1cc4593f5292fa2d5bd9c69b2d5c49dddde55a  # main
+    uses: xiboplayer/.github/.github/workflows/cleanup-releases.yml@9af382cf12830bca426a1a99e4b59532ee72a711  # main
     with:
       keep-versioned: 3
       keep-dated: 7

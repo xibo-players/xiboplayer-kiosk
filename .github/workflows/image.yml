@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    uses: xiboplayer/.github/.github/workflows/build-iso.yml@cb1cc4593f5292fa2d5bd9c69b2d5c49dddde55a  # main
+    uses: xiboplayer/.github/.github/workflows/build-iso.yml@9af382cf12830bca426a1a99e4b59532ee72a711  # main
     with:
       package-name: xiboplayer-kiosk
       kickstart-file: 'kickstart/xiboplayer-kiosk.ks'
