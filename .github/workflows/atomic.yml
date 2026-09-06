@@ -57,33 +57,32 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: startsWith(github.ref, 'refs/tags/v')
+    container:
+      image: fedora:43
     steps:
-      - name: Poll dl.xiboplayer.org for the tag's RPM
+      - name: Poll the repository for the tag's RPM
         env:
           VERSION: ${{ github.ref_name }}
+        # Query with dnf, not curl: dl.xiboplayer.org answers 403 to curl
+        # from GitHub runners (xiboplayer/.github#59) while serving dnf, and
+        # dnf is what the Containerfile below uses to install this package.
         run: |
           set -eu
-          # Strip leading 'v' to get the bare version string
           VER="${VERSION#v}"
-          URL="https://dl.xiboplayer.org/rpm/fedora/43/noarch/xiboplayer-kiosk-${VER}-1.fc43.noarch.rpm"
-          echo "Waiting for $URL"
-          # Report the status code on every attempt. `curl -sf` alone cannot
-          # tell "not published yet" (404) from a WAF block (403/429) or a
-          # connection that never completed, which cost a day of guessing
-          # when GitHub runners started being refused by the CDN.
-          code=""
+          REPO_URL="https://dl.xiboplayer.org/rpm/fedora/${FEDORA_VERSION}/x86_64/"
+          echo "Waiting for xiboplayer-kiosk ${VER} in ${REPO_URL}"
           for i in $(seq 1 60); do
-            code=$(curl -sI -o /dev/null -w '%{http_code}' --max-time 30 "$URL" || echo "curl-exit-$?")
-            if [ "$code" = "200" ]; then
-              echo "RPM published — proceeding."
+            FOUND=$(dnf -q --nogpgcheck --setopt=metadata_expire=0 --refresh \
+              --repofrompath "xp,$REPO_URL" --repo xp \
+              repoquery --qf '%{version}' xiboplayer-kiosk 2>/dev/null | head -1)
+            if [ "$FOUND" = "$VER" ]; then
+              echo "Published — proceeding."
               exit 0
             fi
-            echo "Not yet (attempt $i/60, HTTP $code), sleeping 15s..."
+            echo "Not yet (attempt $i/60, repo has '${FOUND:-nothing}'), sleeping 15s..."
             sleep 15
           done
-          echo "::error::Timed out waiting for $URL after 15 minutes (last status: $code)"
-          echo "Final response, headers and all:"
-          curl -sSI --max-time 30 "$URL" 2>&1 | head -20 || true
+          echo "::error::xiboplayer-kiosk ${VER} did not appear in the repository after 15 minutes"
           exit 1
 
   build-oci-x86_64:
