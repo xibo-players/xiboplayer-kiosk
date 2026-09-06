@@ -67,15 +67,23 @@ jobs:
           VER="${VERSION#v}"
           URL="https://dl.xiboplayer.org/rpm/fedora/43/noarch/xiboplayer-kiosk-${VER}-1.fc43.noarch.rpm"
           echo "Waiting for $URL"
+          # Report the status code on every attempt. `curl -sf` alone cannot
+          # tell "not published yet" (404) from a WAF block (403/429) or a
+          # connection that never completed, which cost a day of guessing
+          # when GitHub runners started being refused by the CDN.
+          code=""
           for i in $(seq 1 60); do
-            if curl -sfI -o /dev/null "$URL"; then
+            code=$(curl -sI -o /dev/null -w '%{http_code}' --max-time 30 "$URL" || echo "curl-exit-$?")
+            if [ "$code" = "200" ]; then
               echo "RPM published — proceeding."
               exit 0
             fi
-            echo "Not yet (attempt $i/60), sleeping 15s..."
+            echo "Not yet (attempt $i/60, HTTP $code), sleeping 15s..."
             sleep 15
           done
-          echo "Timed out waiting for $URL after 15 minutes."
+          echo "::error::Timed out waiting for $URL after 15 minutes (last status: $code)"
+          echo "Final response, headers and all:"
+          curl -sSI --max-time 30 "$URL" 2>&1 | head -20 || true
           exit 1
 
   build-oci-x86_64:
